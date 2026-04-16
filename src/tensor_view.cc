@@ -1,4 +1,4 @@
-#include "tensor.h"
+#include "tensor_view.h"
 
 #include <algorithm>
 #include <cassert>
@@ -6,17 +6,18 @@
 
 namespace infini::rt {
 
-static Tensor::Index GetEffectiveIndex(Tensor::Index index, Tensor::Size size) {
+static TensorView::Index GetEffectiveIndex(TensorView::Index index,
+                                           TensorView::Size size) {
   return index < 0 ? index + size : index;
 }
 
-Tensor::Tensor(void* data, std::initializer_list<Size> shape,
-               const DataType& dtype, const Device& device,
-               std::initializer_list<Stride> strides)
-    : Tensor{data, decltype(shape_){shape}, dtype, device,
-             decltype(strides_){strides}} {}
+TensorView::TensorView(void* data, std::initializer_list<Size> shape,
+                       const DataType& dtype, const Device& device,
+                       std::initializer_list<Stride> strides)
+    : TensorView{data, decltype(shape_){shape}, dtype, device,
+                 decltype(strides_){strides}} {}
 
-Tensor Tensor::operator[](const Index& index) const {
+TensorView TensorView::operator[](const Index& index) const {
   return {
       reinterpret_cast<decltype(data_)>(
           reinterpret_cast<decltype(index)>(data_) +
@@ -25,37 +26,39 @@ Tensor Tensor::operator[](const Index& index) const {
       Strides{strides_.cbegin() + 1, strides_.cend()}};
 }
 
-void*& Tensor::data() { return data_; }
+void*& TensorView::data() { return data_; }
 
-const void* Tensor::data() const { return data_; }
+const void* TensorView::data() const { return data_; }
 
-const Tensor::Shape& Tensor::shape() const { return shape_; }
+const TensorView::Shape& TensorView::shape() const { return shape_; }
 
-const DataType& Tensor::dtype() const { return dtype_; }
+const DataType& TensorView::dtype() const { return dtype_; }
 
-const Device& Tensor::device() const { return device_; }
+const Device& TensorView::device() const { return device_; }
 
-const Tensor::Strides& Tensor::strides() const { return strides_; }
+const TensorView::Strides& TensorView::strides() const { return strides_; }
 
-Tensor::Size Tensor::size(const Index& index) const {
+TensorView::Size TensorView::size(const Index& index) const {
   return shape_[GetEffectiveIndex(index, shape_.size())];
 }
 
-Tensor::Stride Tensor::stride(const Index& index) const {
+TensorView::Stride TensorView::stride(const Index& index) const {
   return strides_[GetEffectiveIndex(index, strides_.size())];
 }
 
-Tensor::Size Tensor::ndim() const { return shape_.size(); }
+TensorView::Size TensorView::ndim() const { return shape_.size(); }
 
-Tensor::Size Tensor::element_size() const { return kDataTypeToSize.at(dtype_); }
-
-Tensor::Size Tensor::numel() const {
-  return std::accumulate(shape_.begin(), shape_.end(),
-                         static_cast<Tensor::Size>(1),
-                         [](Tensor::Size a, Tensor::Size b) { return a * b; });
+TensorView::Size TensorView::element_size() const {
+  return kDataTypeToSize.at(dtype_);
 }
 
-Tensor Tensor::T() const {
+TensorView::Size TensorView::numel() const {
+  return std::accumulate(
+      shape_.begin(), shape_.end(), static_cast<TensorView::Size>(1),
+      [](TensorView::Size a, TensorView::Size b) { return a * b; });
+}
+
+TensorView TensorView::T() const {
   return {data_,
           {shape_[1], shape_[0]},
           dtype_,
@@ -63,20 +66,20 @@ Tensor Tensor::T() const {
           {strides_[1], strides_[0]}};
 }
 
-std::string Tensor::ToString() const {
+std::string TensorView::ToString() const {
   return "tensor(" + ToStringHelper() +
          ", dtype=" + std::string(kDataTypeToDesc.at(dtype_)) + ", device='" +
          device_.ToString() + "')";
 }
 
-bool Tensor::HasBroadcastDim() const {
+bool TensorView::HasBroadcastDim() const {
   return std::any_of(shape_.begin(), shape_.end(),
                      [&, i = 0](const auto&) mutable {
                        return shape_[i] != 1 && strides_[i++] == 0;
                      });
 }
 
-bool Tensor::IsContiguous() const {
+bool TensorView::IsContiguous() const {
   if (ndim() == 0) {
     return true;
   }
@@ -88,11 +91,11 @@ bool Tensor::IsContiguous() const {
   return stride(ndim() - 1) == 1;
 }
 
-const DataType Tensor::DefaultDataType() { return DataType::kFloat32; }
+const DataType TensorView::DefaultDataType() { return DataType::kFloat32; }
 
-Device Tensor::DefaultDevice() { return Device{Device::Type::kCpu}; }
+Device TensorView::DefaultDevice() { return Device{Device::Type::kCpu}; }
 
-Tensor::Strides Tensor::DefaultStrides(const Shape& shape) {
+TensorView::Strides TensorView::DefaultStrides(const Shape& shape) {
   if (shape.empty()) {
     return {};
   }
@@ -108,7 +111,7 @@ Tensor::Strides Tensor::DefaultStrides(const Shape& shape) {
   return strides;
 }
 
-std::string Tensor::ToStringHelper() const {
+std::string TensorView::ToStringHelper() const {
   if (ndim() == 0) {
     switch (dtype_) {
       case DataType::kFloat16:
@@ -152,12 +155,13 @@ std::string Tensor::ToStringHelper() const {
   return result;
 }
 
-bool Tensor::IsMergeable(Tensor::Size dim_start, Tensor::Size dim_end) const {
+bool TensorView::IsMergeable(TensorView::Size dim_start,
+                             TensorView::Size dim_end) const {
   if (dim_start == dim_end) {
     return true;
   }
 
-  for (Tensor::Size i = dim_start; i < dim_end; ++i) {
+  for (TensorView::Size i = dim_start; i < dim_end; ++i) {
     if (size(i) == 1 && stride(i) == 0) {
       return false;
     }

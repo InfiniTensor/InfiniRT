@@ -1,5 +1,5 @@
-#ifndef INFINI_RT_TENSOR_H_
-#define INFINI_RT_TENSOR_H_
+#ifndef INFINI_RT_TENSOR_VIEW_H_
+#define INFINI_RT_TENSOR_VIEW_H_
 
 #include <cstdint>
 #include <string>
@@ -11,7 +11,7 @@
 
 namespace infini::rt {
 
-class Tensor {
+class TensorView {
  public:
   using Size = std::size_t;
 
@@ -24,7 +24,7 @@ class Tensor {
   using Strides = std::vector<Stride>;
 
   template <typename Shape>
-  Tensor(void* data, const Shape& shape)
+  TensorView(void* data, const Shape& shape)
       : data_{data},
         shape_{shape},
         dtype_{DefaultDataType()},
@@ -32,7 +32,7 @@ class Tensor {
         strides_{DefaultStrides(shape)} {}
 
   template <typename Shape>
-  Tensor(void* data, const Shape& shape, const DataType& dtype)
+  TensorView(void* data, const Shape& shape, const DataType& dtype)
       : data_{data},
         shape_{shape},
         dtype_{dtype},
@@ -40,7 +40,7 @@ class Tensor {
         strides_{DefaultStrides(shape)} {}
 
   template <typename Shape>
-  Tensor(void* data, const Shape& shape, const Device& device)
+  TensorView(void* data, const Shape& shape, const Device& device)
       : data_{data},
         shape_{shape},
         dtype_{DefaultDataType()},
@@ -48,8 +48,8 @@ class Tensor {
         strides_{DefaultStrides(shape)} {}
 
   template <typename Shape>
-  Tensor(void* data, const Shape& shape, const DataType& dtype,
-         const Device& device)
+  TensorView(void* data, const Shape& shape, const DataType& dtype,
+             const Device& device)
       : data_{data},
         shape_{shape},
         dtype_{dtype},
@@ -57,18 +57,19 @@ class Tensor {
         strides_{DefaultStrides(shape)} {}
 
   template <typename Shape, typename Strides>
-  Tensor(void* data, const Shape& shape, const DataType& dtype,
-         const Device& device, const Strides& strides)
+  TensorView(void* data, const Shape& shape, const DataType& dtype,
+             const Device& device, const Strides& strides)
       : data_{data},
         shape_{shape},
         dtype_{dtype},
         device_{device},
         strides_{strides} {}
 
-  Tensor(void* data, std::initializer_list<Size> shape, const DataType& dtype,
-         const Device& device, std::initializer_list<Stride> strides);
+  TensorView(void* data, std::initializer_list<Size> shape,
+             const DataType& dtype, const Device& device,
+             std::initializer_list<Stride> strides);
 
-  Tensor operator[](const Index& index) const;
+  TensorView operator[](const Index& index) const;
 
   void*& data();
 
@@ -92,7 +93,7 @@ class Tensor {
 
   Size numel() const;
 
-  Tensor T() const;
+  TensorView T() const;
 
   std::string ToString() const;
 
@@ -125,8 +126,8 @@ class Tensor {
 }  // namespace infini::rt
 
 template <>
-struct std::hash<infini::rt::Tensor> {
-  std::size_t operator()(const infini::rt::Tensor& tensor) const {
+struct std::hash<infini::rt::TensorView> {
+  std::size_t operator()(const infini::rt::TensorView& tensor) const {
     std::size_t seed{0};
 
     for (const auto& size : tensor.shape()) {
@@ -146,9 +147,9 @@ struct std::hash<infini::rt::Tensor> {
 };
 
 template <>
-struct std::equal_to<infini::rt::Tensor> {
-  bool operator()(const infini::rt::Tensor& a,
-                  const infini::rt::Tensor& b) const {
+struct std::equal_to<infini::rt::TensorView> {
+  bool operator()(const infini::rt::TensorView& a,
+                  const infini::rt::TensorView& b) const {
     return a.dtype() == b.dtype() && a.device() == b.device() &&
            a.shape() == b.shape() && a.strides() == b.strides();
   }
