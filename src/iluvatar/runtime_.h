@@ -9,7 +9,6 @@
 
 #include "cuda/runtime.h"
 #include "iluvatar/device_.h"
-#include "iluvatar/runtime_utils.h"
 
 namespace infini::rt {
 

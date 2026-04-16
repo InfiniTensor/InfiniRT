@@ -5,7 +5,6 @@
 
 #include "cuda/runtime.h"
 #include "metax/device_.h"
-#include "metax/runtime_utils.h"
 
 namespace infini::rt {
 

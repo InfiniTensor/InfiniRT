@@ -7,7 +7,6 @@
 
 #include "cuda/runtime.h"
 #include "moore/device_.h"
-#include "moore/runtime_utils.h"
 
 namespace infini::rt {
 

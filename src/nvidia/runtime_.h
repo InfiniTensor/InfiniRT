@@ -9,7 +9,6 @@
 
 #include "cuda/runtime.h"
 #include "nvidia/device_.h"
-#include "nvidia/runtime_utils.h"
 
 namespace infini::rt {
 

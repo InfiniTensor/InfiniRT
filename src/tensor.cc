@@ -4,8 +4,6 @@
 #include <cassert>
 #include <numeric>
 
-#include "dispatcher.h"
-
 namespace infini::rt {
 
 static Tensor::Index GetEffectiveIndex(Tensor::Index index, Tensor::Size size) {
@@ -112,14 +110,34 @@ Tensor::Strides Tensor::DefaultStrides(const Shape& shape) {
 
 std::string Tensor::ToStringHelper() const {
   if (ndim() == 0) {
-    return DispatchFunc<Device::Type::kCpu,
-                        ConcatType<FloatTypes, AllIntTypes>>(
-        dtype_,
-        [&](auto tag) {
-          using T = typename decltype(tag)::type;
-          return std::to_string(*static_cast<T*>(data_));
-        },
-        "Tensor::ToStringHelper()");
+    switch (dtype_) {
+      case DataType::kFloat16:
+        return std::to_string(static_cast<Float16*>(data_)->ToFloat());
+      case DataType::kBFloat16:
+        return std::to_string(static_cast<BFloat16*>(data_)->ToFloat());
+      case DataType::kFloat32:
+        return std::to_string(*static_cast<float*>(data_));
+      case DataType::kFloat64:
+        return std::to_string(*static_cast<double*>(data_));
+      case DataType::kInt8:
+        return std::to_string(*static_cast<int8_t*>(data_));
+      case DataType::kInt16:
+        return std::to_string(*static_cast<int16_t*>(data_));
+      case DataType::kInt32:
+        return std::to_string(*static_cast<int32_t*>(data_));
+      case DataType::kInt64:
+        return std::to_string(*static_cast<int64_t*>(data_));
+      case DataType::kUInt8:
+        return std::to_string(*static_cast<uint8_t*>(data_));
+      case DataType::kUInt16:
+        return std::to_string(*static_cast<uint16_t*>(data_));
+      case DataType::kUInt32:
+        return std::to_string(*static_cast<uint32_t*>(data_));
+      case DataType::kUInt64:
+        return std::to_string(*static_cast<uint64_t*>(data_));
+      default:
+        return "?";
+    }
   }
 
   std::string result{"["};
