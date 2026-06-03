@@ -190,6 +190,7 @@ endif()
 
 # If all other platforms are not enabled, CPU is enabled by default.
 if(NOT WITH_NVIDIA AND NOT WITH_ILUVATAR AND NOT WITH_METAX AND NOT WITH_MOORE AND NOT WITH_CAMBRICON AND NOT WITH_ASCEND)
+    set(WITH_CPU ON CACHE BOOL "Enable CPU backend" FORCE)
     add_compile_definitions(WITH_CPU=1)
 endif()
 
