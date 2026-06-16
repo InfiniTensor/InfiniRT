@@ -13,6 +13,22 @@ if(NOT EXISTS "${INFINI_RT_LIBRARY_DIR}/libinfinirt.so")
     message(FATAL_ERROR "The installed InfiniRT library was not found.")
 endif()
 
+set(INFINI_RT_EXTRA_LINK_ARGS "")
+set(INFINI_RT_LD_LIBRARY_PATH "${INFINI_RT_LIBRARY_DIR}")
+
+if(INFINI_RT_EXTRA_LIBRARY_PATHS)
+    string(REPLACE ":" ";" INFINI_RT_EXTRA_LIBRARY_DIRS
+           "${INFINI_RT_EXTRA_LIBRARY_PATHS}")
+    foreach(INFINI_RT_EXTRA_LIBRARY_DIR ${INFINI_RT_EXTRA_LIBRARY_DIRS})
+        if(EXISTS "${INFINI_RT_EXTRA_LIBRARY_DIR}")
+            list(APPEND INFINI_RT_EXTRA_LINK_ARGS
+                 "-Wl,-rpath-link,${INFINI_RT_EXTRA_LIBRARY_DIR}")
+            set(INFINI_RT_LD_LIBRARY_PATH
+                "${INFINI_RT_LD_LIBRARY_PATH}:${INFINI_RT_EXTRA_LIBRARY_DIR}")
+        endif()
+    endforeach()
+endif()
+
 execute_process(
     COMMAND "${INFINI_RT_CXX_COMPILER}"
             -std=c++17
@@ -22,6 +38,7 @@ execute_process(
             "-L${INFINI_RT_LIBRARY_DIR}"
             -linfinirt
             "-Wl,-rpath,${INFINI_RT_LIBRARY_DIR}"
+            ${INFINI_RT_EXTRA_LINK_ARGS}
             -o "${INFINI_RT_CONSUMER_BINARY}"
     RESULT_VARIABLE INFINI_RT_COMPILE_RESULT
     OUTPUT_VARIABLE INFINI_RT_COMPILE_OUTPUT
@@ -34,7 +51,9 @@ if(NOT INFINI_RT_COMPILE_RESULT EQUAL 0)
 endif()
 
 execute_process(
-    COMMAND "${INFINI_RT_CONSUMER_BINARY}"
+    COMMAND "${CMAKE_COMMAND}" -E env
+            "LD_LIBRARY_PATH=${INFINI_RT_LD_LIBRARY_PATH}:$ENV{LD_LIBRARY_PATH}"
+            "${INFINI_RT_CONSUMER_BINARY}"
     RESULT_VARIABLE INFINI_RT_RUN_RESULT
     OUTPUT_VARIABLE INFINI_RT_RUN_OUTPUT
     ERROR_VARIABLE INFINI_RT_RUN_ERROR)

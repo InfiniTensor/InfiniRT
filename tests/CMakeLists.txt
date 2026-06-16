@@ -19,6 +19,20 @@ set(INFINI_RT_TEST_INSTALL_PREFIX
     "${CMAKE_CURRENT_BINARY_DIR}/install_consumer_prefix")
 set(INFINI_RT_TEST_CONSUMER_BINARY
     "${CMAKE_CURRENT_BINARY_DIR}/install_consumer_smoke")
+set(INFINI_RT_TEST_EXTRA_LIBRARY_DIRS "")
+
+if(WITH_ASCEND)
+    get_filename_component(
+        INFINI_RT_ASCEND_DEVLIB
+        "${ASCEND_HOME}/${CMAKE_SYSTEM_PROCESSOR}-linux/devlib"
+        ABSOLUTE)
+    list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+         "${ASCEND_HOME}/lib64"
+         "${INFINI_RT_ASCEND_DEVLIB}"
+         "${ASCEND_HOME}/runtime/lib64/stub")
+endif()
+
+list(JOIN INFINI_RT_TEST_EXTRA_LIBRARY_DIRS ":" INFINI_RT_TEST_EXTRA_LIBRARY_PATHS)
 
 add_test(
     NAME test_install
@@ -33,6 +47,7 @@ add_test(
             "-DINFINI_RT_CONSUMER_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/install_consumer_smoke.cc"
             "-DINFINI_RT_CONSUMER_BINARY=${INFINI_RT_TEST_CONSUMER_BINARY}"
             "-DINFINI_RT_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            "-DINFINI_RT_EXTRA_LIBRARY_PATHS=${INFINI_RT_TEST_EXTRA_LIBRARY_PATHS}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/compile_install_consumer.cmake")
 set_tests_properties(test_install_consumer PROPERTIES
     FIXTURES_REQUIRED infini_rt_install)
