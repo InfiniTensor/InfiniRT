@@ -190,7 +190,44 @@ endif()
 
 # If all other platforms are not enabled, CPU is enabled by default.
 if(NOT WITH_NVIDIA AND NOT WITH_ILUVATAR AND NOT WITH_METAX AND NOT WITH_MOORE AND NOT WITH_CAMBRICON AND NOT WITH_ASCEND)
+    set(WITH_CPU ON)
     add_compile_definitions(WITH_CPU=1)
+endif()
+
+set(INFINI_RT_PUBLIC_HEADER_DEVICES "")
+if(WITH_CPU)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES cpu)
+endif()
+if(WITH_NVIDIA)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES nvidia)
+endif()
+if(WITH_ILUVATAR)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES iluvatar)
+endif()
+if(WITH_METAX)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES metax)
+endif()
+if(WITH_MOORE)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES moore)
+endif()
+if(WITH_CAMBRICON)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES cambricon)
+endif()
+if(WITH_ASCEND)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES ascend)
+endif()
+
+find_package(Python COMPONENTS Interpreter REQUIRED)
+execute_process(
+    COMMAND ${Python_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_public_headers.py
+        --output-dir ${CMAKE_CURRENT_SOURCE_DIR}/generated/include
+        --devices ${INFINI_RT_PUBLIC_HEADER_DEVICES}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE INFINI_RT_PUBLIC_HEADER_RESULT
+)
+if(NOT INFINI_RT_PUBLIC_HEADER_RESULT EQUAL 0)
+    message(FATAL_ERROR "Generating public headers failed")
 endif()
 
 add_subdirectory(src)
