@@ -1,7 +1,5 @@
 add_library(infinirt SHARED)
 
-include(GNUInstallDirs)
-
 file(GLOB BASE_SRCS CONFIGURE_DEPENDS "*.cc")
 target_sources(infinirt PRIVATE ${BASE_SRCS})
 
@@ -96,14 +94,3 @@ if(WITH_ASCEND)
 endif()
 
 target_include_directories(infinirt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-install(TARGETS infinirt
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/infinirt
-    FILES_MATCHING PATTERN "*.h"
-)
