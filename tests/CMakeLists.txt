@@ -10,3 +10,29 @@ add_infini_rt_test(test_core test_core.cc)
 if(WITH_CPU)
     add_infini_rt_test(test_cpu_runtime test_cpu_runtime.cc)
 endif()
+
+if(WITH_NVIDIA)
+    add_infini_rt_test(test_nvidia_runtime test_nvidia_runtime.cc)
+endif()
+
+set(INFINI_RT_TEST_INSTALL_PREFIX
+    "${CMAKE_CURRENT_BINARY_DIR}/install_consumer_prefix")
+set(INFINI_RT_TEST_CONSUMER_BINARY
+    "${CMAKE_CURRENT_BINARY_DIR}/install_consumer_smoke")
+
+add_test(
+    NAME test_install
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+            --prefix "${INFINI_RT_TEST_INSTALL_PREFIX}")
+set_tests_properties(test_install PROPERTIES FIXTURES_SETUP infini_rt_install)
+
+add_test(
+    NAME test_install_consumer
+    COMMAND "${CMAKE_COMMAND}"
+            "-DINFINI_RT_INSTALL_PREFIX=${INFINI_RT_TEST_INSTALL_PREFIX}"
+            "-DINFINI_RT_CONSUMER_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/install_consumer_smoke.cc"
+            "-DINFINI_RT_CONSUMER_BINARY=${INFINI_RT_TEST_CONSUMER_BINARY}"
+            "-DINFINI_RT_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/compile_install_consumer.cmake")
+set_tests_properties(test_install_consumer PROPERTIES
+    FIXTURES_REQUIRED infini_rt_install)
