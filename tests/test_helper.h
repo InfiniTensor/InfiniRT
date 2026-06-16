@@ -19,6 +19,11 @@ class TestContext {
     return false;
   }
 
+  template <typename Lhs, typename Rhs>
+  bool ExpectEqual(const Lhs& lhs, const Rhs& rhs, std::string_view message) {
+    return Expect(lhs == rhs, message);
+  }
+
   int ExitCode() const { return failed_ ? 1 : 0; }
 
  private:

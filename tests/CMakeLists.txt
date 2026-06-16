@@ -5,3 +5,4 @@ function(add_infini_rt_test target)
 endfunction()
 
 add_infini_rt_test(test_smoke test_smoke.cc)
+add_infini_rt_test(test_core test_core.cc)
