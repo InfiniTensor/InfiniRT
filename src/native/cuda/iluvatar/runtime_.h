@@ -1,5 +1,5 @@
-#ifndef INFINI_RT_NVIDIA_RUNTIME__H_
-#define INFINI_RT_NVIDIA_RUNTIME__H_
+#ifndef INFINI_RT_ILUVATAR_RUNTIME__H_
+#define INFINI_RT_ILUVATAR_RUNTIME__H_
 
 #include <utility>
 
@@ -7,17 +7,17 @@
 #include <cuda_runtime.h>
 // clang-format on
 
-#include "cuda/runtime.h"
-#include "nvidia/device_.h"
+#include "native/cuda/runtime_.h"
+#include "native/cuda/iluvatar/device_.h"
 
 namespace infini::rt {
 
 template <>
-struct Runtime<Device::Type::kNvidia>
-    : CudaRuntime<Runtime<Device::Type::kNvidia>> {
+struct Runtime<Device::Type::kIluvatar>
+    : CudaRuntime<Runtime<Device::Type::kIluvatar>> {
   using Stream = cudaStream_t;
 
-  static constexpr Device::Type kDeviceType = Device::Type::kNvidia;
+  static constexpr Device::Type kDeviceType = Device::Type::kIluvatar;
 
   static constexpr auto Malloc = [](auto&&... args) {
     return cudaMalloc(std::forward<decltype(args)>(args)...);
@@ -34,7 +34,7 @@ struct Runtime<Device::Type::kNvidia>
   static constexpr auto Memset = cudaMemset;
 };
 
-static_assert(Runtime<Device::Type::kNvidia>::Validate());
+static_assert(Runtime<Device::Type::kIluvatar>::Validate());
 
 }  // namespace infini::rt
 
