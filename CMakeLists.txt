@@ -14,6 +14,7 @@ option(WITH_MOORE "Enable Moore backend" OFF)
 option(WITH_ASCEND "Enable Ascend backend" OFF)
 
 option(AUTO_DETECT_DEVICES "Automatically detect available devices" OFF)
+option(INFINI_RT_BUILD_TESTING "Build InfiniRT tests" OFF)
 
 if(AUTO_DETECT_DEVICES)
     message(STATUS "Auto-detecting available devices...")
@@ -231,3 +232,8 @@ if(NOT INFINI_RT_PUBLIC_HEADER_RESULT EQUAL 0)
 endif()
 
 add_subdirectory(src)
+
+if(INFINI_RT_BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
