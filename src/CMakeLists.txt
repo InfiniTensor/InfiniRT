@@ -40,6 +40,20 @@ if(WITH_ILUVATAR)
     )
 endif()
 
+if(WITH_HYGON)
+    enable_language(CUDA)
+
+    target_compile_definitions(infinirt PUBLIC WITH_HYGON=1)
+
+    find_package(CUDAToolkit REQUIRED)
+    target_link_libraries(infinirt PUBLIC CUDA::cudart)
+
+    set_target_properties(infinirt PROPERTIES
+        CUDA_STANDARD 17
+        CUDA_STANDARD_REQUIRED ON
+    )
+endif()
+
 if(WITH_METAX)
     target_compile_definitions(infinirt PRIVATE WITH_METAX=1)
 

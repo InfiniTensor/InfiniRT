@@ -18,6 +18,11 @@ _DEVICE_HEADERS = {
         ("iluvatar", "device_.h", "native/cuda/iluvatar/device_.h"),
         ("iluvatar", "runtime_.h", "native/cuda/iluvatar/runtime_.h"),
     ),
+    "hygon": (
+        ("hygon", "data_type_.h", "native/cuda/hygon/data_type_.h"),
+        ("hygon", "device_.h", "native/cuda/hygon/device_.h"),
+        ("hygon", "runtime_.h", "native/cuda/hygon/runtime_.h"),
+    ),
     "metax": (
         ("metax", "data_type_.h", "native/cuda/metax/data_type_.h"),
         ("metax", "device_.h", "native/cuda/metax/device_.h"),
