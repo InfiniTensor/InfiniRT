@@ -19,6 +19,14 @@ struct Runtime<Device::Type::kNvidia>
 
   static constexpr Device::Type kDeviceType = Device::Type::kNvidia;
 
+  static constexpr auto SetDevice = cudaSetDevice;
+
+  static constexpr auto GetDevice = cudaGetDevice;
+
+  static constexpr auto GetDeviceCount = cudaGetDeviceCount;
+
+  static constexpr auto DeviceSynchronize = cudaDeviceSynchronize;
+
   static constexpr auto Malloc = [](auto&&... args) {
     return cudaMalloc(std::forward<decltype(args)>(args)...);
   };
@@ -27,9 +35,13 @@ struct Runtime<Device::Type::kNvidia>
 
   static constexpr auto Free = cudaFree;
 
+  static constexpr auto MemcpyHostToHost = cudaMemcpyHostToHost;
+
   static constexpr auto MemcpyHostToDevice = cudaMemcpyHostToDevice;
 
   static constexpr auto MemcpyDeviceToHost = cudaMemcpyDeviceToHost;
+
+  static constexpr auto MemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = cudaMemset;
 };

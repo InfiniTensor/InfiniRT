@@ -15,15 +15,27 @@ struct Runtime<Device::Type::kMetax>
 
   static constexpr Device::Type kDeviceType = Device::Type::kMetax;
 
+  static constexpr auto SetDevice = mcSetDevice;
+
+  static constexpr auto GetDevice = mcGetDevice;
+
+  static constexpr auto GetDeviceCount = mcGetDeviceCount;
+
+  static constexpr auto DeviceSynchronize = mcDeviceSynchronize;
+
   static constexpr auto Malloc = mcMalloc;
 
   static constexpr auto Memcpy = mcMemcpy;
 
   static constexpr auto Free = mcFree;
 
+  static constexpr auto MemcpyHostToHost = mcMemcpyHostToHost;
+
   static constexpr auto MemcpyHostToDevice = mcMemcpyHostToDevice;
 
   static constexpr auto MemcpyDeviceToHost = mcMemcpyDeviceToHost;
+
+  static constexpr auto MemcpyDeviceToDevice = mcMemcpyDeviceToDevice;
 
   static constexpr auto Memset = mcMemset;
 };
