@@ -4,6 +4,8 @@ import pathlib
 import re
 
 
+_DETAIL_PREFIX = "infini/rt/detail"
+
 _DEVICE_HEADERS = {
     "cpu": (
         ("cpu", "data_type_.h", "native/cpu/data_type_.h"),
@@ -82,20 +84,83 @@ def _write_wrapper(include_root, device, header_name, target):
         f"""#ifndef {guard}
 #define {guard}
 
-#include "{target}"
+#include <{_DETAIL_PREFIX}/{target}>
 
 #endif
 """
     )
 
 
+def _detail_include(path):
+    return f"<{_DETAIL_PREFIX}/{path}>"
+
+
+def _rewrite_detail_include(match):
+    target = match.group(1)
+    return f"#include {_detail_include(target)}"
+
+
+_DETAIL_INCLUDE_PATTERN = re.compile(
+    r'#include "((?:common|native)/[^"]+|data_type\.h|device\.h|dispatcher\.h|hash\.h|runtime\.h|tensor_view\.h)"'
+)
+
+
+def _detail_header_dependencies(source_root, relative_path):
+    source_path = source_root / relative_path
+    text = source_path.read_text()
+
+    return {
+        target
+        for target in _DETAIL_INCLUDE_PATTERN.findall(text)
+        if (source_root / target).exists()
+    }
+
+
+def _write_detail_header(include_root, source_root, relative_path):
+    source_path = source_root / relative_path
+    output_path = include_root / _DETAIL_PREFIX / relative_path
+    text = source_path.read_text()
+    text = _DETAIL_INCLUDE_PATTERN.sub(_rewrite_detail_include, text)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(text)
+
+
+def _write_detail_headers(include_root, source_root, devices):
+    detail_headers = {
+        "common/constexpr_map.h",
+        "common/traits.h",
+        "data_type.h",
+        "device.h",
+        "dispatcher.h",
+        "hash.h",
+        "runtime.h",
+        "tensor_view.h",
+    }
+
+    for device in devices:
+        for _, _, target in _DEVICE_HEADERS[device]:
+            detail_headers.add(target)
+
+    pending_headers = list(detail_headers)
+    while pending_headers:
+        relative_path = pending_headers.pop()
+        for dependency in _detail_header_dependencies(source_root, relative_path):
+            if dependency not in detail_headers:
+                detail_headers.add(dependency)
+                pending_headers.append(dependency)
+
+    for relative_path in sorted(detail_headers):
+        _write_detail_header(include_root, source_root, relative_path)
+
+
 def _write_generated_header(include_root, devices):
     includes = [
-        '#include "data_type.h"',
-        '#include "device.h"',
-        '#include "hash.h"',
-        '#include "runtime.h"',
-        '#include "tensor_view.h"',
+        f"#include {_detail_include('data_type.h')}",
+        f"#include {_detail_include('device.h')}",
+        f"#include {_detail_include('hash.h')}",
+        f"#include {_detail_include('runtime.h')}",
+        f"#include {_detail_include('tensor_view.h')}",
     ]
 
     for device in devices:
@@ -349,7 +414,9 @@ def main():
             devices.append(device)
 
     include_root = pathlib.Path(args.output_dir)
+    source_root = pathlib.Path(args.runtime_header).parent
 
+    _write_detail_headers(include_root, source_root, devices)
     for device in devices:
         for wrapper_device, header_name, target in _DEVICE_HEADERS[device]:
             _write_wrapper(include_root, wrapper_device, header_name, target)
