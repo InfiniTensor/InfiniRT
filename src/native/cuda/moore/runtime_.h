@@ -17,6 +17,14 @@ struct Runtime<Device::Type::kMoore>
 
   static constexpr Device::Type kDeviceType = Device::Type::kMoore;
 
+  static constexpr auto SetDevice = musaSetDevice;
+
+  static constexpr auto GetDevice = musaGetDevice;
+
+  static constexpr auto GetDeviceCount = musaGetDeviceCount;
+
+  static constexpr auto DeviceSynchronize = musaDeviceSynchronize;
+
   static constexpr auto Malloc = [](auto&&... args) {
     return musaMalloc(std::forward<decltype(args)>(args)...);
   };
@@ -29,9 +37,13 @@ struct Runtime<Device::Type::kMoore>
     return musaFree(std::forward<decltype(args)>(args)...);
   };
 
+  static constexpr auto MemcpyHostToHost = musaMemcpyHostToHost;
+
   static constexpr auto MemcpyHostToDevice = musaMemcpyHostToDevice;
 
   static constexpr auto MemcpyDeviceToHost = musaMemcpyDeviceToHost;
+
+  static constexpr auto MemcpyDeviceToDevice = musaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = musaMemset;
 };

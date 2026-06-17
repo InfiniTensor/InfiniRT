@@ -321,6 +321,7 @@ execute_process(
     COMMAND ${Python_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_public_headers.py
         --output-dir ${CMAKE_CURRENT_SOURCE_DIR}/generated/include
+        --source-output ${CMAKE_CURRENT_SOURCE_DIR}/generated/src/runtime_dispatch.cc
         --devices ${INFINI_RT_PUBLIC_HEADER_DEVICES}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE INFINI_RT_PUBLIC_HEADER_RESULT

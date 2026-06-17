@@ -1,6 +1,7 @@
 #ifndef INFINI_RT_RUNTIME_H_
 #define INFINI_RT_RUNTIME_H_
 
+#include <cstddef>
 #include <type_traits>
 
 #include "device.h"
@@ -49,6 +50,29 @@ struct DeviceRuntime : RuntimeBase<Derived> {
     return true;
   }
 };
+
+enum class MemcpyKind {
+  kHostToHost,
+  kHostToDevice,
+  kDeviceToHost,
+  kDeviceToDevice,
+};
+
+void SetDevice(Device device);
+
+void GetDevice(Device* device);
+
+void GetDeviceCount(int* count, Device::Type type);
+
+void DeviceSynchronize();
+
+void Malloc(void** ptr, std::size_t size);
+
+void Free(void* ptr);
+
+void Memset(void* ptr, int value, std::size_t count);
+
+void Memcpy(void* dst, const void* src, std::size_t count, MemcpyKind kind);
 
 }  // namespace infini::rt
 

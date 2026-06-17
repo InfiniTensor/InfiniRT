@@ -3,7 +3,9 @@ add_library(infinirt SHARED)
 include(GNUInstallDirs)
 
 file(GLOB BASE_SRCS CONFIGURE_DEPENDS "*.cc")
-target_sources(infinirt PRIVATE ${BASE_SRCS})
+target_sources(infinirt PRIVATE
+    ${BASE_SRCS}
+    ${PROJECT_SOURCE_DIR}/generated/src/runtime_dispatch.cc)
 
 if(WITH_CPU)
     target_compile_definitions(infinirt PUBLIC WITH_CPU=1)

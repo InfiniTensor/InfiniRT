@@ -1,6 +1,7 @@
 #include <infini/rt.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 int main() {
@@ -16,6 +17,23 @@ int main() {
   if (tensor.numel() != 4 || !tensor.IsContiguous()) {
     return 1;
   }
+
+#if defined(INFINI_RT_CONSUMER_BACKEND_CPU) || \
+    defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA)
+#if defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA)
+  const infini::rt::Device runtime_device{infini::rt::Device::Type::kNvidia};
+#else
+  const infini::rt::Device runtime_device{infini::rt::Device::Type::kCpu};
+#endif
+
+  void* ptr = nullptr;
+  infini::rt::SetDevice(runtime_device);
+  infini::rt::Malloc(&ptr, sizeof(std::uint32_t));
+  if (ptr == nullptr) {
+    return 1;
+  }
+  infini::rt::Free(ptr);
+#endif
 
   return 0;
 }
