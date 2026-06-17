@@ -71,10 +71,8 @@ void TestTensorView(infini::rt::test::TestContext* context) {
   context->Expect(!transposed.IsContiguous(),
                   "Transposed TensorView should not be contiguous.");
 
-  TensorView strided{data.data(),
-                     std::vector<std::size_t>{2, 3},
-                     DataType::kFloat32,
-                     Device{Device::Type::kCpu},
+  TensorView strided{data.data(), std::vector<std::size_t>{2, 3},
+                     DataType::kFloat32, Device{Device::Type::kCpu},
                      std::vector<std::ptrdiff_t>{4, 1}};
   context->Expect(!strided.IsContiguous(),
                   "TensorView with row padding should not be contiguous.");

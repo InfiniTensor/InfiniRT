@@ -5,8 +5,8 @@
 
 #include <utility>
 
-#include "native/cuda/runtime_.h"
 #include "native/cuda/moore/device_.h"
+#include "native/cuda/runtime_.h"
 
 namespace infini::rt {
 

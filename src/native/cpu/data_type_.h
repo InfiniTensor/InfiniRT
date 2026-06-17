@@ -1,8 +1,8 @@
 #ifndef INFINI_RT_CPU_DATA_TYPE__H_
 #define INFINI_RT_CPU_DATA_TYPE__H_
 
-#include "native/cpu/device_.h"
 #include "data_type.h"
+#include "native/cpu/device_.h"
 
 namespace infini::rt {
 

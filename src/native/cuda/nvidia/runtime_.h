@@ -7,8 +7,8 @@
 #include <cuda_runtime.h>
 // clang-format on
 
-#include "native/cuda/runtime_.h"
 #include "native/cuda/nvidia/device_.h"
+#include "native/cuda/runtime_.h"
 
 namespace infini::rt {
 

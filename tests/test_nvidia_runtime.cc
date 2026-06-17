@@ -51,8 +51,7 @@ void TestMemcpyRoundTrip(infini::rt::test::TestContext* context) {
                     "NVIDIA runtime should free copy memory.");
 
   context->ExpectEqual(
-      output, input,
-      "NVIDIA runtime should copy data through device memory.");
+      output, input, "NVIDIA runtime should copy data through device memory.");
 }
 
 void TestMemset(infini::rt::test::TestContext* context) {
