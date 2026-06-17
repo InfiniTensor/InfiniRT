@@ -19,11 +19,17 @@ struct Runtime<Device::Type::kMoore>
 
   static constexpr auto SetDevice = musaSetDevice;
 
-  static constexpr auto GetDevice = musaGetDevice;
+  static constexpr auto GetDevice = [](auto&&... args) {
+    return musaGetDevice(std::forward<decltype(args)>(args)...);
+  };
 
-  static constexpr auto GetDeviceCount = musaGetDeviceCount;
+  static constexpr auto GetDeviceCount = [](auto&&... args) {
+    return musaGetDeviceCount(std::forward<decltype(args)>(args)...);
+  };
 
-  static constexpr auto DeviceSynchronize = musaDeviceSynchronize;
+  static constexpr auto DeviceSynchronize = [](auto&&... args) {
+    return musaDeviceSynchronize(std::forward<decltype(args)>(args)...);
+  };
 
   static constexpr auto Malloc = [](auto&&... args) {
     return musaMalloc(std::forward<decltype(args)>(args)...);
