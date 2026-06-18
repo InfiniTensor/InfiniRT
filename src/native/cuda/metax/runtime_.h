@@ -3,6 +3,8 @@
 
 #include <mcr/mc_runtime.h>
 
+#include <utility>
+
 #include "native/cuda/metax/device_.h"
 #include "native/cuda/runtime_.h"
 
@@ -23,11 +25,17 @@ struct Runtime<Device::Type::kMetax>
 
   static constexpr auto DeviceSynchronize = mcDeviceSynchronize;
 
-  static constexpr auto Malloc = mcMalloc;
+  static constexpr auto Malloc = [](auto&&... args) {
+    return mcMalloc(std::forward<decltype(args)>(args)...);
+  };
 
-  static constexpr auto Memcpy = mcMemcpy;
+  static constexpr auto Memcpy = [](auto&&... args) {
+    return mcMemcpy(std::forward<decltype(args)>(args)...);
+  };
 
-  static constexpr auto Free = mcFree;
+  static constexpr auto Free = [](auto&&... args) {
+    return mcFree(std::forward<decltype(args)>(args)...);
+  };
 
   static constexpr auto MemcpyHostToHost = mcMemcpyHostToHost;
 
