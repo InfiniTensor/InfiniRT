@@ -2,6 +2,7 @@
 #define INFINI_RT_RUNTIME_H_
 
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 #include "device.h"
@@ -51,28 +52,84 @@ struct DeviceRuntime : RuntimeBase<Derived> {
   }
 };
 
-enum class MemcpyKind {
-  kHostToHost,
-  kHostToDevice,
-  kDeviceToHost,
-  kDeviceToDevice,
+enum class Error {
+  kSuccess = 0,
+  kUnSuccess = -1,
 };
 
-void SetDevice(Device device);
+inline constexpr infini::rt::Error kSuccess = infini::rt::Error::kSuccess;
+inline constexpr infini::rt::Error kUnSuccess = infini::rt::Error::kUnSuccess;
 
-void GetDevice(Device* device);
+enum class MemcpyKind {
+  kMemcpyHostToHost,
+  kMemcpyHostToDevice,
+  kMemcpyDeviceToHost,
+  kMemcpyDeviceToDevice,
+};
 
-void GetDeviceCount(int* count, Device::Type type);
+using Stream = void*;
+using Event = void*;
 
-void DeviceSynchronize();
+infini::rt::Error SetDevice(int device);
 
-void Malloc(void** ptr, std::size_t size);
+infini::rt::Error GetDevice(int* device);
 
-void Free(void* ptr);
+infini::rt::Error GetDeviceCount(int* count);
 
-void Memset(void* ptr, int value, std::size_t count);
+infini::rt::Error DeviceSynchronize();
 
-void Memcpy(void* dst, const void* src, std::size_t count, MemcpyKind kind);
+infini::rt::Error Malloc(void** ptr, std::size_t size);
+
+infini::rt::Error Free(void* ptr);
+
+infini::rt::Error Memset(void* ptr, int value, std::size_t count);
+
+infini::rt::Error Memcpy(void* dst, const void* src, std::size_t count,
+                         infini::rt::MemcpyKind kind);
+
+infini::rt::Error MallocHost(void** ptr, std::size_t size);
+
+infini::rt::Error FreeHost(void* ptr);
+
+infini::rt::Error MemcpyAsync(void* dst, const void* src, std::size_t count,
+                              infini::rt::MemcpyKind kind,
+                              infini::rt::Stream stream);
+
+infini::rt::Error MallocAsync(void** ptr, std::size_t size,
+                              infini::rt::Stream stream);
+
+infini::rt::Error FreeAsync(void* ptr, infini::rt::Stream stream);
+
+infini::rt::Error MemsetAsync(void* ptr, int value, std::size_t count,
+                              infini::rt::Stream stream);
+
+infini::rt::Error MemGetInfo(std::size_t* free_bytes, std::size_t* total_bytes);
+
+infini::rt::Error StreamCreate(infini::rt::Stream* stream);
+
+infini::rt::Error StreamDestroy(infini::rt::Stream stream);
+
+infini::rt::Error StreamSynchronize(infini::rt::Stream stream);
+
+infini::rt::Error StreamWaitEvent(infini::rt::Stream stream,
+                                  infini::rt::Event event, std::uint32_t flags);
+
+infini::rt::Error EventCreate(infini::rt::Event* event);
+
+infini::rt::Error EventCreateWithFlags(infini::rt::Event* event,
+                                       std::uint32_t flags);
+
+infini::rt::Error EventRecord(infini::rt::Event event,
+                              infini::rt::Stream stream);
+
+infini::rt::Error EventQuery(infini::rt::Event event);
+
+infini::rt::Error EventSynchronize(infini::rt::Event event);
+
+infini::rt::Error EventDestroy(infini::rt::Event event);
+
+infini::rt::Error EventElapsedTime(float* ms, infini::rt::Event start,
+                                   infini::rt::Event end);
 
 }  // namespace infini::rt
 
