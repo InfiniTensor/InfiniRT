@@ -1,6 +1,6 @@
 # InfiniRT
 
-InfiniRT is the runtime library of the InfiniTensor project. It provides a stable runtime API for device management and memory operations across supported backends such as CPU and NVIDIA.
+InfiniRT is the runtime library of the InfiniCore project. It provides a stable runtime API for device management and memory operations across supported backends such as CPU and NVIDIA.
 
 The recommended public entry is:
 
@@ -127,8 +127,6 @@ ctest --test-dir build --output-on-failure
 
 ## Formatting
 
-InfiniRT follows the project formatting rules used by InfiniTensor repositories.
-
 C++ code should be formatted with `clang-format`.
 
 Python scripts should be checked and formatted with Ruff:
@@ -140,4 +138,4 @@ ruff check .
 
 ## Contributing
 
-Please follow the repository's `CONTRIBUTING.md`. In particular, C++ code should follow the Google C++ Style Guide and the additional InfiniTensor project rules.
+Please follow the repository's `CONTRIBUTING.md`.
