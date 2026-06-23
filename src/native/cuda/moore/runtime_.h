@@ -18,6 +18,10 @@ struct Runtime<Device::Type::kMoore>
 
   using Stream = musaStream_t;
 
+  using Graph = void*;
+
+  using GraphExec = void*;
+
   using Event = musaEvent_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kMoore;
@@ -131,6 +135,28 @@ struct Runtime<Device::Type::kMoore>
   static constexpr auto EventElapsedTime = [](auto&&... args) {
     return musaEventElapsedTime(std::forward<decltype(args)>(args)...);
   };
+
+  static constexpr int kStreamCaptureModeGlobal = 0;
+
+  static constexpr int kStreamCaptureModeThreadLocal = 1;
+
+  static constexpr int kStreamCaptureModeRelaxed = 2;
+
+  static Error StreamBeginCapture(Stream, int) { return static_cast<Error>(1); }
+
+  static Error StreamEndCapture(Stream, Graph*) {
+    return static_cast<Error>(1);
+  }
+
+  static Error GraphDestroy(Graph) { return static_cast<Error>(1); }
+
+  static Error GraphInstantiate(GraphExec*, Graph) {
+    return static_cast<Error>(1);
+  }
+
+  static Error GraphExecDestroy(GraphExec) { return static_cast<Error>(1); }
+
+  static Error GraphLaunch(GraphExec, Stream) { return static_cast<Error>(1); }
 };
 
 static_assert(Runtime<Device::Type::kMoore>::Validate());

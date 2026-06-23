@@ -156,9 +156,31 @@ def _write_detail_headers(include_root, source_root, devices):
         _write_detail_header(include_root, source_root, relative_path)
 
 
-def _write_generated_header(include_root, devices):
+def _write_generated_header(include_root, source_root, devices):
     default_device = _default_device(devices)
     default_device_type = _DEVICE_TYPES[default_device]
+    public_runtime_functions = _public_runtime_functions_for_devices(
+        devices, source_root
+    )
+    has_graph_api = any(
+        function.name in {"StreamBeginCapture", "GraphLaunch"}
+        for function in public_runtime_functions
+    )
+    graph_declarations = (
+        """
+using Graph = void*;
+
+using GraphExec = void*;
+
+enum class StreamCaptureMode {
+  kStreamCaptureModeGlobal = 0,
+  kStreamCaptureModeThreadLocal = 1,
+  kStreamCaptureModeRelaxed = 2,
+};
+"""
+        if has_graph_api
+        else ""
+    )
     includes = [
         "#include <cstddef>",
         "#include <cstdint>",
@@ -177,7 +199,7 @@ def _write_generated_header(include_root, devices):
         includes.append(f"#include <infini/rt/{device}/runtime_.h>")
 
     runtime_declarations = "\n\n".join(
-        f"{function.signature()};" for function in _PUBLIC_RUNTIME_FUNCTIONS
+        f"{function.signature()};" for function in public_runtime_functions
     )
 
     path = include_root / "infini" / "rt" / "generated.h"
@@ -209,6 +231,7 @@ using Stream = typename generated_detail::DefaultErrorRuntime::Stream;
 
 using Event = void*;
 
+{graph_declarations}
 using MemcpyKind = std::remove_cv_t<
     decltype(generated_detail::DefaultErrorRuntime::kMemcpyHostToHost)>;
 
@@ -366,6 +389,32 @@ _PUBLIC_RUNTIME_FUNCTIONS = (
             _Param("Event", "end"),
         ),
     ),
+    _Function(
+        "Error",
+        "StreamBeginCapture",
+        (_Param("Stream", "stream"), _Param("StreamCaptureMode", "mode")),
+    ),
+    _Function(
+        "Error",
+        "StreamEndCapture",
+        (_Param("Stream", "stream"), _Param("Graph*", "graph")),
+    ),
+    _Function("Error", "GraphDestroy", (_Param("Graph", "graph"),)),
+    _Function(
+        "Error",
+        "GraphInstantiate",
+        (_Param("GraphExec*", "graph_exec"), _Param("Graph", "graph")),
+    ),
+    _Function(
+        "Error",
+        "GraphExecDestroy",
+        (_Param("GraphExec", "graph_exec"),),
+    ),
+    _Function(
+        "Error",
+        "GraphLaunch",
+        (_Param("GraphExec", "graph_exec"), _Param("Stream", "stream")),
+    ),
 )
 
 
@@ -395,6 +444,24 @@ def _runtime_arg(param, device):
         return (
             f"reinterpret_cast<typename Runtime<{device_type}>::Event*>({param.name})"
         )
+    if param.type == "Graph":
+        return f"reinterpret_cast<typename Runtime<{device_type}>::Graph>({param.name})"
+    if param.type == "Graph*":
+        return (
+            f"reinterpret_cast<typename Runtime<{device_type}>::Graph*>({param.name})"
+        )
+    if param.type == "GraphExec":
+        return (
+            f"reinterpret_cast<typename Runtime<{device_type}>::GraphExec>"
+            f"({param.name})"
+        )
+    if param.type == "GraphExec*":
+        return (
+            f"reinterpret_cast<typename Runtime<{device_type}>::GraphExec*>"
+            f"({param.name})"
+        )
+    if param.type == "StreamCaptureMode":
+        return f"RuntimeStreamCaptureMode<{device_type}>({param.name})"
 
     return param.name
 
@@ -452,8 +519,42 @@ def _devices_for_function(function, devices, source_root):
     )
 
 
+def _public_runtime_functions_for_devices(devices, source_root):
+    return tuple(
+        function
+        for function in _PUBLIC_RUNTIME_FUNCTIONS
+        if _devices_for_function(function, devices, source_root)
+    )
+
+
 def _write_runtime_dispatch(source_path, source_root, devices):
-    functions = _PUBLIC_RUNTIME_FUNCTIONS
+    functions = _public_runtime_functions_for_devices(devices, source_root)
+    stream_capture_mode_helper = (
+        """
+template <Device::Type device_type>
+auto RuntimeStreamCaptureMode(StreamCaptureMode mode) {
+  using DeviceRuntime = Runtime<device_type>;
+
+  switch (mode) {
+    case StreamCaptureMode::kStreamCaptureModeGlobal:
+      return DeviceRuntime::kStreamCaptureModeGlobal;
+    case StreamCaptureMode::kStreamCaptureModeThreadLocal:
+      return DeviceRuntime::kStreamCaptureModeThreadLocal;
+    case StreamCaptureMode::kStreamCaptureModeRelaxed:
+      return DeviceRuntime::kStreamCaptureModeRelaxed;
+  }
+
+  assert(false && "unsupported stream capture mode");
+  return DeviceRuntime::kStreamCaptureModeRelaxed;
+}
+"""
+        if any(
+            param.type == "StreamCaptureMode"
+            for function in functions
+            for param in function.params
+        )
+        else ""
+    )
     dispatch_functions = "\n".join(
         _write_runtime_dispatch_function(
             function,
@@ -535,6 +636,7 @@ auto RuntimeMemcpyKind(MemcpyKind kind) {{
   return DeviceRuntime::kMemcpyHostToHost;
 }}
 
+{stream_capture_mode_helper}
 }}  // namespace
 
 {dispatch_functions}
@@ -566,7 +668,7 @@ def main():
         for wrapper_device, header_name, target in _DEVICE_HEADERS[device]:
             _write_wrapper(include_root, wrapper_device, header_name, target)
 
-    _write_generated_header(include_root, devices)
+    _write_generated_header(include_root, source_root, devices)
     _write_runtime_dispatch(pathlib.Path(args.source_output), source_root, devices)
 
 

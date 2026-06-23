@@ -19,6 +19,10 @@ struct Runtime<Device::Type::kNvidia>
 
   using Stream = cudaStream_t;
 
+  using Graph = cudaGraph_t;
+
+  using GraphExec = cudaGraphExec_t;
+
   using Event = cudaEvent_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kNvidia;
@@ -78,7 +82,8 @@ struct Runtime<Device::Type::kNvidia>
   };
 
   static constexpr auto StreamCreate = [](auto&&... args) {
-    return cudaStreamCreate(std::forward<decltype(args)>(args)...);
+    return cudaStreamCreateWithFlags(std::forward<decltype(args)>(args)...,
+                                     cudaStreamNonBlocking);
   };
 
   static constexpr auto StreamDestroy = [](auto&&... args) {
@@ -120,6 +125,78 @@ struct Runtime<Device::Type::kNvidia>
   static constexpr auto EventElapsedTime = [](auto&&... args) {
     return cudaEventElapsedTime(std::forward<decltype(args)>(args)...);
   };
+
+  static constexpr auto kStreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;
+
+  static constexpr auto kStreamCaptureModeThreadLocal =
+      cudaStreamCaptureModeThreadLocal;
+
+  static constexpr auto kStreamCaptureModeRelaxed =
+      cudaStreamCaptureModeRelaxed;
+
+  static constexpr auto StreamBeginCapture = [](auto&&... args) {
+    return cudaStreamBeginCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamEndCapture = [](auto&&... args) {
+    return cudaStreamEndCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphDestroy = [](auto&&... args) {
+    return cudaGraphDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphInstantiate = [](auto&&... args) {
+    return cudaGraphInstantiate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphExecDestroy = [](auto&&... args) {
+    return cudaGraphExecDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphLaunch = [](auto&&... args) {
+    return cudaGraphLaunch(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr bool Validate() {
+    CudaRuntime<Runtime<Device::Type::kNvidia>>::Validate();
+    static_assert(sizeof(Graph) > 0,
+                  "`Runtime` must define a `Graph` type alias.");
+    static_assert(sizeof(GraphExec) > 0,
+                  "`Runtime` must define a `GraphExec` type alias.");
+    static_assert(std::is_invocable_v<decltype(StreamCreate), Stream*>,
+                  "`Runtime::StreamCreate` must be callable with `(Stream*)`.");
+    static_assert(std::is_invocable_v<decltype(StreamDestroy), Stream>,
+                  "`Runtime::StreamDestroy` must be callable with `(Stream)`.");
+    static_assert(
+        std::is_invocable_v<decltype(StreamSynchronize), Stream>,
+        "`Runtime::StreamSynchronize` must be callable with `(Stream)`.");
+    static_assert(std::is_invocable_v<decltype(MemcpyAsync), void*, const void*,
+                                      std::size_t, cudaMemcpyKind, Stream>,
+                  "`Runtime::MemcpyAsync` must be callable with "
+                  "`(void*, const void*, size_t, cudaMemcpyKind, Stream)`.");
+    static_assert(std::is_invocable_v<decltype(StreamBeginCapture), Stream,
+                                      cudaStreamCaptureMode>,
+                  "`Runtime::StreamBeginCapture` must be callable with "
+                  "`(Stream, cudaStreamCaptureMode)`.");
+    static_assert(
+        std::is_invocable_v<decltype(StreamEndCapture), Stream, Graph*>,
+        "`Runtime::StreamEndCapture` must be callable with "
+        "`(Stream, Graph*)`.");
+    static_assert(std::is_invocable_v<decltype(GraphDestroy), Graph>,
+                  "`Runtime::GraphDestroy` must be callable with `(Graph)`.");
+    static_assert(
+        std::is_invocable_v<decltype(GraphInstantiate), GraphExec*, Graph>,
+        "`Runtime::GraphInstantiate` must be callable with "
+        "`(GraphExec*, Graph)`.");
+    static_assert(
+        std::is_invocable_v<decltype(GraphExecDestroy), GraphExec>,
+        "`Runtime::GraphExecDestroy` must be callable with `(GraphExec)`.");
+    static_assert(
+        std::is_invocable_v<decltype(GraphLaunch), GraphExec, Stream>,
+        "`Runtime::GraphLaunch` must be callable with `(GraphExec, Stream)`.");
+    return true;
+  }
 };
 
 static_assert(Runtime<Device::Type::kNvidia>::Validate());

@@ -3,6 +3,7 @@
 
 #include <mcr/mc_runtime.h>
 
+#include <cstddef>
 #include <utility>
 
 #include "native/cuda/metax/device_.h"
@@ -16,6 +17,10 @@ struct Runtime<Device::Type::kMetax>
   using Error = mcError_t;
 
   using Stream = mcStream_t;
+
+  using Graph = void*;
+
+  using GraphExec = void*;
 
   using Event = mcEvent_t;
 
@@ -124,6 +129,28 @@ struct Runtime<Device::Type::kMetax>
   static constexpr auto EventElapsedTime = [](auto&&... args) {
     return mcEventElapsedTime(std::forward<decltype(args)>(args)...);
   };
+
+  static constexpr int kStreamCaptureModeGlobal = 0;
+
+  static constexpr int kStreamCaptureModeThreadLocal = 1;
+
+  static constexpr int kStreamCaptureModeRelaxed = 2;
+
+  static Error StreamBeginCapture(Stream, int) { return static_cast<Error>(1); }
+
+  static Error StreamEndCapture(Stream, Graph*) {
+    return static_cast<Error>(1);
+  }
+
+  static Error GraphDestroy(Graph) { return static_cast<Error>(1); }
+
+  static Error GraphInstantiate(GraphExec*, Graph) {
+    return static_cast<Error>(1);
+  }
+
+  static Error GraphExecDestroy(GraphExec) { return static_cast<Error>(1); }
+
+  static Error GraphLaunch(GraphExec, Stream) { return static_cast<Error>(1); }
 };
 
 static_assert(Runtime<Device::Type::kMetax>::Validate());

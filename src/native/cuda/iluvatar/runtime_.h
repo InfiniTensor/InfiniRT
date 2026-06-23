@@ -19,6 +19,10 @@ struct Runtime<Device::Type::kIluvatar>
 
   using Stream = cudaStream_t;
 
+  using Graph = cudaGraph_t;
+
+  using GraphExec = cudaGraphExec_t;
+
   using Event = cudaEvent_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kIluvatar;
@@ -78,7 +82,8 @@ struct Runtime<Device::Type::kIluvatar>
   };
 
   static constexpr auto StreamCreate = [](auto&&... args) {
-    return cudaStreamCreate(std::forward<decltype(args)>(args)...);
+    return cudaStreamCreateWithFlags(std::forward<decltype(args)>(args)...,
+                                     cudaStreamNonBlocking);
   };
 
   static constexpr auto StreamDestroy = [](auto&&... args) {
@@ -119,6 +124,38 @@ struct Runtime<Device::Type::kIluvatar>
 
   static constexpr auto EventElapsedTime = [](auto&&... args) {
     return cudaEventElapsedTime(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto kStreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;
+
+  static constexpr auto kStreamCaptureModeThreadLocal =
+      cudaStreamCaptureModeThreadLocal;
+
+  static constexpr auto kStreamCaptureModeRelaxed =
+      cudaStreamCaptureModeRelaxed;
+
+  static constexpr auto StreamBeginCapture = [](auto&&... args) {
+    return cudaStreamBeginCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamEndCapture = [](auto&&... args) {
+    return cudaStreamEndCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphDestroy = [](auto&&... args) {
+    return cudaGraphDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphInstantiate = [](auto&&... args) {
+    return cudaGraphInstantiate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphExecDestroy = [](auto&&... args) {
+    return cudaGraphExecDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphLaunch = [](auto&&... args) {
+    return cudaGraphLaunch(std::forward<decltype(args)>(args)...);
   };
 };
 
