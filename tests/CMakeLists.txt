@@ -17,6 +17,7 @@ endif()
 
 if(WITH_NVIDIA)
     add_infini_rt_test(test_nvidia_runtime test_nvidia_runtime.cc)
+    add_infini_rt_test(test_nvidia_graph test_nvidia_graph.cc)
 endif()
 
 set(INFINI_RT_TEST_INSTALL_PREFIX

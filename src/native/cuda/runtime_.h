@@ -1,6 +1,7 @@
 #ifndef INFINI_RT_CUDA_RUNTIME_H_
 #define INFINI_RT_CUDA_RUNTIME_H_
 
+#include <cstddef>
 #include <type_traits>
 
 #include "runtime.h"
@@ -17,7 +18,7 @@ struct CudaRuntime : DeviceRuntime<Derived> {
     DeviceRuntime<Derived>::Validate();
     static_assert(
         std::is_invocable_v<decltype(Derived::Memcpy), void*, const void*,
-                            size_t, decltype(Derived::MemcpyHostToDevice)>,
+                            std::size_t, decltype(Derived::MemcpyHostToDevice)>,
         "`Runtime::Memcpy` must be callable with "
         "`(void*, const void*, size_t, MemcpyHostToDevice)`.");
     return true;

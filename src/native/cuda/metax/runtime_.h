@@ -3,6 +3,7 @@
 
 #include <mcr/mc_runtime.h>
 
+#include <cstddef>
 #include <utility>
 
 #include "native/cuda/metax/device_.h"
@@ -14,6 +15,10 @@ template <>
 struct Runtime<Device::Type::kMetax>
     : CudaRuntime<Runtime<Device::Type::kMetax>> {
   using Stream = mcStream_t;
+
+  using Graph = void*;
+
+  using GraphExec = void*;
 
   static constexpr Device::Type kDeviceType = Device::Type::kMetax;
 
@@ -46,6 +51,35 @@ struct Runtime<Device::Type::kMetax>
   static constexpr auto MemcpyDeviceToDevice = mcMemcpyDeviceToDevice;
 
   static constexpr auto Memset = mcMemset;
+
+  static int StreamCreate(Stream*) { return 1; }
+
+  static int StreamDestroy(Stream) { return 1; }
+
+  static int StreamSynchronize(Stream) { return 1; }
+
+  static int MemcpyAsync(void*, const void*, std::size_t,
+                         decltype(MemcpyHostToDevice), Stream) {
+    return 1;
+  }
+
+  static constexpr int StreamCaptureModeGlobal = 0;
+
+  static constexpr int StreamCaptureModeThreadLocal = 1;
+
+  static constexpr int StreamCaptureModeRelaxed = 2;
+
+  static int StreamBeginCapture(Stream, int) { return 1; }
+
+  static int StreamEndCapture(Stream, Graph*) { return 1; }
+
+  static int GraphDestroy(Graph) { return 1; }
+
+  static int GraphInstantiate(GraphExec*, Graph) { return 1; }
+
+  static int GraphExecDestroy(GraphExec) { return 1; }
+
+  static int GraphLaunch(GraphExec, Stream) { return 1; }
 };
 
 static_assert(Runtime<Device::Type::kMetax>::Validate());

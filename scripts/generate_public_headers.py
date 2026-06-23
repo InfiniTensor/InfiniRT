@@ -101,7 +101,7 @@ def _rewrite_detail_include(match):
 
 
 _DETAIL_INCLUDE_PATTERN = re.compile(
-    r'#include "((?:common|native)/[^"]+|data_type\.h|device\.h|dispatcher\.h|hash\.h|runtime\.h|tensor_view\.h)"'
+    r'#include "((?:common|native)/[^"]+|data_type\.h|device\.h|dispatcher\.h|graph\.h|hash\.h|runtime\.h|tensor_view\.h)"'
 )
 
 
@@ -133,6 +133,7 @@ def _write_detail_headers(include_root, source_root, devices):
         "data_type.h",
         "device.h",
         "dispatcher.h",
+        "graph.h",
         "hash.h",
         "runtime.h",
         "tensor_view.h",
@@ -158,6 +159,7 @@ def _write_generated_header(include_root, devices):
     includes = [
         f"#include {_detail_include('data_type.h')}",
         f"#include {_detail_include('device.h')}",
+        f"#include {_detail_include('graph.h')}",
         f"#include {_detail_include('hash.h')}",
         f"#include {_detail_include('runtime.h')}",
         f"#include {_detail_include('tensor_view.h')}",
@@ -210,7 +212,11 @@ def _parse_runtime_functions(runtime_header):
         _Function(
             return_type,
             name,
-            tuple(_parse_param(param) for param in params.split(", ") if param),
+            tuple(
+                _parse_param(param)
+                for param in re.split(r",\s*", params.strip())
+                if param
+            ),
         )
         for return_type, name, params in re.findall(
             r"^(void) ([A-Z]\w*)\(([^()]*)\);$", text, re.MULTILINE
@@ -239,6 +245,8 @@ def _selector(function):
             return f"{param.name}.type()"
         if param.type == "Device::Type":
             return param.name
+        if param.type in {"Stream", "Graph", "GraphExec"}:
+            return f"{param.name}.device_type()"
 
     return "current_device.type()"
 
@@ -250,6 +258,13 @@ def _runtime_arg(param):
         return None
     if param.type == "MemcpyKind":
         return f"RuntimeMemcpyKind<__DEVICE_TYPE__>({param.name})"
+    if param.type == "StreamCaptureMode":
+        return f"RuntimeStreamCaptureMode<__DEVICE_TYPE__>({param.name})"
+    if param.type in {"Stream", "Graph", "GraphExec"}:
+        return (
+            f"static_cast<typename Runtime<__DEVICE_TYPE__>::{param.type}>"
+            f"({param.name}.raw())"
+        )
 
     return param.name
 
@@ -264,6 +279,9 @@ def _preconditions(function):
     required_pointer_names = {
         "GetDevice": {"device"},
         "GetDeviceCount": {"count"},
+        "StreamCreate": {"stream"},
+        "StreamEndCapture": {"graph"},
+        "GraphInstantiate": {"graph_exec"},
     }
     checks = []
     for param in function.params:
@@ -290,6 +308,27 @@ def _runtime_call(function):
     return f"Runtime<__DEVICE_TYPE__>::{function.name}()"
 
 
+def _write_stream_create(function, devices):
+    stream_param = function.params[0].name
+    cases = _dispatch_cases(
+        devices,
+        f"""      typename Runtime<__DEVICE_TYPE__>::Stream raw_stream = {{}};
+      CheckCall([&] {{ return Runtime<__DEVICE_TYPE__>::StreamCreate(&raw_stream); }});
+      *{stream_param} = Stream{{__DEVICE_TYPE__, static_cast<void*>(raw_stream)}};""",
+    )
+
+    return f"""void StreamCreate(Stream* {stream_param}) {{
+  assert({stream_param} != nullptr);
+
+  switch (current_device.type()) {{
+{cases}
+    default:
+{_abort_statement("runtime device is not enabled")}
+  }}
+}}
+"""
+
+
 def _write_get_device(function, devices):
     device_param = function.params[0].name
     cases = _dispatch_cases(
@@ -312,9 +351,81 @@ def _write_get_device(function, devices):
 """
 
 
+def _write_stream_end_capture(function, devices):
+    stream_param = function.params[0].name
+    graph_param = function.params[1].name
+    cases = _dispatch_cases(
+        devices,
+        f"""      typename Runtime<__DEVICE_TYPE__>::Graph raw_graph = {{}};
+      CheckCall([&] {{ return Runtime<__DEVICE_TYPE__>::StreamEndCapture(static_cast<typename Runtime<__DEVICE_TYPE__>::Stream>({stream_param}.raw()), &raw_graph); }});
+      *{graph_param} = Graph{{__DEVICE_TYPE__, static_cast<void*>(raw_graph)}};""",
+    )
+
+    return f"""void StreamEndCapture(Stream {stream_param}, Graph* {graph_param}) {{
+  assert({graph_param} != nullptr);
+
+  switch ({stream_param}.device_type()) {{
+{cases}
+    default:
+{_abort_statement("runtime device is not enabled")}
+  }}
+}}
+"""
+
+
+def _write_graph_instantiate(function, devices):
+    graph_exec_param = function.params[0].name
+    graph_param = function.params[1].name
+    cases = _dispatch_cases(
+        devices,
+        f"""      typename Runtime<__DEVICE_TYPE__>::GraphExec raw_graph_exec = {{}};
+      CheckCall([&] {{ return Runtime<__DEVICE_TYPE__>::GraphInstantiate(&raw_graph_exec, static_cast<typename Runtime<__DEVICE_TYPE__>::Graph>({graph_param}.raw())); }});
+      *{graph_exec_param} = GraphExec{{__DEVICE_TYPE__, static_cast<void*>(raw_graph_exec)}};""",
+    )
+
+    return f"""void GraphInstantiate(GraphExec* {graph_exec_param}, Graph {graph_param}) {{
+  assert({graph_exec_param} != nullptr);
+
+  switch ({graph_param}.device_type()) {{
+{cases}
+    default:
+{_abort_statement("runtime device is not enabled")}
+  }}
+}}
+"""
+
+
+def _write_graph_launch(function, devices):
+    graph_exec_param = function.params[0].name
+    stream_param = function.params[1].name
+    cases = _dispatch_cases(
+        devices,
+        f"""      CheckCall([&] {{ return Runtime<__DEVICE_TYPE__>::GraphLaunch(static_cast<typename Runtime<__DEVICE_TYPE__>::GraphExec>({graph_exec_param}.raw()), static_cast<typename Runtime<__DEVICE_TYPE__>::Stream>({stream_param}.raw())); }});""",
+    )
+
+    return f"""void GraphLaunch(GraphExec {graph_exec_param}, Stream {stream_param}) {{
+  assert({graph_exec_param}.device_type() == {stream_param}.device_type());
+
+  switch ({graph_exec_param}.device_type()) {{
+{cases}
+    default:
+{_abort_statement("runtime device is not enabled")}
+  }}
+}}
+"""
+
+
 def _write_dispatch_function(function, devices):
     if function.name == "GetDevice":
         return _write_get_device(function, devices)
+    if function.name == "StreamCreate":
+        return _write_stream_create(function, devices)
+    if function.name == "StreamEndCapture":
+        return _write_stream_end_capture(function, devices)
+    if function.name == "GraphInstantiate":
+        return _write_graph_instantiate(function, devices)
+    if function.name == "GraphLaunch":
+        return _write_graph_launch(function, devices)
 
     cases = _dispatch_cases(
         devices,
@@ -388,6 +499,22 @@ auto RuntimeMemcpyKind(MemcpyKind kind) {{
   assert(false && "unsupported memcpy kind");
   std::abort();
   return Runtime<kDev>::MemcpyHostToHost;
+}}
+
+template <Device::Type kDev>
+auto RuntimeStreamCaptureMode(StreamCaptureMode mode) {{
+  switch (mode) {{
+    case StreamCaptureMode::kGlobal:
+      return Runtime<kDev>::StreamCaptureModeGlobal;
+    case StreamCaptureMode::kThreadLocal:
+      return Runtime<kDev>::StreamCaptureModeThreadLocal;
+    case StreamCaptureMode::kRelaxed:
+      return Runtime<kDev>::StreamCaptureModeRelaxed;
+  }}
+
+  assert(false && "unsupported stream capture mode");
+  std::abort();
+  return Runtime<kDev>::StreamCaptureModeGlobal;
 }}
 
 }}  // namespace

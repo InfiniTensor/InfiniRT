@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "device.h"
+#include "graph.h"
 
 namespace infini::rt {
 
@@ -70,9 +71,30 @@ void Malloc(void** ptr, std::size_t size);
 
 void Free(void* ptr);
 
+void Memcpy(void* dst, const void* src, std::size_t count, MemcpyKind kind);
+
+void MemcpyAsync(void* dst, const void* src, std::size_t count, MemcpyKind kind,
+                 Stream stream);
+
 void Memset(void* ptr, int value, std::size_t count);
 
-void Memcpy(void* dst, const void* src, std::size_t count, MemcpyKind kind);
+void StreamCreate(Stream* stream);
+
+void StreamDestroy(Stream stream);
+
+void StreamSynchronize(Stream stream);
+
+void StreamBeginCapture(Stream stream, StreamCaptureMode mode);
+
+void StreamEndCapture(Stream stream, Graph* graph);
+
+void GraphDestroy(Graph graph);
+
+void GraphInstantiate(GraphExec* graph_exec, Graph graph);
+
+void GraphExecDestroy(GraphExec graph_exec);
+
+void GraphLaunch(GraphExec graph_exec, Stream stream);
 
 }  // namespace infini::rt
 
