@@ -23,6 +23,14 @@ class TensorView {
 
   using Strides = std::vector<Stride>;
 
+  template <typename TensorLike>
+  TensorView(const TensorLike& tensor)
+      : data_{const_cast<void*>(static_cast<const void*>(tensor.data()))},
+        shape_{tensor.shape()},
+        dtype_{tensor.dtype()},
+        device_{tensor.device()},
+        strides_{tensor.strides()} {}
+
   template <typename Shape>
   TensorView(void* data, const Shape& shape)
       : data_{data},
