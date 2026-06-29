@@ -108,7 +108,8 @@ if(WITH_ASCEND)
         "${ASCEND_HOME}/include/aclnnop")
     target_link_libraries(infinirt PUBLIC
         "${ASCEND_HOME}/lib64/libascendcl.so"
-        "${ASCEND_HAL_LIB}")
+        "${ASCEND_HAL_LIB}"
+        ${CMAKE_DL_LIBS})
 endif()
 
 target_include_directories(infinirt
