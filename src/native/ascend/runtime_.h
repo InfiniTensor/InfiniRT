@@ -1,7 +1,10 @@
 #ifndef INFINI_RT_ASCEND_RUNTIME__H_
 #define INFINI_RT_ASCEND_RUNTIME__H_
 
+#include <dlfcn.h>
+
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 
 // clang-format off
@@ -80,17 +83,115 @@ struct Runtime<Device::Type::kAscend>
 
   static constexpr int StreamCaptureModeRelaxed = 2;
 
-  static int StreamBeginCapture(Stream, int) { return 1; }
+  struct RIApi {
+    using CaptureBeginFn = aclError (*)(aclrtStream, int);
+    using CaptureGetInfoFn = aclError (*)(aclrtStream, int*, void**);
+    using CaptureEndFn = aclError (*)(aclrtStream, void**);
+    using RIExecuteAsyncFn = aclError (*)(void*, aclrtStream);
+    using RIDestroyFn = aclError (*)(void*);
 
-  static int StreamEndCapture(Stream, Graph*) { return 1; }
+    CaptureBeginFn capture_begin = nullptr;
+    CaptureGetInfoFn capture_get_info = nullptr;
+    CaptureEndFn capture_end = nullptr;
+    RIExecuteAsyncFn execute_async = nullptr;
+    RIDestroyFn destroy = nullptr;
 
-  static int GraphDestroy(Graph) { return 1; }
+    bool available() const {
+      return capture_begin != nullptr && capture_get_info != nullptr &&
+             capture_end != nullptr && execute_async != nullptr;
+    }
+  };
 
-  static int GraphInstantiate(GraphExec*, Graph) { return 1; }
+  static const RIApi& GraphApi() {
+    static const RIApi api = [] {
+      RIApi loaded{};
+      auto load_symbols = [](void* lib, RIApi* api) {
+        api->capture_begin = reinterpret_cast<RIApi::CaptureBeginFn>(
+            dlsym(lib, "aclmdlRICaptureBegin"));
+        api->capture_get_info = reinterpret_cast<RIApi::CaptureGetInfoFn>(
+            dlsym(lib, "aclmdlRICaptureGetInfo"));
+        api->capture_end = reinterpret_cast<RIApi::CaptureEndFn>(
+            dlsym(lib, "aclmdlRICaptureEnd"));
+        api->execute_async = reinterpret_cast<RIApi::RIExecuteAsyncFn>(
+            dlsym(lib, "aclmdlRIExecuteAsync"));
+        api->destroy =
+            reinterpret_cast<RIApi::RIDestroyFn>(dlsym(lib, "aclmdlRIDestroy"));
+      };
 
-  static int GraphExecDestroy(GraphExec) { return 1; }
+      load_symbols(RTLD_DEFAULT, &loaded);
+      if (loaded.available()) {
+        return loaded;
+      }
 
-  static int GraphLaunch(GraphExec, Stream) { return 1; }
+      void* lib = dlopen("libascendcl.so", RTLD_NOW | RTLD_NOLOAD);
+      if (lib == nullptr) {
+        lib = dlopen("libascendcl.so", RTLD_NOW);
+      }
+      if (lib == nullptr) {
+        return loaded;
+      }
+
+      load_symbols(lib, &loaded);
+      return loaded;
+    }();
+    return api;
+  }
+
+  static aclError UnsupportedGraphApi() { return static_cast<aclError>(1); }
+
+  static aclError StreamBeginCapture(Stream stream, int mode) {
+    const auto& api = GraphApi();
+    if (!api.available()) {
+      return UnsupportedGraphApi();
+    }
+    return api.capture_begin(stream, mode);
+  }
+
+  static aclError StreamEndCapture(Stream stream, Graph* graph) {
+    assert(graph != nullptr);
+    const auto& api = GraphApi();
+    if (!api.available()) {
+      return UnsupportedGraphApi();
+    }
+    int capture_status = 0;
+    void* capturing_model_ri = nullptr;
+    const auto info_status =
+        api.capture_get_info(stream, &capture_status, &capturing_model_ri);
+    if (info_status != ACL_SUCCESS) {
+      return info_status;
+    }
+    void* model_ri = nullptr;
+    const auto status = api.capture_end(stream, &model_ri);
+    if (status != ACL_SUCCESS) {
+      return status;
+    }
+    *graph = model_ri;
+    return ACL_SUCCESS;
+  }
+
+  static aclError GraphDestroy(Graph graph) {
+    const auto& api = GraphApi();
+    if (api.destroy == nullptr || graph == nullptr) {
+      return ACL_SUCCESS;
+    }
+    return api.destroy(graph);
+  }
+
+  static aclError GraphInstantiate(GraphExec* graph_exec, Graph graph) {
+    assert(graph_exec != nullptr);
+    *graph_exec = graph;
+    return ACL_SUCCESS;
+  }
+
+  static aclError GraphExecDestroy(GraphExec) { return ACL_SUCCESS; }
+
+  static aclError GraphLaunch(GraphExec graph_exec, Stream stream) {
+    const auto& api = GraphApi();
+    if (!api.available()) {
+      return UnsupportedGraphApi();
+    }
+    return api.execute_async(graph_exec, stream);
+  }
 };
 
 static_assert(Runtime<Device::Type::kAscend>::Validate());

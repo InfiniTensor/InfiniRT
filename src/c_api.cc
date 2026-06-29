@@ -6,6 +6,10 @@
 
 #include "runtime.h"
 
+#if defined(WITH_ASCEND)
+#include "native/ascend/runtime_.h"
+#endif
+
 #if defined(WITH_NVIDIA)
 #include "native/cuda/nvidia/runtime_.h"
 #endif
@@ -109,6 +113,35 @@ auto RawNvidiaGraphExec(GraphExec graph_exec) {
 }
 #endif
 
+#if defined(WITH_ASCEND)
+auto ToAscendCaptureMode(infiniRtStreamCaptureMode_t mode) {
+  switch (mode) {
+    case INFINI_RT_STREAM_CAPTURE_MODE_GLOBAL:
+      return Runtime<Device::Type::kAscend>::StreamCaptureModeGlobal;
+    case INFINI_RT_STREAM_CAPTURE_MODE_THREAD_LOCAL:
+      return Runtime<Device::Type::kAscend>::StreamCaptureModeThreadLocal;
+    case INFINI_RT_STREAM_CAPTURE_MODE_RELAXED:
+      return Runtime<Device::Type::kAscend>::StreamCaptureModeRelaxed;
+  }
+  return Runtime<Device::Type::kAscend>::StreamCaptureModeRelaxed;
+}
+
+auto RawAscendStream(Stream stream) {
+  return static_cast<typename Runtime<Device::Type::kAscend>::Stream>(
+      stream.raw());
+}
+
+auto RawAscendGraph(Graph graph) {
+  return static_cast<typename Runtime<Device::Type::kAscend>::Graph>(
+      graph.raw());
+}
+
+auto RawAscendGraphExec(GraphExec graph_exec) {
+  return static_cast<typename Runtime<Device::Type::kAscend>::GraphExec>(
+      graph_exec.raw());
+}
+#endif
+
 CStream* AsStream(infiniRtStream_t stream) {
   return static_cast<CStream*>(stream);
 }
@@ -155,6 +188,13 @@ infiniRtStatus_t infiniRtStreamBeginCapture(infiniRtStream_t stream,
   return Guard([&] {
     auto* wrapped = AsStream(stream);
     switch (wrapped->stream.device_type()) {
+#if defined(WITH_ASCEND)
+      case Device::Type::kAscend:
+        return CheckBackendCall([&] {
+          return Runtime<Device::Type::kAscend>::StreamBeginCapture(
+              RawAscendStream(wrapped->stream), ToAscendCaptureMode(mode));
+        });
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia:
         return CheckBackendCall([&] {
@@ -176,6 +216,21 @@ infiniRtStatus_t infiniRtStreamEndCapture(infiniRtStream_t stream,
   return Guard([&] {
     auto* wrapped = AsStream(stream);
     switch (wrapped->stream.device_type()) {
+#if defined(WITH_ASCEND)
+      case Device::Type::kAscend: {
+        typename Runtime<Device::Type::kAscend>::Graph raw_graph = {};
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kAscend>::StreamEndCapture(
+              RawAscendStream(wrapped->stream), &raw_graph);
+        });
+        if (status != INFINI_RT_STATUS_SUCCESS) {
+          return status;
+        }
+        *graph = new CGraph{
+            Graph{Device::Type::kAscend, static_cast<void*>(raw_graph)}};
+        return INFINI_RT_STATUS_SUCCESS;
+      }
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         typename Runtime<Device::Type::kNvidia>::Graph raw_graph = {};
@@ -204,6 +259,16 @@ infiniRtStatus_t infiniRtGraphDestroy(infiniRtGraph_t graph) {
   return Guard([&] {
     auto* wrapped = AsGraph(graph);
     switch (wrapped->graph.device_type()) {
+#if defined(WITH_ASCEND)
+      case Device::Type::kAscend: {
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kAscend>::GraphDestroy(
+              RawAscendGraph(wrapped->graph));
+        });
+        delete wrapped;
+        return status;
+      }
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         const auto status = CheckBackendCall([&] {
@@ -231,6 +296,21 @@ infiniRtStatus_t infiniRtGraphInstantiate(infiniRtGraphExec_t* graph_exec,
   return Guard([&] {
     auto* wrapped = AsGraph(graph);
     switch (wrapped->graph.device_type()) {
+#if defined(WITH_ASCEND)
+      case Device::Type::kAscend: {
+        typename Runtime<Device::Type::kAscend>::GraphExec raw_exec = {};
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kAscend>::GraphInstantiate(
+              &raw_exec, RawAscendGraph(wrapped->graph));
+        });
+        if (status != INFINI_RT_STATUS_SUCCESS) {
+          return status;
+        }
+        *graph_exec = new CGraphExec{
+            GraphExec{Device::Type::kAscend, static_cast<void*>(raw_exec)}};
+        return INFINI_RT_STATUS_SUCCESS;
+      }
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         typename Runtime<Device::Type::kNvidia>::GraphExec raw_exec = {};
@@ -259,6 +339,16 @@ infiniRtStatus_t infiniRtGraphExecDestroy(infiniRtGraphExec_t graph_exec) {
   return Guard([&] {
     auto* wrapped = AsGraphExec(graph_exec);
     switch (wrapped->graph_exec.device_type()) {
+#if defined(WITH_ASCEND)
+      case Device::Type::kAscend: {
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kAscend>::GraphExecDestroy(
+              RawAscendGraphExec(wrapped->graph_exec));
+        });
+        delete wrapped;
+        return status;
+      }
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         const auto status = CheckBackendCall([&] {
@@ -291,6 +381,14 @@ infiniRtStatus_t infiniRtGraphLaunch(infiniRtGraphExec_t graph_exec,
       return INFINI_RT_STATUS_INVALID_ARGUMENT;
     }
     switch (exec->graph_exec.device_type()) {
+#if defined(WITH_ASCEND)
+      case Device::Type::kAscend:
+        return CheckBackendCall([&] {
+          return Runtime<Device::Type::kAscend>::GraphLaunch(
+              RawAscendGraphExec(exec->graph_exec),
+              RawAscendStream(wrapped_stream->stream));
+        });
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia:
         return CheckBackendCall([&] {
