@@ -17,6 +17,10 @@ struct Runtime<Device::Type::kIluvatar>
     : CudaRuntime<Runtime<Device::Type::kIluvatar>> {
   using Stream = cudaStream_t;
 
+  using Graph = cudaGraph_t;
+
+  using GraphExec = cudaGraphExec_t;
+
   static constexpr Device::Type kDeviceType = Device::Type::kIluvatar;
 
   static constexpr auto SetDevice = cudaSetDevice;
@@ -44,6 +48,54 @@ struct Runtime<Device::Type::kIluvatar>
   static constexpr auto MemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = cudaMemset;
+
+  static constexpr auto StreamCreate = [](auto&&... args) {
+    return cudaStreamCreateWithFlags(std::forward<decltype(args)>(args)...,
+                                     cudaStreamNonBlocking);
+  };
+
+  static constexpr auto StreamDestroy = [](auto&&... args) {
+    return cudaStreamDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamSynchronize = [](auto&&... args) {
+    return cudaStreamSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto MemcpyAsync = [](auto&&... args) {
+    return cudaMemcpyAsync(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;
+
+  static constexpr auto StreamCaptureModeThreadLocal =
+      cudaStreamCaptureModeThreadLocal;
+
+  static constexpr auto StreamCaptureModeRelaxed = cudaStreamCaptureModeRelaxed;
+
+  static constexpr auto StreamBeginCapture = [](auto&&... args) {
+    return cudaStreamBeginCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamEndCapture = [](auto&&... args) {
+    return cudaStreamEndCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphDestroy = [](auto&&... args) {
+    return cudaGraphDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphInstantiate = [](auto&&... args) {
+    return cudaGraphInstantiate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphExecDestroy = [](auto&&... args) {
+    return cudaGraphExecDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphLaunch = [](auto&&... args) {
+    return cudaGraphLaunch(std::forward<decltype(args)>(args)...);
+  };
 };
 
 static_assert(Runtime<Device::Type::kIluvatar>::Validate());

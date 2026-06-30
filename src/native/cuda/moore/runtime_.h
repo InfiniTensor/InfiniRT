@@ -3,6 +3,7 @@
 
 #include <musa_runtime.h>
 
+#include <cstddef>
 #include <utility>
 
 #include "native/cuda/moore/device_.h"
@@ -14,6 +15,10 @@ template <>
 struct Runtime<Device::Type::kMoore>
     : CudaRuntime<Runtime<Device::Type::kMoore>> {
   using Stream = musaStream_t;
+
+  using Graph = void*;
+
+  using GraphExec = void*;
 
   static constexpr Device::Type kDeviceType = Device::Type::kMoore;
 
@@ -52,6 +57,35 @@ struct Runtime<Device::Type::kMoore>
   static constexpr auto MemcpyDeviceToDevice = musaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = musaMemset;
+
+  static int StreamCreate(Stream*) { return 1; }
+
+  static int StreamDestroy(Stream) { return 1; }
+
+  static int StreamSynchronize(Stream) { return 1; }
+
+  static int MemcpyAsync(void*, const void*, std::size_t,
+                         decltype(MemcpyHostToDevice), Stream) {
+    return 1;
+  }
+
+  static constexpr int StreamCaptureModeGlobal = 0;
+
+  static constexpr int StreamCaptureModeThreadLocal = 1;
+
+  static constexpr int StreamCaptureModeRelaxed = 2;
+
+  static int StreamBeginCapture(Stream, int) { return 1; }
+
+  static int StreamEndCapture(Stream, Graph*) { return 1; }
+
+  static int GraphDestroy(Graph) { return 1; }
+
+  static int GraphInstantiate(GraphExec*, Graph) { return 1; }
+
+  static int GraphExecDestroy(GraphExec) { return 1; }
+
+  static int GraphLaunch(GraphExec, Stream) { return 1; }
 };
 
 static_assert(Runtime<Device::Type::kMoore>::Validate());
