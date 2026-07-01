@@ -21,6 +21,20 @@ int main() {
 
 #if defined(INFINI_RT_CONSUMER_BACKEND_CPU) || \
     defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA)
+  using DefaultRuntime = infini::rt::Runtime<>;
+#if defined(INFINI_RT_CONSUMER_BACKEND_CPU)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kCpu;
+#else
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kNvidia;
+#endif
+  if (DefaultRuntime::SetDeviceType(kExpectedDeviceType) !=
+      infini::rt::kSuccess) {
+    return 1;
+  }
+  if (DefaultRuntime::GetDeviceType() != kExpectedDeviceType) {
+    return 1;
+  }
+
   std::array<std::uint8_t, 4> input{1, 2, 3, 4};
   std::array<std::uint8_t, 4> output{};
   void* ptr = nullptr;

@@ -79,11 +79,22 @@ int main() {
 }
 ```
 
-When a GPU backend is enabled, the top-level runtime API targets that backend,
-matching CUDA Runtime API behavior:
+The top-level runtime API dispatches through `infini::rt::Runtime<>`, which is
+the `Runtime<Device::Type::kCount>` default specialization. A GPU backend is
+selected initially when one is enabled; otherwise CPU is selected.
+`SetDeviceType` accepts only backends enabled in the current build.
 
 ```cpp
-infini::rt::SetDevice(0);
+constexpr std::size_t size = 1024;
+void* ptr = nullptr;
+
+infini::rt::Runtime<>::SetDeviceType(infini::rt::Device::Type::kCpu);
+infini::rt::Malloc(&ptr, size);
+infini::rt::Free(ptr);
+
+infini::rt::Runtime<>::SetDeviceType(infini::rt::Device::Type::kNvidia);
+infini::rt::Malloc(&ptr, size);
+infini::rt::Free(ptr);
 ```
 
 Use `infini::rt::Runtime<infini::rt::Device::Type::kCpu>` when CPU runtime

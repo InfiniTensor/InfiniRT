@@ -166,11 +166,13 @@ def _write_generated_header(include_root, devices):
         f"#include {_detail_include('hash.h')}",
         f"#include {_detail_include('runtime.h')}",
         f"#include {_detail_include('tensor_view.h')}",
-        f"#include <infini/rt/{default_device}/runtime_.h>",
     ]
 
     for device in devices:
         includes.append(f"#include <infini/rt/{device}/device_.h>")
+
+    for device in devices:
+        includes.append(f"#include <infini/rt/{device}/runtime_.h>")
 
     path = include_root / "infini" / "rt" / "generated.h"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,26 +185,82 @@ def _write_generated_header(include_root, devices):
 namespace infini::rt {{
 namespace generated_detail {{
 
-using DefaultRuntime = Runtime<{default_device_type}>;
+using DefaultErrorRuntime = Runtime<{default_device_type}>;
+
+inline constexpr Device::Type kDefaultDeviceType = {default_device_type};
 
 }}  // namespace generated_detail
 
-using Error = typename generated_detail::DefaultRuntime::Error;
+using Error = typename generated_detail::DefaultErrorRuntime::Error;
 
-using Stream = typename generated_detail::DefaultRuntime::Stream;
+using Stream = typename generated_detail::DefaultErrorRuntime::Stream;
 
-inline constexpr Error kSuccess = generated_detail::DefaultRuntime::kSuccess;
+inline constexpr Error kSuccess = generated_detail::DefaultErrorRuntime::kSuccess;
 
 enum class MemcpyKind {{
   kMemcpyHostToHost =
-      static_cast<int>(generated_detail::DefaultRuntime::kMemcpyHostToHost),
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyHostToHost),
   kMemcpyHostToDevice =
-      static_cast<int>(generated_detail::DefaultRuntime::kMemcpyHostToDevice),
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyHostToDevice),
   kMemcpyDeviceToHost =
-      static_cast<int>(generated_detail::DefaultRuntime::kMemcpyDeviceToHost),
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyDeviceToHost),
   kMemcpyDeviceToDevice =
-      static_cast<int>(generated_detail::DefaultRuntime::kMemcpyDeviceToDevice),
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyDeviceToDevice),
 }};
+
+template <>
+struct Runtime<Device::Type::kCount>
+    : RuntimeBase<Runtime<Device::Type::kCount>> {{
+  using Error = infini::rt::Error;
+
+  using Stream = infini::rt::Stream;
+
+  static constexpr Device::Type kDeviceType = Device::Type::kCount;
+
+  static constexpr Error kSuccess = infini::rt::kSuccess;
+
+  static constexpr MemcpyKind kMemcpyHostToHost =
+      MemcpyKind::kMemcpyHostToHost;
+
+  static constexpr MemcpyKind kMemcpyHostToDevice =
+      MemcpyKind::kMemcpyHostToDevice;
+
+  static constexpr MemcpyKind kMemcpyDeviceToHost =
+      MemcpyKind::kMemcpyDeviceToHost;
+
+  static constexpr MemcpyKind kMemcpyDeviceToDevice =
+      MemcpyKind::kMemcpyDeviceToDevice;
+
+  static Error SetDeviceType(Device::Type device_type);
+
+  static Device::Type GetDeviceType();
+
+  static Error SetDevice(int device);
+
+  static Error GetDevice(int* device);
+
+  static Error GetDeviceCount(int* count);
+
+  static Error DeviceSynchronize();
+
+  static Error Malloc(void** ptr, std::size_t size);
+
+  static Error Free(void* ptr);
+
+  static Error Memset(void* ptr, int value, std::size_t count);
+
+  static Error Memcpy(void* dst, const void* src, std::size_t count,
+                      MemcpyKind kind);
+
+  static Error MemcpyAsync(void* dst, const void* src, std::size_t count,
+                           MemcpyKind kind, Stream stream);
+
+ private:
+  inline static thread_local Device::Type device_type_ =
+      generated_detail::kDefaultDeviceType;
+}};
+
+static_assert(Runtime<Device::Type::kCount>::Validate());
 
 Error SetDevice(int device);
 
@@ -301,42 +359,91 @@ def _default_device(devices):
     raise ValueError("at least one device is required")
 
 
-def _runtime_arg(param):
+def _runtime_arg(param, device):
+    device_type = _DEVICE_TYPES[device]
     if param.type == "MemcpyKind":
-        return f"RuntimeMemcpyKind({param.name})"
+        return f"RuntimeMemcpyKind<{device_type}>({param.name})"
     if param.type == "Stream":
         return (
-            f"reinterpret_cast<typename DefaultRuntime::Stream>({param.name})"
+            f"reinterpret_cast<typename Runtime<{device_type}>::Stream>"
+            f"({param.name})"
         )
 
     return param.name
 
 
-def _runtime_args(function):
-    args = (_runtime_arg(param) for param in function.params)
+def _runtime_args(function, device):
+    args = (_runtime_arg(param, device) for param in function.params)
 
     return ", ".join(arg for arg in args if arg is not None)
 
 
-def _runtime_call(function):
-    args = _runtime_args(function)
+def _runtime_call(function, device):
+    device_type = _DEVICE_TYPES[device]
+    args = _runtime_args(function, device)
     if args:
-        return f"DefaultRuntime::{function.name}({args})"
+        return f"Runtime<{device_type}>::{function.name}({args})"
 
-    return f"DefaultRuntime::{function.name}()"
+    return f"Runtime<{device_type}>::{function.name}()"
 
 
-def _write_dispatch_function(function):
-    return f"""{function.signature()} {{
-  return CheckCall([&] {{ return {_runtime_call(function)}; }});
+def _call_args(function):
+    return ", ".join(param.name for param in function.params)
+
+
+def _member_signature(function):
+    return (
+        f"{function.return_type} Runtime<Device::Type::kCount>::"
+        f"{function.name}({function.params_decl()})"
+    )
+
+
+def _dispatch_cases(devices, function):
+    return "\n".join(
+        f"""    case {_DEVICE_TYPES[device]}:
+      return CheckCall([&] {{ return {_runtime_call(function, device)}; }});"""
+        for device in devices
+    )
+
+
+def _write_member_dispatch_function(function, devices):
+    return f"""{_member_signature(function)} {{
+  switch (device_type_) {{
+{_dispatch_cases(devices, function)}
+  }}
+
+  return InvalidValueError();
 }}
 """
 
 
-def _write_runtime_dispatch(source_path):
+def _write_public_dispatch_function(function):
+    args = _call_args(function)
+    if args:
+        call = f"Runtime<Device::Type::kCount>::{function.name}({args})"
+    else:
+        call = f"Runtime<Device::Type::kCount>::{function.name}()"
+
+    return f"""{function.signature()} {{
+  return {call};
+}}
+"""
+
+
+def _write_runtime_dispatch(source_path, devices):
     functions = _PUBLIC_RUNTIME_FUNCTIONS
-    dispatch_functions = "\n".join(
-        _write_dispatch_function(function) for function in functions
+    member_dispatch_functions = "\n".join(
+        _write_member_dispatch_function(function, devices=devices)
+        for function in functions
+    )
+    public_dispatch_functions = "\n".join(
+        _write_public_dispatch_function(function) for function in functions
+    )
+    set_device_type_cases = "\n".join(
+        f"""    case {_DEVICE_TYPES[device]}:
+      device_type_ = device_type;
+      return kSuccess;"""
+        for device in devices
     )
 
     source_path.parent.mkdir(parents=True, exist_ok=True)
@@ -351,8 +458,6 @@ def _write_runtime_dispatch(source_path):
 namespace infini::rt {{
 namespace {{
 
-using DefaultRuntime = generated_detail::DefaultRuntime;
-
 template <typename Func>
 Error CheckCall(Func&& func) {{
   using ReturnType = decltype(std::forward<Func>(func)());
@@ -365,25 +470,43 @@ Error CheckCall(Func&& func) {{
   }}
 }}
 
+Error InvalidValueError() {{ return static_cast<Error>(1); }}
+
+template <Device::Type device_type>
 auto RuntimeMemcpyKind(MemcpyKind kind) {{
+  using DeviceRuntime = Runtime<device_type>;
+
   switch (kind) {{
     case MemcpyKind::kMemcpyHostToHost:
-      return DefaultRuntime::kMemcpyHostToHost;
+      return DeviceRuntime::kMemcpyHostToHost;
     case MemcpyKind::kMemcpyHostToDevice:
-      return DefaultRuntime::kMemcpyHostToDevice;
+      return DeviceRuntime::kMemcpyHostToDevice;
     case MemcpyKind::kMemcpyDeviceToHost:
-      return DefaultRuntime::kMemcpyDeviceToHost;
+      return DeviceRuntime::kMemcpyDeviceToHost;
     case MemcpyKind::kMemcpyDeviceToDevice:
-      return DefaultRuntime::kMemcpyDeviceToDevice;
+      return DeviceRuntime::kMemcpyDeviceToDevice;
   }}
 
   assert(false && "unsupported memcpy kind");
-  return DefaultRuntime::kMemcpyHostToHost;
+  return DeviceRuntime::kMemcpyHostToHost;
 }}
 
 }}  // namespace
 
-{dispatch_functions}
+Error Runtime<Device::Type::kCount>::SetDeviceType(Device::Type device_type) {{
+  switch (device_type) {{
+{set_device_type_cases}
+  }}
+
+  return InvalidValueError();
+}}
+
+Device::Type Runtime<Device::Type::kCount>::GetDeviceType() {{
+  return device_type_;
+}}
+
+{member_dispatch_functions}
+{public_dispatch_functions}
 }}  // namespace infini::rt
 """
     )
@@ -413,7 +536,7 @@ def main():
             _write_wrapper(include_root, wrapper_device, header_name, target)
 
     _write_generated_header(include_root, devices)
-    _write_runtime_dispatch(pathlib.Path(args.source_output))
+    _write_runtime_dispatch(pathlib.Path(args.source_output), devices)
 
 
 if __name__ == "__main__":

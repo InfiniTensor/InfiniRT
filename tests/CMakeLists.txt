@@ -7,6 +7,18 @@ endfunction()
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
 
+if(WITH_CPU OR WITH_NVIDIA)
+    add_infini_rt_test(test_default_runtime test_default_runtime.cc)
+    if(WITH_CPU)
+        target_compile_definitions(test_default_runtime
+                                   PRIVATE INFINI_RT_TEST_WITH_CPU=1)
+    endif()
+    if(WITH_NVIDIA)
+        target_compile_definitions(test_default_runtime
+                                   PRIVATE INFINI_RT_TEST_WITH_NVIDIA=1)
+    endif()
+endif()
+
 if(WITH_CPU)
     add_infini_rt_test(test_cpu_runtime test_cpu_runtime.cc)
 endif()

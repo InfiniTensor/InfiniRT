@@ -8,7 +8,7 @@
 
 namespace infini::rt {
 
-template <Device::Type device_type>
+template <Device::Type device_type = Device::Type::kCount>
 struct Runtime;
 
 /// ## Interface enforcement via CRTP.
