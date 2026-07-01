@@ -30,6 +30,11 @@ struct RuntimeBase {
         std::is_same_v<std::remove_cv_t<decltype(Derived::kDeviceType)>,
                        Device::Type>,
         "`Runtime` must define `static constexpr Device::Type kDeviceType`.");
+    static_assert(sizeof(typename Derived::Error) > 0,
+                  "`Runtime` must define an `Error` type alias.");
+    static_assert(std::is_same_v<std::remove_cv_t<decltype(Derived::kSuccess)>,
+                                 typename Derived::Error>,
+                  "`Runtime` must define `static constexpr Error kSuccess`.");
     return true;
   }
 };
@@ -50,29 +55,6 @@ struct DeviceRuntime : RuntimeBase<Derived> {
     return true;
   }
 };
-
-enum class MemcpyKind {
-  kHostToHost,
-  kHostToDevice,
-  kDeviceToHost,
-  kDeviceToDevice,
-};
-
-void SetDevice(Device device);
-
-void GetDevice(Device* device);
-
-void GetDeviceCount(int* count, Device::Type type);
-
-void DeviceSynchronize();
-
-void Malloc(void** ptr, std::size_t size);
-
-void Free(void* ptr);
-
-void Memset(void* ptr, int value, std::size_t count);
-
-void Memcpy(void* dst, const void* src, std::size_t count, MemcpyKind kind);
 
 }  // namespace infini::rt
 

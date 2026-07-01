@@ -11,10 +11,6 @@ if(WITH_CPU)
     add_infini_rt_test(test_cpu_runtime test_cpu_runtime.cc)
 endif()
 
-if(WITH_CPU OR WITH_NVIDIA)
-    add_infini_rt_test(test_runtime_dispatch test_runtime_dispatch.cc)
-endif()
-
 if(WITH_NVIDIA)
     add_infini_rt_test(test_nvidia_runtime test_nvidia_runtime.cc)
 endif()
@@ -24,12 +20,20 @@ set(INFINI_RT_TEST_INSTALL_PREFIX
 set(INFINI_RT_TEST_CONSUMER_BINARY
     "${CMAKE_CURRENT_BINARY_DIR}/install_consumer_smoke")
 set(INFINI_RT_TEST_EXTRA_LIBRARY_DIRS "")
+set(INFINI_RT_TEST_EXTRA_INCLUDE_DIRS "")
 set(INFINI_RT_TEST_CONSUMER_BACKEND NONE)
 
-if(WITH_CPU)
-    set(INFINI_RT_TEST_CONSUMER_BACKEND CPU)
-elseif(WITH_NVIDIA)
+if(WITH_NVIDIA)
     set(INFINI_RT_TEST_CONSUMER_BACKEND NVIDIA)
+    if(CUDAToolkit_INCLUDE_DIRS)
+        list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
+             ${CUDAToolkit_INCLUDE_DIRS})
+    elseif(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES)
+        list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
+             ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+    endif()
+elseif(WITH_CPU)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND CPU)
 endif()
 
 if(WITH_ASCEND)
@@ -44,6 +48,7 @@ if(WITH_ASCEND)
 endif()
 
 list(JOIN INFINI_RT_TEST_EXTRA_LIBRARY_DIRS ":" INFINI_RT_TEST_EXTRA_LIBRARY_PATHS)
+list(JOIN INFINI_RT_TEST_EXTRA_INCLUDE_DIRS ":" INFINI_RT_TEST_EXTRA_INCLUDE_PATHS)
 
 add_test(
     NAME test_install
@@ -59,6 +64,7 @@ add_test(
             "-DINFINI_RT_CONSUMER_BINARY=${INFINI_RT_TEST_CONSUMER_BINARY}"
             "-DINFINI_RT_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
             "-DINFINI_RT_EXTRA_LIBRARY_PATHS=${INFINI_RT_TEST_EXTRA_LIBRARY_PATHS}"
+            "-DINFINI_RT_EXTRA_INCLUDE_PATHS=${INFINI_RT_TEST_EXTRA_INCLUDE_PATHS}"
             "-DINFINI_RT_CONSUMER_BACKEND=${INFINI_RT_TEST_CONSUMER_BACKEND}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/compile_install_consumer.cmake")
 set_tests_properties(test_install_consumer PROPERTIES

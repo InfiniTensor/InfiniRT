@@ -66,7 +66,7 @@ cmake --install build
 #include <infini/rt.h>
 
 int main() {
-  infini::rt::SetDevice({infini::rt::Device::Type::kCpu, 0});
+  infini::rt::SetDevice(0);
 
   constexpr std::size_t size = 1024;
   void* ptr = nullptr;
@@ -79,11 +79,15 @@ int main() {
 }
 ```
 
-For NVIDIA:
+When a GPU backend is enabled, the top-level runtime API targets that backend,
+matching CUDA Runtime API behavior:
 
 ```cpp
-infini::rt::SetDevice({infini::rt::Device::Type::kNvidia, 0});
+infini::rt::SetDevice(0);
 ```
+
+Use `infini::rt::Runtime<infini::rt::Device::Type::kCpu>` when CPU runtime
+calls are needed explicitly in a build that also enables an accelerator backend.
 
 ## Using Installed InfiniRT From Another Project
 

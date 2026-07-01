@@ -32,13 +32,24 @@ void TestMemcpyRoundTrip(infini::rt::test::TestContext* context) {
   }
 
   CpuRuntime::Memcpy(ptr, input.data(), input.size(),
-                     CpuRuntime::MemcpyHostToDevice);
+                     CpuRuntime::kMemcpyHostToDevice);
   CpuRuntime::Memcpy(output.data(), ptr, output.size(),
-                     CpuRuntime::MemcpyDeviceToHost);
+                     CpuRuntime::kMemcpyDeviceToHost);
   CpuRuntime::Free(ptr);
 
   context->ExpectEqual(output, input,
                        "CPU runtime should copy data through runtime memory.");
+}
+
+void TestMemcpyAsyncUnsupported(infini::rt::test::TestContext* context) {
+  std::array<std::uint8_t, 1> input{1};
+  std::array<std::uint8_t, 1> output{};
+
+  context->Expect(CpuRuntime::MemcpyAsync(output.data(), input.data(),
+                                          input.size(),
+                                          CpuRuntime::kMemcpyHostToHost,
+                                          nullptr) != CpuRuntime::kSuccess,
+                  "CPU runtime should not report async memcpy success.");
 }
 
 void TestMemset(infini::rt::test::TestContext* context) {
@@ -53,7 +64,7 @@ void TestMemset(infini::rt::test::TestContext* context) {
 
   CpuRuntime::Memset(ptr, 0x5A, output.size());
   CpuRuntime::Memcpy(output.data(), ptr, output.size(),
-                     CpuRuntime::MemcpyDeviceToHost);
+                     CpuRuntime::kMemcpyDeviceToHost);
   CpuRuntime::Free(ptr);
 
   for (const auto value : output) {
@@ -69,6 +80,7 @@ int main() {
 
   TestMallocAndFree(&context);
   TestMemcpyRoundTrip(&context);
+  TestMemcpyAsyncUnsupported(&context);
   TestMemset(&context);
 
   return context.ExitCode();
