@@ -6,16 +6,17 @@
 
 #include "device.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
-template <Device::Type device_type = Device::Type::kCount>
+template <Device::Type device_type>
 struct Runtime;
 
 /// ## Interface enforcement via CRTP.
 ///
 /// Inherit from the appropriate base to declare which interface level a
-/// `Runtime` specialization implements. After the struct is fully defined, call
-/// `static_assert(Runtime<...>::Validate())`. The chained `Validate()` checks
+/// `runtime::Runtime` specialization implements. After the struct is fully
+/// defined, call `static_assert(Runtime<...>::Validate())`. The chained
+/// `Validate()` checks
 /// every required member's existence and signature at compile time, analogous
 /// to how `override` catches signature mismatches for virtual functions.
 ///
@@ -56,6 +57,6 @@ struct DeviceRuntime : RuntimeBase<Derived> {
   }
 };
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

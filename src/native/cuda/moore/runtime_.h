@@ -8,7 +8,7 @@
 #include "native/cuda/moore/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kMoore>
@@ -64,6 +64,6 @@ struct Runtime<Device::Type::kMoore>
 
 static_assert(Runtime<Device::Type::kMoore>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

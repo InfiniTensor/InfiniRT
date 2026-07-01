@@ -183,6 +183,12 @@ def _write_generated_header(include_root, devices):
 {chr(10).join(includes)}
 
 namespace infini::rt {{
+
+void set_runtime_device_type(Device::Type device_type);
+
+Device::Type runtime_device_type();
+
+namespace runtime {{
 namespace generated_detail {{
 
 using DefaultErrorRuntime = Runtime<{default_device_type}>;
@@ -208,60 +214,6 @@ enum class MemcpyKind {{
       static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyDeviceToDevice),
 }};
 
-template <>
-struct Runtime<Device::Type::kCount>
-    : RuntimeBase<Runtime<Device::Type::kCount>> {{
-  using Error = infini::rt::Error;
-
-  using Stream = infini::rt::Stream;
-
-  static constexpr Device::Type kDeviceType = Device::Type::kCount;
-
-  static constexpr Error kSuccess = infini::rt::kSuccess;
-
-  static constexpr MemcpyKind kMemcpyHostToHost =
-      MemcpyKind::kMemcpyHostToHost;
-
-  static constexpr MemcpyKind kMemcpyHostToDevice =
-      MemcpyKind::kMemcpyHostToDevice;
-
-  static constexpr MemcpyKind kMemcpyDeviceToHost =
-      MemcpyKind::kMemcpyDeviceToHost;
-
-  static constexpr MemcpyKind kMemcpyDeviceToDevice =
-      MemcpyKind::kMemcpyDeviceToDevice;
-
-  static Error SetDeviceType(Device::Type device_type);
-
-  static Device::Type GetDeviceType();
-
-  static Error SetDevice(int device);
-
-  static Error GetDevice(int* device);
-
-  static Error GetDeviceCount(int* count);
-
-  static Error DeviceSynchronize();
-
-  static Error Malloc(void** ptr, std::size_t size);
-
-  static Error Free(void* ptr);
-
-  static Error Memset(void* ptr, int value, std::size_t count);
-
-  static Error Memcpy(void* dst, const void* src, std::size_t count,
-                      MemcpyKind kind);
-
-  static Error MemcpyAsync(void* dst, const void* src, std::size_t count,
-                           MemcpyKind kind, Stream stream);
-
- private:
-  inline static thread_local Device::Type device_type_ =
-      generated_detail::kDefaultDeviceType;
-}};
-
-static_assert(Runtime<Device::Type::kCount>::Validate());
-
 Error SetDevice(int device);
 
 Error GetDevice(int* device);
@@ -281,6 +233,7 @@ Error Memcpy(void* dst, const void* src, std::size_t count, MemcpyKind kind);
 Error MemcpyAsync(void* dst, const void* src, std::size_t count,
                   MemcpyKind kind, Stream stream);
 
+}}  // namespace runtime
 }}  // namespace infini::rt
 
 #endif
@@ -365,8 +318,7 @@ def _runtime_arg(param, device):
         return f"RuntimeMemcpyKind<{device_type}>({param.name})"
     if param.type == "Stream":
         return (
-            f"reinterpret_cast<typename Runtime<{device_type}>::Stream>"
-            f"({param.name})"
+            f"reinterpret_cast<typename Runtime<{device_type}>::Stream>({param.name})"
         )
 
     return param.name
@@ -387,17 +339,6 @@ def _runtime_call(function, device):
     return f"Runtime<{device_type}>::{function.name}()"
 
 
-def _call_args(function):
-    return ", ".join(param.name for param in function.params)
-
-
-def _member_signature(function):
-    return (
-        f"{function.return_type} Runtime<Device::Type::kCount>::"
-        f"{function.name}({function.params_decl()})"
-    )
-
-
 def _dispatch_cases(devices, function):
     return "\n".join(
         f"""    case {_DEVICE_TYPES[device]}:
@@ -406,43 +347,28 @@ def _dispatch_cases(devices, function):
     )
 
 
-def _write_member_dispatch_function(function, devices):
-    return f"""{_member_signature(function)} {{
-  switch (device_type_) {{
+def _write_runtime_dispatch_function(function, devices):
+    return f"""{function.signature()} {{
+  switch (infini::rt::runtime_device_type()) {{
 {_dispatch_cases(devices, function)}
   }}
 
+  assert(false && "unsupported runtime device type");
   return InvalidValueError();
-}}
-"""
-
-
-def _write_public_dispatch_function(function):
-    args = _call_args(function)
-    if args:
-        call = f"Runtime<Device::Type::kCount>::{function.name}({args})"
-    else:
-        call = f"Runtime<Device::Type::kCount>::{function.name}()"
-
-    return f"""{function.signature()} {{
-  return {call};
 }}
 """
 
 
 def _write_runtime_dispatch(source_path, devices):
     functions = _PUBLIC_RUNTIME_FUNCTIONS
-    member_dispatch_functions = "\n".join(
-        _write_member_dispatch_function(function, devices=devices)
+    dispatch_functions = "\n".join(
+        _write_runtime_dispatch_function(function, devices=devices)
         for function in functions
-    )
-    public_dispatch_functions = "\n".join(
-        _write_public_dispatch_function(function) for function in functions
     )
     set_device_type_cases = "\n".join(
         f"""    case {_DEVICE_TYPES[device]}:
-      device_type_ = device_type;
-      return kSuccess;"""
+      runtime_device_type_ = device_type;
+      return;"""
         for device in devices
     )
 
@@ -456,6 +382,28 @@ def _write_runtime_dispatch(source_path, devices):
 #include <infini/rt/generated.h>
 
 namespace infini::rt {{
+namespace {{
+
+thread_local Device::Type runtime_device_type_ =
+    runtime::generated_detail::kDefaultDeviceType;
+
+}}  // namespace
+
+void set_runtime_device_type(Device::Type device_type) {{
+  switch (device_type) {{
+{set_device_type_cases}
+  }}
+
+  assert(false && "unsupported runtime device type");
+}}
+
+Device::Type runtime_device_type() {{
+  return runtime_device_type_;
+}}
+
+}}  // namespace infini::rt
+
+namespace infini::rt::runtime {{
 namespace {{
 
 template <typename Func>
@@ -493,21 +441,8 @@ auto RuntimeMemcpyKind(MemcpyKind kind) {{
 
 }}  // namespace
 
-Error Runtime<Device::Type::kCount>::SetDeviceType(Device::Type device_type) {{
-  switch (device_type) {{
-{set_device_type_cases}
-  }}
-
-  return InvalidValueError();
-}}
-
-Device::Type Runtime<Device::Type::kCount>::GetDeviceType() {{
-  return device_type_;
-}}
-
-{member_dispatch_functions}
-{public_dispatch_functions}
-}}  // namespace infini::rt
+{dispatch_functions}
+}}  // namespace infini::rt::runtime
 """
     )
 

@@ -9,7 +9,8 @@
 
 namespace {
 
-using NvidiaRuntime = infini::rt::Runtime<infini::rt::Device::Type::kNvidia>;
+using NvidiaRuntime =
+    infini::rt::runtime::Runtime<infini::rt::Device::Type::kNvidia>;
 
 void ExpectCudaSuccess(infini::rt::test::TestContext* context,
                        cudaError_t status, const char* message) {

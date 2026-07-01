@@ -19,12 +19,12 @@ template <typename T, typename = void>
 struct IsTensorLike : std::false_type {};
 
 template <typename T>
-struct IsTensorLike<
-    T, std::void_t<decltype(std::declval<const T&>().data()),
-                   decltype(std::declval<const T&>().shape()),
-                   decltype(std::declval<const T&>().dtype()),
-                   decltype(std::declval<const T&>().device()),
-                   decltype(std::declval<const T&>().strides())>>
+struct IsTensorLike<T,
+                    std::void_t<decltype(std::declval<const T&>().data()),
+                                decltype(std::declval<const T&>().shape()),
+                                decltype(std::declval<const T&>().dtype()),
+                                decltype(std::declval<const T&>().device()),
+                                decltype(std::declval<const T&>().strides())>>
     : std::true_type {};
 
 }  // namespace tensor_view_detail

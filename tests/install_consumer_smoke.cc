@@ -21,76 +21,73 @@ int main() {
 
 #if defined(INFINI_RT_CONSUMER_BACKEND_CPU) || \
     defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA)
-  using DefaultRuntime = infini::rt::Runtime<>;
+  namespace runtime = infini::rt::runtime;
 #if defined(INFINI_RT_CONSUMER_BACKEND_CPU)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kCpu;
 #else
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kNvidia;
 #endif
-  if (DefaultRuntime::SetDeviceType(kExpectedDeviceType) !=
-      infini::rt::kSuccess) {
-    return 1;
-  }
-  if (DefaultRuntime::GetDeviceType() != kExpectedDeviceType) {
+  infini::rt::set_runtime_device_type(kExpectedDeviceType);
+  if (infini::rt::runtime_device_type() != kExpectedDeviceType) {
     return 1;
   }
 
   std::array<std::uint8_t, 4> input{1, 2, 3, 4};
   std::array<std::uint8_t, 4> output{};
   void* ptr = nullptr;
-  if (infini::rt::SetDevice(0) != infini::rt::kSuccess) {
+  if (runtime::SetDevice(0) != runtime::kSuccess) {
     return 1;
   }
   int current_device = -1;
-  if (infini::rt::GetDevice(&current_device) != infini::rt::kSuccess) {
+  if (runtime::GetDevice(&current_device) != runtime::kSuccess) {
     return 1;
   }
   if (current_device != 0) {
     return 1;
   }
   int device_count = 0;
-  if (infini::rt::GetDeviceCount(&device_count) != infini::rt::kSuccess) {
+  if (runtime::GetDeviceCount(&device_count) != runtime::kSuccess) {
     return 1;
   }
   if (device_count <= 0) {
     return 1;
   }
-  if (infini::rt::Malloc(&ptr, input.size()) != infini::rt::kSuccess) {
+  if (runtime::Malloc(&ptr, input.size()) != runtime::kSuccess) {
     return 1;
   }
   if (ptr == nullptr) {
     return 1;
   }
-  if (infini::rt::Memcpy(ptr, input.data(), input.size(),
-                         infini::rt::MemcpyKind::kMemcpyHostToDevice) !=
-      infini::rt::kSuccess) {
+  if (runtime::Memcpy(ptr, input.data(), input.size(),
+                      runtime::MemcpyKind::kMemcpyHostToDevice) !=
+      runtime::kSuccess) {
     return 1;
   }
 #if defined(INFINI_RT_CONSUMER_BACKEND_CPU)
-  if (infini::rt::MemcpyAsync(ptr, input.data(), input.size(),
-                              infini::rt::MemcpyKind::kMemcpyHostToDevice,
-                              nullptr) == infini::rt::kSuccess) {
+  if (runtime::MemcpyAsync(ptr, input.data(), input.size(),
+                           runtime::MemcpyKind::kMemcpyHostToDevice,
+                           nullptr) == runtime::kSuccess) {
     return 1;
   }
 #else
-  if (infini::rt::MemcpyAsync(ptr, input.data(), input.size(),
-                              infini::rt::MemcpyKind::kMemcpyHostToDevice,
-                              nullptr) != infini::rt::kSuccess) {
+  if (runtime::MemcpyAsync(ptr, input.data(), input.size(),
+                           runtime::MemcpyKind::kMemcpyHostToDevice,
+                           nullptr) != runtime::kSuccess) {
     return 1;
   }
 #endif
-  if (infini::rt::DeviceSynchronize() != infini::rt::kSuccess) {
+  if (runtime::DeviceSynchronize() != runtime::kSuccess) {
     return 1;
   }
-  if (infini::rt::Memcpy(output.data(), ptr, output.size(),
-                         infini::rt::MemcpyKind::kMemcpyDeviceToHost) !=
-      infini::rt::kSuccess) {
+  if (runtime::Memcpy(output.data(), ptr, output.size(),
+                      runtime::MemcpyKind::kMemcpyDeviceToHost) !=
+      runtime::kSuccess) {
     return 1;
   }
   if (output != input) {
     return 1;
   }
-  if (infini::rt::Free(ptr) != infini::rt::kSuccess) {
+  if (runtime::Free(ptr) != runtime::kSuccess) {
     return 1;
   }
 #endif

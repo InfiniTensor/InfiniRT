@@ -5,7 +5,7 @@
 
 #include "runtime.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 /// ## CUDA-like runtime interface enforcement via CRTP.
 ///
@@ -30,6 +30,6 @@ struct CudaRuntime : DeviceRuntime<Derived> {
   }
 };
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

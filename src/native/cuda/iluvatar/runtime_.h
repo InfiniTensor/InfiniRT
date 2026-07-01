@@ -10,7 +10,7 @@
 #include "native/cuda/iluvatar/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kIluvatar>
@@ -54,6 +54,6 @@ struct Runtime<Device::Type::kIluvatar>
 
 static_assert(Runtime<Device::Type::kIluvatar>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

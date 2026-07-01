@@ -9,7 +9,7 @@
 #include "native/cambricon/device_.h"
 #include "runtime.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kCambricon>
@@ -64,6 +64,6 @@ struct Runtime<Device::Type::kCambricon>
 
 static_assert(Runtime<Device::Type::kCambricon>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

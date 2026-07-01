@@ -9,7 +9,7 @@
 
 namespace {
 
-using CpuRuntime = infini::rt::Runtime<infini::rt::Device::Type::kCpu>;
+using CpuRuntime = infini::rt::runtime::Runtime<infini::rt::Device::Type::kCpu>;
 
 void TestMallocAndFree(infini::rt::test::TestContext* context) {
   void* ptr = nullptr;
@@ -45,11 +45,11 @@ void TestMemcpyAsyncUnsupported(infini::rt::test::TestContext* context) {
   std::array<std::uint8_t, 1> input{1};
   std::array<std::uint8_t, 1> output{};
 
-  context->Expect(CpuRuntime::MemcpyAsync(output.data(), input.data(),
-                                          input.size(),
-                                          CpuRuntime::kMemcpyHostToHost,
-                                          nullptr) != CpuRuntime::kSuccess,
-                  "CPU runtime should not report async memcpy success.");
+  context->Expect(
+      CpuRuntime::MemcpyAsync(output.data(), input.data(), input.size(),
+                              CpuRuntime::kMemcpyHostToHost,
+                              nullptr) != CpuRuntime::kSuccess,
+      "CPU runtime should not report async memcpy success.");
 }
 
 void TestMemset(infini::rt::test::TestContext* context) {

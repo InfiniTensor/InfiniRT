@@ -11,7 +11,7 @@
 #include "native/ascend/device_.h"
 #include "runtime.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kAscend>
@@ -70,6 +70,6 @@ struct Runtime<Device::Type::kAscend>
 
 static_assert(Runtime<Device::Type::kAscend>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

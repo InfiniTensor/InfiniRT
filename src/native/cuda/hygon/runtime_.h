@@ -10,7 +10,7 @@
 #include "native/cuda/hygon/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kHygon>
@@ -56,6 +56,6 @@ struct Runtime<Device::Type::kHygon>
 
 static_assert(Runtime<Device::Type::kHygon>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif
