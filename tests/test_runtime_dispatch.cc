@@ -20,7 +20,7 @@ void TestCpuDispatch(infini::rt::test::TestContext* context) {
   infini::rt::set_runtime_device_type(infini::rt::Device::Type::kCpu);
   context->Expect(
       infini::rt::runtime_device_type() == infini::rt::Device::Type::kCpu,
-      "Default runtime should report CPU dispatch.");
+      "Runtime dispatch should report CPU dispatch.");
 
   std::array<std::uint8_t, 4> input{1, 2, 3, 4};
   std::array<std::uint8_t, 4> output{};
@@ -28,6 +28,18 @@ void TestCpuDispatch(infini::rt::test::TestContext* context) {
 
   ExpectSuccess(context, runtime::SetDevice(0),
                 "CPU dispatch should set device 0.");
+  int current_device = -1;
+  ExpectSuccess(context, runtime::GetDevice(&current_device),
+                "CPU dispatch should get the current device.");
+  context->ExpectEqual(current_device, 0,
+                       "CPU dispatch should keep the current device.");
+
+  int device_count = 0;
+  ExpectSuccess(context, runtime::GetDeviceCount(&device_count),
+                "CPU dispatch should get the device count.");
+  context->Expect(device_count > 0,
+                  "CPU dispatch should report at least one device.");
+
   ExpectSuccess(context, runtime::Malloc(&ptr, input.size()),
                 "CPU dispatch should allocate memory.");
   if (ptr == nullptr) {
@@ -46,11 +58,23 @@ void TestCpuDispatch(infini::rt::test::TestContext* context) {
                 runtime::Memcpy(output.data(), ptr, output.size(),
                                 runtime::MemcpyKind::kMemcpyDeviceToHost),
                 "CPU dispatch should copy runtime memory to host.");
-  ExpectSuccess(context, runtime::Free(ptr),
-                "CPU dispatch should free memory.");
 
   context->ExpectEqual(output, input,
                        "CPU dispatch should preserve copied bytes.");
+
+  ExpectSuccess(context, runtime::Memset(ptr, 0x5A, output.size()),
+                "CPU dispatch should fill runtime memory.");
+  ExpectSuccess(context,
+                runtime::Memcpy(output.data(), ptr, output.size(),
+                                runtime::MemcpyKind::kMemcpyDeviceToHost),
+                "CPU dispatch should copy filled memory to host.");
+  for (const auto value : output) {
+    context->ExpectEqual(value, static_cast<std::uint8_t>(0x5A),
+                         "CPU dispatch should preserve filled bytes.");
+  }
+
+  ExpectSuccess(context, runtime::Free(ptr),
+                "CPU dispatch should free memory.");
 }
 #endif
 
@@ -59,7 +83,7 @@ void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
   infini::rt::set_runtime_device_type(infini::rt::Device::Type::kNvidia);
   context->Expect(
       infini::rt::runtime_device_type() == infini::rt::Device::Type::kNvidia,
-      "Default runtime should report NVIDIA dispatch.");
+      "Runtime dispatch should report NVIDIA dispatch.");
 
   std::array<std::uint8_t, 4> input{5, 6, 7, 8};
   std::array<std::uint8_t, 4> output{};
@@ -67,6 +91,18 @@ void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
 
   ExpectSuccess(context, runtime::SetDevice(0),
                 "NVIDIA dispatch should set device 0.");
+  int current_device = -1;
+  ExpectSuccess(context, runtime::GetDevice(&current_device),
+                "NVIDIA dispatch should get the current device.");
+  context->ExpectEqual(current_device, 0,
+                       "NVIDIA dispatch should keep the current device.");
+
+  int device_count = 0;
+  ExpectSuccess(context, runtime::GetDeviceCount(&device_count),
+                "NVIDIA dispatch should get the device count.");
+  context->Expect(device_count > 0,
+                  "NVIDIA dispatch should report at least one device.");
+
   ExpectSuccess(context, runtime::Malloc(&ptr, input.size()),
                 "NVIDIA dispatch should allocate memory.");
   if (ptr == nullptr) {
@@ -84,11 +120,25 @@ void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
                 runtime::Memcpy(output.data(), ptr, output.size(),
                                 runtime::MemcpyKind::kMemcpyDeviceToHost),
                 "NVIDIA dispatch should copy device data to host.");
-  ExpectSuccess(context, runtime::Free(ptr),
-                "NVIDIA dispatch should free memory.");
 
   context->ExpectEqual(output, input,
                        "NVIDIA dispatch should preserve copied bytes.");
+
+  ExpectSuccess(context, runtime::Memset(ptr, 0x5A, output.size()),
+                "NVIDIA dispatch should fill runtime memory.");
+  ExpectSuccess(context, runtime::DeviceSynchronize(),
+                "NVIDIA dispatch should synchronize filled memory.");
+  ExpectSuccess(context,
+                runtime::Memcpy(output.data(), ptr, output.size(),
+                                runtime::MemcpyKind::kMemcpyDeviceToHost),
+                "NVIDIA dispatch should copy filled memory to host.");
+  for (const auto value : output) {
+    context->ExpectEqual(value, static_cast<std::uint8_t>(0x5A),
+                         "NVIDIA dispatch should preserve filled bytes.");
+  }
+
+  ExpectSuccess(context, runtime::Free(ptr),
+                "NVIDIA dispatch should free memory.");
 }
 #endif
 

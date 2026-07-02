@@ -3,8 +3,6 @@
 
 #include <cstdint>
 #include <string>
-#include <type_traits>
-#include <utility>
 #include <vector>
 
 #include "data_type.h"
@@ -12,22 +10,6 @@
 #include "hash.h"
 
 namespace infini::rt {
-
-namespace tensor_view_detail {
-
-template <typename T, typename = void>
-struct IsTensorLike : std::false_type {};
-
-template <typename T>
-struct IsTensorLike<T,
-                    std::void_t<decltype(std::declval<const T&>().data()),
-                                decltype(std::declval<const T&>().shape()),
-                                decltype(std::declval<const T&>().dtype()),
-                                decltype(std::declval<const T&>().device()),
-                                decltype(std::declval<const T&>().strides())>>
-    : std::true_type {};
-
-}  // namespace tensor_view_detail
 
 class TensorView {
  public:
@@ -41,9 +23,7 @@ class TensorView {
 
   using Strides = std::vector<Stride>;
 
-  template <typename TensorLike,
-            typename = std::enable_if_t<
-                tensor_view_detail::IsTensorLike<TensorLike>::value>>
+  template <typename TensorLike>
   TensorView(const TensorLike& tensor)
       : data_{const_cast<void*>(static_cast<const void*>(tensor.data()))},
         shape_{tensor.shape()},

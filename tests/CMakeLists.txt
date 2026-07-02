@@ -8,13 +8,13 @@ add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
 
 if(WITH_CPU OR WITH_NVIDIA)
-    add_infini_rt_test(test_default_runtime test_default_runtime.cc)
+    add_infini_rt_test(test_runtime_dispatch test_runtime_dispatch.cc)
     if(WITH_CPU)
-        target_compile_definitions(test_default_runtime
+        target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_CPU=1)
     endif()
     if(WITH_NVIDIA)
-        target_compile_definitions(test_default_runtime
+        target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_NVIDIA=1)
     endif()
 endif()

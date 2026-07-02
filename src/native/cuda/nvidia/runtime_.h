@@ -1,7 +1,7 @@
 #ifndef INFINI_RT_NVIDIA_RUNTIME__H_
 #define INFINI_RT_NVIDIA_RUNTIME__H_
 
-#include <utility>
+#include <cstddef>
 
 // clang-format off
 #include <cuda_runtime.h>
@@ -23,23 +23,29 @@ struct Runtime<Device::Type::kNvidia>
 
   static constexpr Error kSuccess = cudaSuccess;
 
-  static constexpr auto SetDevice = cudaSetDevice;
+  static Error SetDevice(int device) { return cudaSetDevice(device); }
 
-  static constexpr auto GetDevice = cudaGetDevice;
+  static Error GetDevice(int* device) { return cudaGetDevice(device); }
 
-  static constexpr auto GetDeviceCount = cudaGetDeviceCount;
+  static Error GetDeviceCount(int* count) { return cudaGetDeviceCount(count); }
 
-  static constexpr auto DeviceSynchronize = cudaDeviceSynchronize;
+  static Error DeviceSynchronize() { return cudaDeviceSynchronize(); }
 
-  static constexpr auto Malloc = [](auto&&... args) {
-    return cudaMalloc(std::forward<decltype(args)>(args)...);
-  };
+  static Error Malloc(void** ptr, std::size_t size) {
+    return cudaMalloc(ptr, size);
+  }
 
-  static constexpr auto Memcpy = cudaMemcpy;
+  static Error Memcpy(void* dst, const void* src, std::size_t count,
+                      cudaMemcpyKind kind) {
+    return cudaMemcpy(dst, src, count, kind);
+  }
 
-  static constexpr auto MemcpyAsync = cudaMemcpyAsync;
+  static Error MemcpyAsync(void* dst, const void* src, std::size_t count,
+                           cudaMemcpyKind kind, Stream stream) {
+    return cudaMemcpyAsync(dst, src, count, kind, stream);
+  }
 
-  static constexpr auto Free = cudaFree;
+  static Error Free(void* ptr) { return cudaFree(ptr); }
 
   static constexpr auto kMemcpyHostToHost = cudaMemcpyHostToHost;
 
@@ -49,7 +55,9 @@ struct Runtime<Device::Type::kNvidia>
 
   static constexpr auto kMemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
 
-  static constexpr auto Memset = cudaMemset;
+  static Error Memset(void* ptr, int value, std::size_t count) {
+    return cudaMemset(ptr, value, count);
+  }
 };
 
 static_assert(Runtime<Device::Type::kNvidia>::Validate());

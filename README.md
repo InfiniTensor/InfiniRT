@@ -66,39 +66,45 @@ cmake --install build
 #include <infini/rt.h>
 
 int main() {
-  infini::rt::SetDevice(0);
+  namespace runtime = infini::rt::runtime;
+
+  runtime::SetDevice(0);
 
   constexpr std::size_t size = 1024;
   void* ptr = nullptr;
 
-  infini::rt::Malloc(&ptr, size);
-  infini::rt::Memset(ptr, 0, size);
-  infini::rt::Free(ptr);
+  runtime::Malloc(&ptr, size);
+  runtime::Memset(ptr, 0, size);
+  runtime::Free(ptr);
 
   return 0;
 }
 ```
 
-The top-level runtime API dispatches through `infini::rt::Runtime<>`, which is
-the `Runtime<Device::Type::kCount>` default specialization. A GPU backend is
-selected initially when one is enabled; otherwise CPU is selected.
-`SetDeviceType` accepts only backends enabled in the current build.
+The CUDA Runtime API-aligned layer lives under `infini::rt::runtime`. The
+top-level `infini::rt::set_runtime_device_type` and
+`infini::rt::runtime_device_type` APIs select which enabled backend receives
+those runtime calls. A GPU backend is selected initially when one is enabled;
+otherwise CPU is selected.
 
 ```cpp
+namespace runtime = infini::rt::runtime;
+
 constexpr std::size_t size = 1024;
 void* ptr = nullptr;
 
-infini::rt::Runtime<>::SetDeviceType(infini::rt::Device::Type::kCpu);
-infini::rt::Malloc(&ptr, size);
-infini::rt::Free(ptr);
+infini::rt::set_runtime_device_type(infini::rt::Device::Type::kCpu);
+runtime::Malloc(&ptr, size);
+runtime::Free(ptr);
 
-infini::rt::Runtime<>::SetDeviceType(infini::rt::Device::Type::kNvidia);
-infini::rt::Malloc(&ptr, size);
-infini::rt::Free(ptr);
+infini::rt::set_runtime_device_type(infini::rt::Device::Type::kNvidia);
+runtime::Malloc(&ptr, size);
+runtime::Free(ptr);
 ```
 
-Use `infini::rt::Runtime<infini::rt::Device::Type::kCpu>` when CPU runtime
-calls are needed explicitly in a build that also enables an accelerator backend.
+Use `infini::rt::runtime::Runtime<infini::rt::Device::Type::kCpu>` when CPU
+runtime calls are needed explicitly in a build that also enables an accelerator
+backend.
 
 ## Using Installed InfiniRT From Another Project
 
