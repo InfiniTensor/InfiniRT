@@ -59,19 +59,18 @@ int main() {
     return 1;
   }
   if (runtime::Memcpy(ptr, input.data(), input.size(),
-                      runtime::MemcpyKind::kMemcpyHostToDevice) !=
-      runtime::kSuccess) {
+                      runtime::kMemcpyHostToDevice) != runtime::kSuccess) {
     return 1;
   }
 #if defined(INFINI_RT_CONSUMER_BACKEND_CPU)
   if (runtime::MemcpyAsync(ptr, input.data(), input.size(),
-                           runtime::MemcpyKind::kMemcpyHostToDevice,
+                           runtime::kMemcpyHostToDevice,
                            nullptr) == runtime::kSuccess) {
     return 1;
   }
 #else
   if (runtime::MemcpyAsync(ptr, input.data(), input.size(),
-                           runtime::MemcpyKind::kMemcpyHostToDevice,
+                           runtime::kMemcpyHostToDevice,
                            nullptr) != runtime::kSuccess) {
     return 1;
   }
@@ -80,8 +79,7 @@ int main() {
     return 1;
   }
   if (runtime::Memcpy(output.data(), ptr, output.size(),
-                      runtime::MemcpyKind::kMemcpyDeviceToHost) !=
-      runtime::kSuccess) {
+                      runtime::kMemcpyDeviceToHost) != runtime::kSuccess) {
     return 1;
   }
   if (output != input) {
