@@ -15,39 +15,11 @@ void ExpectSuccess(infini::rt::test::TestContext* context,
   context->Expect(status == runtime::kSuccess, message);
 }
 
-void ExpectStatusOk(infini::rt::test::TestContext* context,
-                    const infini::rt::Status& status, const char* message) {
-  context->Expect(status.ok(), message);
-}
-
-void TestInvalidDeviceType(infini::rt::test::TestContext* context) {
-  const auto before = infini::rt::runtime_device_type();
-  context->Expect(before.ok(),
-                  "Default runtime should report its initial device type.");
-
-  const auto status =
-      infini::rt::set_runtime_device_type(infini::rt::Device::Type::kQy);
-  context->Expect(!status.ok(),
-                  "Default runtime should reject disabled device types.");
-
-  const auto after = infini::rt::runtime_device_type();
-  context->Expect(after.ok(),
-                  "Rejected device type should keep runtime state valid.");
-  if (before.ok() && after.ok()) {
-    context->Expect(*after == *before,
-                    "Rejected device type should not change dispatch target.");
-  }
-}
-
 #if defined(INFINI_RT_TEST_WITH_CPU)
 void TestCpuDispatch(infini::rt::test::TestContext* context) {
-  ExpectStatusOk(
-      context,
-      infini::rt::set_runtime_device_type(infini::rt::Device::Type::kCpu),
-      "Default runtime should select CPU dispatch.");
-  const auto device_type = infini::rt::runtime_device_type();
+  infini::rt::set_runtime_device_type(infini::rt::Device::Type::kCpu);
   context->Expect(
-      device_type.ok() && *device_type == infini::rt::Device::Type::kCpu,
+      infini::rt::runtime_device_type() == infini::rt::Device::Type::kCpu,
       "Default runtime should report CPU dispatch.");
 
   std::array<std::uint8_t, 4> input{1, 2, 3, 4};
@@ -84,13 +56,9 @@ void TestCpuDispatch(infini::rt::test::TestContext* context) {
 
 #if defined(INFINI_RT_TEST_WITH_NVIDIA)
 void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
-  ExpectStatusOk(
-      context,
-      infini::rt::set_runtime_device_type(infini::rt::Device::Type::kNvidia),
-      "Default runtime should select NVIDIA dispatch.");
-  const auto device_type = infini::rt::runtime_device_type();
+  infini::rt::set_runtime_device_type(infini::rt::Device::Type::kNvidia);
   context->Expect(
-      device_type.ok() && *device_type == infini::rt::Device::Type::kNvidia,
+      infini::rt::runtime_device_type() == infini::rt::Device::Type::kNvidia,
       "Default runtime should report NVIDIA dispatch.");
 
   std::array<std::uint8_t, 4> input{5, 6, 7, 8};
@@ -128,8 +96,6 @@ void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
 
 int main() {
   infini::rt::test::TestContext context;
-
-  TestInvalidDeviceType(&context);
 
 #if defined(INFINI_RT_TEST_WITH_CPU)
   TestCpuDispatch(&context);
