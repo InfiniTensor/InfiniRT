@@ -71,13 +71,6 @@ _DEFAULT_DEVICE_PRIORITY = (
     "cpu",
 )
 
-_NVIDIA_RUNTIME_HEADER = "native/cuda/nvidia/runtime_.h"
-
-_PUBLIC_TYPE_NAMES = {
-    "cudaMemcpyKind": "MemcpyKind",
-    "size_t": "std::size_t",
-}
-
 
 def _guard(path):
     token = "_".join(path.parts).replace(".", "_").upper()
@@ -163,8 +156,7 @@ def _write_detail_headers(include_root, source_root, devices):
         _write_detail_header(include_root, source_root, relative_path)
 
 
-def _write_generated_header(include_root, source_root, devices):
-    runtime_api = _parse_nvidia_runtime_api(source_root)
+def _write_generated_header(include_root, devices):
     default_device = _default_device(devices)
     default_device_type = _DEVICE_TYPES[default_device]
     includes = [
@@ -182,17 +174,8 @@ def _write_generated_header(include_root, source_root, devices):
     for device in devices:
         includes.append(f"#include <infini/rt/{device}/runtime_.h>")
 
-    runtime_aliases = "\n\n".join(
-        f"using {alias} = typename generated_detail::DefaultRuntime::{alias};"
-        for alias in runtime_api.aliases
-    )
-    memcpy_kind_values = "\n".join(
-        f"""  {constant} =
-      static_cast<int>(generated_detail::DefaultRuntime::{constant}),"""
-        for constant in runtime_api.memcpy_kind_constants
-    )
     runtime_declarations = "\n\n".join(
-        f"{function.signature()};" for function in runtime_api.functions
+        f"{function.signature()};" for function in _PUBLIC_RUNTIME_FUNCTIONS
     )
 
     path = include_root / "infini" / "rt" / "generated.h"
@@ -212,18 +195,27 @@ Device::Type runtime_device_type();
 namespace runtime {{
 namespace generated_detail {{
 
-using DefaultRuntime = Runtime<{default_device_type}>;
+using DefaultErrorRuntime = Runtime<{default_device_type}>;
 
 inline constexpr Device::Type kDefaultDeviceType = {default_device_type};
 
 }}  // namespace generated_detail
 
-{runtime_aliases}
+using Error = typename generated_detail::DefaultErrorRuntime::Error;
 
-inline constexpr Error kSuccess = generated_detail::DefaultRuntime::kSuccess;
+using Stream = typename generated_detail::DefaultErrorRuntime::Stream;
+
+inline constexpr Error kSuccess = generated_detail::DefaultErrorRuntime::kSuccess;
 
 enum class MemcpyKind {{
-{memcpy_kind_values}
+  kMemcpyHostToHost =
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyHostToHost),
+  kMemcpyHostToDevice =
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyHostToDevice),
+  kMemcpyDeviceToHost =
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyDeviceToHost),
+  kMemcpyDeviceToDevice =
+      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyDeviceToDevice),
 }};
 
 {runtime_declarations}
@@ -255,73 +247,48 @@ class _Function:
         return ", ".join(f"{param.type} {param.name}" for param in self.params)
 
 
-@dataclasses.dataclass(frozen=True)
-class _RuntimeApi:
-    aliases: tuple[str, ...]
-    memcpy_kind_constants: tuple[str, ...]
-    functions: tuple[_Function, ...]
-
-
-def _runtime_struct_body(source_root):
-    text = (source_root / _NVIDIA_RUNTIME_HEADER).read_text()
-    match = re.search(
-        r"struct Runtime<Device::Type::kNvidia>.*?\{\n(?P<body>.*?)\n\};",
-        text,
-        flags=re.DOTALL,
-    )
-    if match is None:
-        raise ValueError("could not find NVIDIA Runtime specialization")
-
-    return match.group("body")
-
-
-def _public_type_name(name):
-    return _PUBLIC_TYPE_NAMES.get(name, name)
-
-
-def _parse_param(param):
-    param_type, param_name = " ".join(param.strip().split()).rsplit(" ", 1)
-
-    return _Param(_public_type_name(param_type), param_name)
-
-
-def _parse_function(match):
-    params = match.group("params").strip()
-    return _Function(
-        _public_type_name(match.group("return_type")),
-        match.group("name"),
-        tuple(_parse_param(param) for param in re.split(r"\s*,\s*", params) if param),
-    )
-
-
-def _parse_nvidia_runtime_api(source_root):
-    body = _runtime_struct_body(source_root)
-    aliases = tuple(
-        alias
-        for alias in re.findall(r"^\s+using\s+(\w+)\s*=", body, flags=re.MULTILINE)
-        if alias in {"Error", "Stream"}
-    )
-    memcpy_kind_constants = tuple(
-        re.findall(
-            r"^\s+static constexpr auto (kMemcpy\w+)\s*=",
-            body,
-            flags=re.MULTILINE,
-        )
-    )
-    functions = tuple(
-        _parse_function(match)
-        for match in re.finditer(
-            r"^\s+static\s+(?P<return_type>\w+)\s+"
-            r"(?P<name>[A-Z]\w*)\((?P<params>[^)]*)\)\s*\{",
-            body,
-            flags=re.MULTILINE,
-        )
-    )
-
-    if not aliases or not memcpy_kind_constants or not functions:
-        raise ValueError("NVIDIA Runtime specialization has no public API")
-
-    return _RuntimeApi(aliases, memcpy_kind_constants, functions)
+_PUBLIC_RUNTIME_FUNCTIONS = (
+    _Function("Error", "SetDevice", (_Param("int", "device"),)),
+    _Function("Error", "GetDevice", (_Param("int*", "device"),)),
+    _Function("Error", "GetDeviceCount", (_Param("int*", "count"),)),
+    _Function("Error", "DeviceSynchronize", ()),
+    _Function(
+        "Error",
+        "Malloc",
+        (_Param("void**", "ptr"), _Param("std::size_t", "size")),
+    ),
+    _Function("Error", "Free", (_Param("void*", "ptr"),)),
+    _Function(
+        "Error",
+        "Memset",
+        (
+            _Param("void*", "ptr"),
+            _Param("int", "value"),
+            _Param("std::size_t", "count"),
+        ),
+    ),
+    _Function(
+        "Error",
+        "Memcpy",
+        (
+            _Param("void*", "dst"),
+            _Param("const void*", "src"),
+            _Param("std::size_t", "count"),
+            _Param("MemcpyKind", "kind"),
+        ),
+    ),
+    _Function(
+        "Error",
+        "MemcpyAsync",
+        (
+            _Param("void*", "dst"),
+            _Param("const void*", "src"),
+            _Param("std::size_t", "count"),
+            _Param("MemcpyKind", "kind"),
+            _Param("Stream", "stream"),
+        ),
+    ),
+)
 
 
 def _default_device(devices):
@@ -379,8 +346,8 @@ def _write_runtime_dispatch_function(function, devices):
 """
 
 
-def _write_runtime_dispatch(source_path, source_root, devices):
-    functions = _parse_nvidia_runtime_api(source_root).functions
+def _write_runtime_dispatch(source_path, devices):
+    functions = _PUBLIC_RUNTIME_FUNCTIONS
     dispatch_functions = "\n".join(
         _write_runtime_dispatch_function(function, devices=devices)
         for function in functions
@@ -490,8 +457,8 @@ def main():
         for wrapper_device, header_name, target in _DEVICE_HEADERS[device]:
             _write_wrapper(include_root, wrapper_device, header_name, target)
 
-    _write_generated_header(include_root, source_root, devices)
-    _write_runtime_dispatch(pathlib.Path(args.source_output), source_root, devices)
+    _write_generated_header(include_root, devices)
+    _write_runtime_dispatch(pathlib.Path(args.source_output), devices)
 
 
 if __name__ == "__main__":
