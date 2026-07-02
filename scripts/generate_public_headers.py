@@ -161,6 +161,7 @@ def _write_generated_header(include_root, devices):
     default_device_type = _DEVICE_TYPES[default_device]
     includes = [
         "#include <cstddef>",
+        "#include <type_traits>",
         f"#include {_detail_include('data_type.h')}",
         f"#include {_detail_include('device.h')}",
         f"#include {_detail_include('hash.h')}",
@@ -205,18 +206,22 @@ using Error = typename generated_detail::DefaultErrorRuntime::Error;
 
 using Stream = typename generated_detail::DefaultErrorRuntime::Stream;
 
+using MemcpyKind = std::remove_cv_t<
+    decltype(generated_detail::DefaultErrorRuntime::kMemcpyHostToHost)>;
+
 inline constexpr Error kSuccess = generated_detail::DefaultErrorRuntime::kSuccess;
 
-enum class MemcpyKind {{
-  kMemcpyHostToHost =
-      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyHostToHost),
-  kMemcpyHostToDevice =
-      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyHostToDevice),
-  kMemcpyDeviceToHost =
-      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyDeviceToHost),
-  kMemcpyDeviceToDevice =
-      static_cast<int>(generated_detail::DefaultErrorRuntime::kMemcpyDeviceToDevice),
-}};
+inline constexpr MemcpyKind kMemcpyHostToHost =
+    generated_detail::DefaultErrorRuntime::kMemcpyHostToHost;
+
+inline constexpr MemcpyKind kMemcpyHostToDevice =
+    generated_detail::DefaultErrorRuntime::kMemcpyHostToDevice;
+
+inline constexpr MemcpyKind kMemcpyDeviceToHost =
+    generated_detail::DefaultErrorRuntime::kMemcpyDeviceToHost;
+
+inline constexpr MemcpyKind kMemcpyDeviceToDevice =
+    generated_detail::DefaultErrorRuntime::kMemcpyDeviceToDevice;
 
 {runtime_declarations}
 
@@ -412,13 +417,13 @@ auto RuntimeMemcpyKind(MemcpyKind kind) {{
   using DeviceRuntime = Runtime<device_type>;
 
   switch (kind) {{
-    case MemcpyKind::kMemcpyHostToHost:
+    case kMemcpyHostToHost:
       return DeviceRuntime::kMemcpyHostToHost;
-    case MemcpyKind::kMemcpyHostToDevice:
+    case kMemcpyHostToDevice:
       return DeviceRuntime::kMemcpyHostToDevice;
-    case MemcpyKind::kMemcpyDeviceToHost:
+    case kMemcpyDeviceToHost:
       return DeviceRuntime::kMemcpyDeviceToHost;
-    case MemcpyKind::kMemcpyDeviceToDevice:
+    case kMemcpyDeviceToDevice:
       return DeviceRuntime::kMemcpyDeviceToDevice;
   }}
 
