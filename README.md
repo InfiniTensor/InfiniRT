@@ -66,16 +66,14 @@ cmake --install build
 #include <infini/rt.h>
 
 int main() {
-  namespace runtime = infini::rt::runtime;
-
-  runtime::SetDevice(0);
+  infini::rt::runtime::SetDevice(0);
 
   constexpr std::size_t size = 1024;
   void* ptr = nullptr;
 
-  runtime::Malloc(&ptr, size);
-  runtime::Memset(ptr, 0, size);
-  runtime::Free(ptr);
+  infini::rt::runtime::Malloc(&ptr, size);
+  infini::rt::runtime::Memset(ptr, 0, size);
+  infini::rt::runtime::Free(ptr);
 
   return 0;
 }
@@ -88,18 +86,16 @@ those runtime calls. A GPU backend is selected initially when one is enabled;
 otherwise CPU is selected.
 
 ```cpp
-namespace runtime = infini::rt::runtime;
-
 constexpr std::size_t size = 1024;
 void* ptr = nullptr;
 
 infini::rt::set_runtime_device_type(infini::rt::Device::Type::kCpu);
-runtime::Malloc(&ptr, size);
-runtime::Free(ptr);
+infini::rt::runtime::Malloc(&ptr, size);
+infini::rt::runtime::Free(ptr);
 
 infini::rt::set_runtime_device_type(infini::rt::Device::Type::kNvidia);
-runtime::Malloc(&ptr, size);
-runtime::Free(ptr);
+infini::rt::runtime::Malloc(&ptr, size);
+infini::rt::runtime::Free(ptr);
 ```
 
 Use `infini::rt::runtime::Runtime<infini::rt::Device::Type::kCpu>` when CPU
