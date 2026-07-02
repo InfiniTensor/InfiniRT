@@ -10,14 +10,18 @@
 #include "native/cuda/iluvatar/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kIluvatar>
     : CudaRuntime<Runtime<Device::Type::kIluvatar>> {
+  using Error = cudaError_t;
+
   using Stream = cudaStream_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kIluvatar;
+
+  static constexpr Error kSuccess = cudaSuccess;
 
   static constexpr auto SetDevice = cudaSetDevice;
 
@@ -33,21 +37,23 @@ struct Runtime<Device::Type::kIluvatar>
 
   static constexpr auto Memcpy = cudaMemcpy;
 
+  static constexpr auto MemcpyAsync = cudaMemcpyAsync;
+
   static constexpr auto Free = cudaFree;
 
-  static constexpr auto MemcpyHostToHost = cudaMemcpyHostToHost;
+  static constexpr auto kMemcpyHostToHost = cudaMemcpyHostToHost;
 
-  static constexpr auto MemcpyHostToDevice = cudaMemcpyHostToDevice;
+  static constexpr auto kMemcpyHostToDevice = cudaMemcpyHostToDevice;
 
-  static constexpr auto MemcpyDeviceToHost = cudaMemcpyDeviceToHost;
+  static constexpr auto kMemcpyDeviceToHost = cudaMemcpyDeviceToHost;
 
-  static constexpr auto MemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
+  static constexpr auto kMemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = cudaMemset;
 };
 
 static_assert(Runtime<Device::Type::kIluvatar>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

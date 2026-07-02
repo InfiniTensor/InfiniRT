@@ -8,14 +8,18 @@
 #include "native/cuda/moore/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kMoore>
     : CudaRuntime<Runtime<Device::Type::kMoore>> {
+  using Error = musaError_t;
+
   using Stream = musaStream_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kMoore;
+
+  static constexpr Error kSuccess = musaSuccess;
 
   static constexpr auto SetDevice = musaSetDevice;
 
@@ -39,23 +43,27 @@ struct Runtime<Device::Type::kMoore>
     return musaMemcpy(std::forward<decltype(args)>(args)...);
   };
 
+  static constexpr auto MemcpyAsync = [](auto&&... args) {
+    return musaMemcpyAsync(std::forward<decltype(args)>(args)...);
+  };
+
   static constexpr auto Free = [](auto&&... args) {
     return musaFree(std::forward<decltype(args)>(args)...);
   };
 
-  static constexpr auto MemcpyHostToHost = musaMemcpyHostToHost;
+  static constexpr auto kMemcpyHostToHost = musaMemcpyHostToHost;
 
-  static constexpr auto MemcpyHostToDevice = musaMemcpyHostToDevice;
+  static constexpr auto kMemcpyHostToDevice = musaMemcpyHostToDevice;
 
-  static constexpr auto MemcpyDeviceToHost = musaMemcpyDeviceToHost;
+  static constexpr auto kMemcpyDeviceToHost = musaMemcpyDeviceToHost;
 
-  static constexpr auto MemcpyDeviceToDevice = musaMemcpyDeviceToDevice;
+  static constexpr auto kMemcpyDeviceToDevice = musaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = musaMemset;
 };
 
 static_assert(Runtime<Device::Type::kMoore>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

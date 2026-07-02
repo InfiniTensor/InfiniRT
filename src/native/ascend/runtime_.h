@@ -11,14 +11,18 @@
 #include "native/ascend/device_.h"
 #include "runtime.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kAscend>
     : DeviceRuntime<Runtime<Device::Type::kAscend>> {
+  using Error = aclError;
+
   using Stream = aclrtStream;
 
   static constexpr Device::Type kDeviceType = Device::Type::kAscend;
+
+  static constexpr Error kSuccess = ACL_SUCCESS;
 
   static constexpr auto SetDevice = aclrtSetDevice;
 
@@ -45,13 +49,19 @@ struct Runtime<Device::Type::kAscend>
     return aclrtMemcpy(dst, count, src, count, kind);
   };
 
-  static constexpr auto MemcpyHostToHost = ACL_MEMCPY_HOST_TO_HOST;
+  static constexpr auto MemcpyAsync = [](void* dst, const void* src,
+                                         size_t count, aclrtMemcpyKind kind,
+                                         Stream stream) {
+    return aclrtMemcpyAsync(dst, count, src, count, kind, stream);
+  };
 
-  static constexpr auto MemcpyHostToDevice = ACL_MEMCPY_HOST_TO_DEVICE;
+  static constexpr auto kMemcpyHostToHost = ACL_MEMCPY_HOST_TO_HOST;
 
-  static constexpr auto MemcpyDeviceToHost = ACL_MEMCPY_DEVICE_TO_HOST;
+  static constexpr auto kMemcpyHostToDevice = ACL_MEMCPY_HOST_TO_DEVICE;
 
-  static constexpr auto MemcpyDeviceToDevice = ACL_MEMCPY_DEVICE_TO_DEVICE;
+  static constexpr auto kMemcpyDeviceToHost = ACL_MEMCPY_DEVICE_TO_HOST;
+
+  static constexpr auto kMemcpyDeviceToDevice = ACL_MEMCPY_DEVICE_TO_DEVICE;
 
   static constexpr auto Memset = [](void* ptr, int value, size_t count) {
     return aclrtMemset(ptr, count, value, count);
@@ -60,6 +70,6 @@ struct Runtime<Device::Type::kAscend>
 
 static_assert(Runtime<Device::Type::kAscend>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

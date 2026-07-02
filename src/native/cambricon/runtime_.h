@@ -9,14 +9,18 @@
 #include "native/cambricon/device_.h"
 #include "runtime.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kCambricon>
     : DeviceRuntime<Runtime<Device::Type::kCambricon>> {
+  using Error = cnrtRet_t;
+
   using Stream = cnrtQueue_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kCambricon;
+
+  static constexpr Error kSuccess = CNRT_RET_SUCCESS;
 
   static constexpr auto SetDevice = cnrtSetDevice;
 
@@ -41,19 +45,25 @@ struct Runtime<Device::Type::kCambricon>
     return cnrtMemcpy(dst, const_cast<void*>(src), size, kind);
   };
 
-  static constexpr auto MemcpyHostToHost = cnrtMemcpyHostToHost;
+  static constexpr auto MemcpyAsync = [](void* dst, const void* src,
+                                         std::size_t size, auto kind,
+                                         Stream stream) {
+    return cnrtMemcpyAsync(dst, const_cast<void*>(src), size, kind, stream);
+  };
 
-  static constexpr auto MemcpyHostToDevice = cnrtMemcpyHostToDev;
+  static constexpr auto kMemcpyHostToHost = cnrtMemcpyHostToHost;
 
-  static constexpr auto MemcpyDeviceToHost = cnrtMemcpyDevToHost;
+  static constexpr auto kMemcpyHostToDevice = cnrtMemcpyHostToDev;
 
-  static constexpr auto MemcpyDeviceToDevice = cnrtMemcpyDevToDev;
+  static constexpr auto kMemcpyDeviceToHost = cnrtMemcpyDevToHost;
+
+  static constexpr auto kMemcpyDeviceToDevice = cnrtMemcpyDevToDev;
 
   static constexpr auto Memset = cnrtMemset;
 };
 
 static_assert(Runtime<Device::Type::kCambricon>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif
