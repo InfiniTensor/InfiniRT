@@ -7,6 +7,8 @@ target_sources(infinirt PRIVATE
     ${BASE_SRCS}
     ${PROJECT_SOURCE_DIR}/generated/src/runtime_dispatch.cc)
 
+target_link_libraries(infinirt PUBLIC absl::status absl::statusor)
+
 if(WITH_CPU)
     target_compile_definitions(infinirt PUBLIC WITH_CPU=1)
 

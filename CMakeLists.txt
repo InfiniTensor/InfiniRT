@@ -3,6 +3,7 @@ project(InfiniRT LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(_DEFAULT_HYGON_DTK_ROOT "/opt/dtk")
 
@@ -33,6 +34,27 @@ option(WITH_ASCEND "Enable Ascend backend" OFF)
 
 option(AUTO_DETECT_DEVICES "Automatically detect available devices" OFF)
 option(INFINI_RT_BUILD_TESTING "Build InfiniRT tests" OFF)
+option(INFINI_RT_FETCH_ABSEIL "Fetch Abseil when no package is found" ON)
+
+find_package(absl CONFIG QUIET)
+if(NOT absl_FOUND)
+    if(NOT INFINI_RT_FETCH_ABSEIL)
+        message(FATAL_ERROR "Abseil was not found. Set absl_DIR or enable INFINI_RT_FETCH_ABSEIL.")
+    endif()
+
+    include(FetchContent)
+    set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
+    set(ABSL_ENABLE_INSTALL ON CACHE BOOL "" FORCE)
+    set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        abseil
+        GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+        GIT_TAG 20260526.0
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+    )
+    FetchContent_MakeAvailable(abseil)
+endif()
 
 if(AUTO_DETECT_DEVICES)
     message(STATUS "Auto-detecting available devices...")

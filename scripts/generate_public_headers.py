@@ -103,7 +103,7 @@ def _rewrite_detail_include(match):
 
 
 _DETAIL_INCLUDE_PATTERN = re.compile(
-    r'#include "((?:common|native)/[^"]+|data_type\.h|device\.h|dispatcher\.h|hash\.h|runtime\.h|tensor_view\.h)"'
+    r'#include "((?:common|native)/[^"]+|data_type\.h|device\.h|dispatcher\.h|hash\.h|runtime\.h|status\.h|tensor_view\.h)"'
 )
 
 
@@ -137,6 +137,7 @@ def _write_detail_headers(include_root, source_root, devices):
         "dispatcher.h",
         "hash.h",
         "runtime.h",
+        "status.h",
         "tensor_view.h",
     }
 
@@ -165,6 +166,7 @@ def _write_generated_header(include_root, devices):
         f"#include {_detail_include('device.h')}",
         f"#include {_detail_include('hash.h')}",
         f"#include {_detail_include('runtime.h')}",
+        f"#include {_detail_include('status.h')}",
         f"#include {_detail_include('tensor_view.h')}",
     ]
 
@@ -184,9 +186,9 @@ def _write_generated_header(include_root, devices):
 
 namespace infini::rt {{
 
-void set_runtime_device_type(Device::Type device_type);
+Status set_runtime_device_type(Device::Type device_type);
 
-Device::Type runtime_device_type();
+StatusOr<Device::Type> runtime_device_type();
 
 namespace runtime {{
 namespace generated_detail {{
@@ -349,11 +351,15 @@ def _dispatch_cases(devices, function):
 
 def _write_runtime_dispatch_function(function, devices):
     return f"""{function.signature()} {{
-  switch (infini::rt::runtime_device_type()) {{
+  auto device_type = infini::rt::runtime_device_type();
+  if (!device_type.ok()) {{
+    return InvalidValueError();
+  }}
+
+  switch (*device_type) {{
 {_dispatch_cases(devices, function)}
   }}
 
-  assert(false && "unsupported runtime device type");
   return InvalidValueError();
 }}
 """
@@ -368,7 +374,7 @@ def _write_runtime_dispatch(source_path, devices):
     set_device_type_cases = "\n".join(
         f"""    case {_DEVICE_TYPES[device]}:
       runtime_device_type_ = device_type;
-      return;"""
+      return OkStatus();"""
         for device in devices
     )
 
@@ -389,15 +395,15 @@ thread_local Device::Type runtime_device_type_ =
 
 }}  // namespace
 
-void set_runtime_device_type(Device::Type device_type) {{
+Status set_runtime_device_type(Device::Type device_type) {{
   switch (device_type) {{
 {set_device_type_cases}
   }}
 
-  assert(false && "unsupported runtime device type");
+  return InvalidArgumentError("unsupported runtime device type");
 }}
 
-Device::Type runtime_device_type() {{
+StatusOr<Device::Type> runtime_device_type() {{
   return runtime_device_type_;
 }}
 

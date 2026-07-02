@@ -45,6 +45,19 @@ void TestDataType(infini::rt::test::TestContext* context) {
                        DataType::kUInt16, "uint16 should parse by name.");
 }
 
+void TestStatus(infini::rt::test::TestContext* context) {
+  const infini::rt::Status ok_status = infini::rt::OkStatus();
+  context->Expect(ok_status.ok(), "OkStatus should report success.");
+
+  const infini::rt::Status invalid =
+      infini::rt::InvalidArgumentError("invalid argument");
+  context->Expect(!invalid.ok(), "InvalidArgumentError should report failure.");
+
+  const infini::rt::StatusOr<int> value{1};
+  context->Expect(value.ok(), "StatusOr should hold a value.");
+  context->ExpectEqual(*value, 1, "StatusOr should expose its value.");
+}
+
 void TestTensorView(infini::rt::test::TestContext* context) {
   std::vector<float> data{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f};
   TensorView tensor{data.data(), std::vector<std::size_t>{2, 3},
@@ -89,6 +102,7 @@ int main() {
 
   TestDevice(&context);
   TestDataType(&context);
+  TestStatus(&context);
   TestTensorView(&context);
 
   return context.ExitCode();

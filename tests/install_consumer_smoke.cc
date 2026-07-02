@@ -27,8 +27,12 @@ int main() {
 #else
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kNvidia;
 #endif
-  infini::rt::set_runtime_device_type(kExpectedDeviceType);
-  if (infini::rt::runtime_device_type() != kExpectedDeviceType) {
+  if (!infini::rt::set_runtime_device_type(kExpectedDeviceType).ok()) {
+    return 1;
+  }
+  const auto runtime_device_type = infini::rt::runtime_device_type();
+  if (!runtime_device_type.ok() ||
+      *runtime_device_type != kExpectedDeviceType) {
     return 1;
   }
 
