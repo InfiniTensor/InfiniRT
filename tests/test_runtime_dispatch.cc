@@ -48,15 +48,15 @@ void TestCpuDispatch(infini::rt::test::TestContext* context) {
 
   ExpectSuccess(context,
                 runtime::Memcpy(ptr, input.data(), input.size(),
-                                runtime::MemcpyKind::kMemcpyHostToDevice),
+                                runtime::kMemcpyHostToDevice),
                 "CPU dispatch should copy host data to runtime memory.");
   context->Expect(runtime::MemcpyAsync(ptr, input.data(), input.size(),
-                                       runtime::MemcpyKind::kMemcpyHostToDevice,
+                                       runtime::kMemcpyHostToDevice,
                                        nullptr) != runtime::kSuccess,
                   "CPU dispatch should not report async memcpy success.");
   ExpectSuccess(context,
                 runtime::Memcpy(output.data(), ptr, output.size(),
-                                runtime::MemcpyKind::kMemcpyDeviceToHost),
+                                runtime::kMemcpyDeviceToHost),
                 "CPU dispatch should copy runtime memory to host.");
 
   context->ExpectEqual(output, input,
@@ -66,7 +66,7 @@ void TestCpuDispatch(infini::rt::test::TestContext* context) {
                 "CPU dispatch should fill runtime memory.");
   ExpectSuccess(context,
                 runtime::Memcpy(output.data(), ptr, output.size(),
-                                runtime::MemcpyKind::kMemcpyDeviceToHost),
+                                runtime::kMemcpyDeviceToHost),
                 "CPU dispatch should copy filled memory to host.");
   for (const auto value : output) {
     context->ExpectEqual(value, static_cast<std::uint8_t>(0x5A),
@@ -112,13 +112,13 @@ void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
   ExpectSuccess(
       context,
       runtime::MemcpyAsync(ptr, input.data(), input.size(),
-                           runtime::MemcpyKind::kMemcpyHostToDevice, nullptr),
+                           runtime::kMemcpyHostToDevice, nullptr),
       "NVIDIA dispatch should support async host-to-device copy.");
   ExpectSuccess(context, runtime::DeviceSynchronize(),
                 "NVIDIA dispatch should synchronize the device.");
   ExpectSuccess(context,
                 runtime::Memcpy(output.data(), ptr, output.size(),
-                                runtime::MemcpyKind::kMemcpyDeviceToHost),
+                                runtime::kMemcpyDeviceToHost),
                 "NVIDIA dispatch should copy device data to host.");
 
   context->ExpectEqual(output, input,
@@ -130,7 +130,7 @@ void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
                 "NVIDIA dispatch should synchronize filled memory.");
   ExpectSuccess(context,
                 runtime::Memcpy(output.data(), ptr, output.size(),
-                                runtime::MemcpyKind::kMemcpyDeviceToHost),
+                                runtime::kMemcpyDeviceToHost),
                 "NVIDIA dispatch should copy filled memory to host.");
   for (const auto value : output) {
     context->ExpectEqual(value, static_cast<std::uint8_t>(0x5A),
