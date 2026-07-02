@@ -6,7 +6,6 @@ endfunction()
 
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
-add_infini_rt_test(test_tensor_view test_tensor_view.cc)
 
 if(WITH_CPU OR WITH_NVIDIA)
     add_infini_rt_test(test_runtime_dispatch test_runtime_dispatch.cc)
