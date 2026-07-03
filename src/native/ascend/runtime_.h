@@ -2,6 +2,7 @@
 #define INFINI_RT_ASCEND_RUNTIME__H_
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 
 // clang-format off
@@ -19,6 +20,8 @@ struct Runtime<Device::Type::kAscend>
   using Error = aclError;
 
   using Stream = aclrtStream;
+
+  using Event = void*;
 
   static constexpr Device::Type kDeviceType = Device::Type::kAscend;
 
@@ -42,7 +45,19 @@ struct Runtime<Device::Type::kAscend>
     return aclrtMalloc(ptr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   };
 
+  static Error MallocHost(void**, std::size_t) { return Unsupported(); }
+
+  static Error MallocAsync(void**, std::size_t, Stream) {
+    return Unsupported();
+  }
+
   static constexpr auto Free = aclrtFree;
+
+  static Error FreeHost(void*) { return Unsupported(); }
+
+  static Error FreeAsync(void*, Stream) { return Unsupported(); }
+
+  static Error MemGetInfo(std::size_t*, std::size_t*) { return Unsupported(); }
 
   static constexpr auto Memcpy = [](void* dst, const void* src, size_t count,
                                     aclrtMemcpyKind kind) {
@@ -66,6 +81,39 @@ struct Runtime<Device::Type::kAscend>
   static constexpr auto Memset = [](void* ptr, int value, size_t count) {
     return aclrtMemset(ptr, count, value, count);
   };
+
+  static Error MemsetAsync(void*, int, std::size_t, Stream) {
+    return Unsupported();
+  }
+
+  static constexpr auto StreamCreate = aclrtCreateStream;
+
+  static constexpr auto StreamDestroy = aclrtDestroyStream;
+
+  static constexpr auto StreamSynchronize = aclrtSynchronizeStream;
+
+  static Error StreamWaitEvent(Stream, Event, unsigned int) {
+    return Unsupported();
+  }
+
+  static Error EventCreate(Event*) { return Unsupported(); }
+
+  static Error EventCreateWithFlags(Event*, unsigned int) {
+    return Unsupported();
+  }
+
+  static Error EventRecord(Event, Stream) { return Unsupported(); }
+
+  static Error EventQuery(Event) { return Unsupported(); }
+
+  static Error EventSynchronize(Event) { return Unsupported(); }
+
+  static Error EventDestroy(Event) { return Unsupported(); }
+
+  static Error EventElapsedTime(float*, Event, Event) { return Unsupported(); }
+
+ private:
+  static Error Unsupported() { return static_cast<Error>(1); }
 };
 
 static_assert(Runtime<Device::Type::kAscend>::Validate());

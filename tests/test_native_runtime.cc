@@ -14,6 +14,15 @@ using Runtime = infini::rt::runtime::Runtime<INFINI_RT_TEST_DEVICE_TYPE>;
 
 constexpr bool kExpectAsyncMemcpySuccess =
     INFINI_RT_TEST_EXPECT_ASYNC_MEMCPY_SUCCESS != 0;
+constexpr bool kSupportsHostMemory = INFINI_RT_TEST_SUPPORTS_HOST_MEMORY != 0;
+constexpr bool kSupportsAsyncMemory = INFINI_RT_TEST_SUPPORTS_ASYNC_MEMORY != 0;
+constexpr bool kSupportsMemGetInfo = INFINI_RT_TEST_SUPPORTS_MEM_GET_INFO != 0;
+constexpr bool kSupportsMemsetAsync = INFINI_RT_TEST_SUPPORTS_MEMSET_ASYNC != 0;
+constexpr bool kSupportsStreamWaitEvent =
+    INFINI_RT_TEST_SUPPORTS_STREAM_WAIT_EVENT != 0;
+constexpr bool kSupportsEvent = INFINI_RT_TEST_SUPPORTS_EVENT != 0;
+constexpr bool kSupportsEventElapsedTime =
+    INFINI_RT_TEST_SUPPORTS_EVENT_ELAPSED_TIME != 0;
 
 void ExpectSuccess(infini::rt::test::TestContext* context,
                    typename Runtime::Error status, const char* message) {
@@ -23,6 +32,16 @@ void ExpectSuccess(infini::rt::test::TestContext* context,
 void ExpectFailure(infini::rt::test::TestContext* context,
                    typename Runtime::Error status, const char* message) {
   context->Expect(status != Runtime::kSuccess, message);
+}
+
+void ExpectStatus(infini::rt::test::TestContext* context,
+                  typename Runtime::Error status, bool expect_success,
+                  const char* message) {
+  if (expect_success) {
+    ExpectSuccess(context, status, message);
+  } else {
+    ExpectFailure(context, status, message);
+  }
 }
 
 bool SelectDevice() {
@@ -41,6 +60,21 @@ bool SelectDevice() {
   }
 
   return true;
+}
+
+bool CreateStream(infini::rt::test::TestContext* context,
+                  typename Runtime::Stream* stream) {
+  const auto status = Runtime::StreamCreate(stream);
+  ExpectSuccess(context, status,
+                INFINI_RT_TEST_BACKEND_NAME " runtime should create a stream.");
+  return status == Runtime::kSuccess;
+}
+
+void DestroyStream(infini::rt::test::TestContext* context,
+                   typename Runtime::Stream stream) {
+  ExpectSuccess(context, Runtime::StreamDestroy(stream),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should destroy a stream.");
 }
 
 void TestDevice(infini::rt::test::TestContext* context) {
@@ -69,6 +103,72 @@ void TestMallocAndFree(infini::rt::test::TestContext* context) {
   if (ptr != nullptr) {
     ExpectSuccess(context, Runtime::Free(ptr),
                   INFINI_RT_TEST_BACKEND_NAME " runtime should free memory.");
+  }
+}
+
+void TestHostMemory(infini::rt::test::TestContext* context) {
+  void* ptr = nullptr;
+  const auto malloc_status = Runtime::MallocHost(&ptr, 16);
+  ExpectStatus(context, malloc_status, kSupportsHostMemory,
+               INFINI_RT_TEST_BACKEND_NAME
+               " runtime should report expected host memory support.");
+
+  if constexpr (kSupportsHostMemory) {
+    context->Expect(ptr != nullptr, INFINI_RT_TEST_BACKEND_NAME
+                    " runtime host allocation should produce a pointer.");
+    if (ptr != nullptr) {
+      ExpectSuccess(context, Runtime::FreeHost(ptr),
+                    INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should free host memory.");
+    }
+  }
+}
+
+void TestAsyncMemory(infini::rt::test::TestContext* context) {
+  typename Runtime::Stream stream{};
+  if (!CreateStream(context, &stream)) {
+    return;
+  }
+
+  void* ptr = nullptr;
+  const auto malloc_status = Runtime::MallocAsync(&ptr, 16, stream);
+  ExpectStatus(context, malloc_status, kSupportsAsyncMemory,
+               INFINI_RT_TEST_BACKEND_NAME
+               " runtime should report expected async allocation support.");
+
+  if constexpr (kSupportsAsyncMemory) {
+    context->Expect(ptr != nullptr, INFINI_RT_TEST_BACKEND_NAME
+                    " runtime async allocation should produce a pointer.");
+    if (ptr != nullptr) {
+      ExpectSuccess(context, Runtime::FreeAsync(ptr, stream),
+                    INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should free async memory.");
+      ExpectSuccess(context, Runtime::StreamSynchronize(stream),
+                    INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should synchronize async memory operations.");
+    }
+  } else if (ptr != nullptr) {
+    ExpectSuccess(context, Runtime::Free(ptr),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should free unexpected async allocation.");
+  }
+
+  DestroyStream(context, stream);
+}
+
+void TestMemGetInfo(infini::rt::test::TestContext* context) {
+  std::size_t free = 0;
+  std::size_t total = 0;
+  const auto status = Runtime::MemGetInfo(&free, &total);
+  ExpectStatus(context, status, kSupportsMemGetInfo,
+               INFINI_RT_TEST_BACKEND_NAME
+               " runtime should report expected memory info support.");
+
+  if constexpr (kSupportsMemGetInfo) {
+    context->Expect(total > 0, INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should report total memory.");
+    context->Expect(free <= total, INFINI_RT_TEST_BACKEND_NAME
+                    " runtime free memory should not exceed total memory.");
   }
 }
 
@@ -174,6 +274,190 @@ void TestMemset(infini::rt::test::TestContext* context) {
   }
 }
 
+void TestMemsetAsync(infini::rt::test::TestContext* context) {
+  std::array<std::uint8_t, 4> output{};
+  void* ptr = nullptr;
+
+  ExpectSuccess(context, Runtime::Malloc(&ptr, output.size()),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should allocate async memset memory.");
+  if (ptr == nullptr) {
+    return;
+  }
+
+  typename Runtime::Stream stream{};
+  if (!CreateStream(context, &stream)) {
+    ExpectSuccess(context, Runtime::Free(ptr),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should free async memset memory.");
+    return;
+  }
+
+  const auto memset_status =
+      Runtime::MemsetAsync(ptr, 0xA5, output.size(), stream);
+  ExpectStatus(context, memset_status, kSupportsMemsetAsync,
+               INFINI_RT_TEST_BACKEND_NAME
+               " runtime should report expected async memset support.");
+
+  if constexpr (kSupportsMemsetAsync) {
+    ExpectSuccess(context, Runtime::StreamSynchronize(stream),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should synchronize async memset.");
+    ExpectSuccess(context,
+                  Runtime::Memcpy(output.data(), ptr, output.size(),
+                                  Runtime::kMemcpyDeviceToHost),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should copy async filled memory to host.");
+    for (const auto value : output) {
+      context->ExpectEqual(value, static_cast<std::uint8_t>(0xA5),
+                           INFINI_RT_TEST_BACKEND_NAME
+                           " runtime should preserve async filled bytes.");
+    }
+  }
+
+  DestroyStream(context, stream);
+  ExpectSuccess(context, Runtime::Free(ptr),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should free async memset memory.");
+}
+
+void TestStream(infini::rt::test::TestContext* context) {
+  typename Runtime::Stream stream{};
+  if (!CreateStream(context, &stream)) {
+    return;
+  }
+
+  ExpectSuccess(context, Runtime::StreamSynchronize(stream),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should synchronize a stream.");
+  DestroyStream(context, stream);
+}
+
+void TestEvent(infini::rt::test::TestContext* context) {
+  typename Runtime::Event event{};
+  const auto create_status = Runtime::EventCreate(&event);
+  ExpectStatus(context, create_status, kSupportsEvent,
+               INFINI_RT_TEST_BACKEND_NAME
+               " runtime should report expected event support.");
+
+  if constexpr (!kSupportsEvent) {
+    return;
+  }
+
+  context->Expect(event != typename Runtime::Event{},
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime event creation should produce an event.");
+  if (event == typename Runtime::Event{}) {
+    return;
+  }
+
+  ExpectSuccess(context,
+                Runtime::EventRecord(event, typename Runtime::Stream{}),
+                INFINI_RT_TEST_BACKEND_NAME " runtime should record an event.");
+  ExpectSuccess(context, Runtime::EventSynchronize(event),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should synchronize an event.");
+  ExpectSuccess(context, Runtime::EventQuery(event),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should query a completed event.");
+  ExpectSuccess(context, Runtime::EventDestroy(event),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should destroy an event.");
+
+  typename Runtime::Event flagged_event{};
+  ExpectSuccess(context, Runtime::EventCreateWithFlags(&flagged_event, 0),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should create an event with flags.");
+  if (flagged_event != typename Runtime::Event{}) {
+    ExpectSuccess(context, Runtime::EventDestroy(flagged_event),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should destroy a flagged event.");
+  }
+}
+
+void TestStreamWaitEvent(infini::rt::test::TestContext* context) {
+  typename Runtime::Stream stream{};
+  if (!CreateStream(context, &stream)) {
+    return;
+  }
+
+  typename Runtime::Event event{};
+  if constexpr (kSupportsEvent) {
+    ExpectSuccess(context, Runtime::EventCreate(&event),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should create a stream wait event.");
+    if (event != typename Runtime::Event{}) {
+      ExpectSuccess(context, Runtime::EventRecord(event, stream),
+                    INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should record a stream wait event.");
+    }
+  }
+
+  const auto wait_status = Runtime::StreamWaitEvent(stream, event, 0);
+  ExpectStatus(context, wait_status, kSupportsStreamWaitEvent,
+               INFINI_RT_TEST_BACKEND_NAME
+               " runtime should report expected stream wait event support.");
+  ExpectSuccess(context, Runtime::StreamSynchronize(stream),
+                INFINI_RT_TEST_BACKEND_NAME
+                " runtime should synchronize after stream wait event.");
+
+  if constexpr (kSupportsEvent) {
+    if (event != typename Runtime::Event{}) {
+      ExpectSuccess(context, Runtime::EventDestroy(event),
+                    INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should destroy a stream wait event.");
+    }
+  }
+  DestroyStream(context, stream);
+}
+
+void TestEventElapsedTime(infini::rt::test::TestContext* context) {
+  typename Runtime::Event start{};
+  typename Runtime::Event end{};
+  if constexpr (kSupportsEvent) {
+    ExpectSuccess(context, Runtime::EventCreate(&start),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should create an elapsed-time start event.");
+    ExpectSuccess(context, Runtime::EventCreate(&end),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should create an elapsed-time end event.");
+  }
+
+  if constexpr (kSupportsEventElapsedTime) {
+    ExpectSuccess(context,
+                  Runtime::EventRecord(start, typename Runtime::Stream{}),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should record an elapsed-time start event.");
+    ExpectSuccess(context,
+                  Runtime::EventRecord(end, typename Runtime::Stream{}),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should record an elapsed-time end event.");
+    ExpectSuccess(context, Runtime::EventSynchronize(end),
+                  INFINI_RT_TEST_BACKEND_NAME
+                  " runtime should synchronize an elapsed-time event.");
+  }
+
+  float elapsed_ms = 0.0f;
+  const auto elapsed_status =
+      Runtime::EventElapsedTime(&elapsed_ms, start, end);
+  ExpectStatus(context, elapsed_status, kSupportsEventElapsedTime,
+               INFINI_RT_TEST_BACKEND_NAME
+               " runtime should report expected event elapsed-time support.");
+
+  if constexpr (kSupportsEvent) {
+    if (start != typename Runtime::Event{}) {
+      ExpectSuccess(context, Runtime::EventDestroy(start),
+                    INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should destroy an elapsed-time start event.");
+    }
+    if (end != typename Runtime::Event{}) {
+      ExpectSuccess(context, Runtime::EventDestroy(end),
+                    INFINI_RT_TEST_BACKEND_NAME
+                    " runtime should destroy an elapsed-time end event.");
+    }
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -185,9 +469,17 @@ int main() {
 
   TestDevice(&context);
   TestMallocAndFree(&context);
+  TestHostMemory(&context);
+  TestAsyncMemory(&context);
+  TestMemGetInfo(&context);
   TestMemcpyRoundTrip(&context);
   TestMemcpyAsync(&context);
   TestMemset(&context);
+  TestMemsetAsync(&context);
+  TestStream(&context);
+  TestEvent(&context);
+  TestStreamWaitEvent(&context);
+  TestEventElapsedTime(&context);
 
   return context.ExitCode();
 }

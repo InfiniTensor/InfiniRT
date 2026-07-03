@@ -19,6 +19,8 @@ struct Runtime<Device::Type::kCambricon>
 
   using Stream = cnrtQueue_t;
 
+  using Event = void*;
+
   static constexpr Device::Type kDeviceType = Device::Type::kCambricon;
 
 #ifdef CNRT_RET_SUCCESS
@@ -43,7 +45,19 @@ struct Runtime<Device::Type::kCambricon>
 
   static constexpr auto Malloc = cnrtMalloc;
 
+  static Error MallocHost(void**, std::size_t) { return Unsupported(); }
+
+  static Error MallocAsync(void**, std::size_t, Stream) {
+    return Unsupported();
+  }
+
   static constexpr auto Free = cnrtFree;
+
+  static Error FreeHost(void*) { return Unsupported(); }
+
+  static Error FreeAsync(void*, Stream) { return Unsupported(); }
+
+  static Error MemGetInfo(std::size_t*, std::size_t*) { return Unsupported(); }
 
   static constexpr auto Memcpy = [](void* dst, const void* src,
                                     std::size_t size, auto kind) {
@@ -70,6 +84,39 @@ struct Runtime<Device::Type::kCambricon>
   static constexpr auto kMemcpyDeviceToDevice = cnrtMemcpyDevToDev;
 
   static constexpr auto Memset = cnrtMemset;
+
+  static Error MemsetAsync(void*, int, std::size_t, Stream) {
+    return Unsupported();
+  }
+
+  static constexpr auto StreamCreate = cnrtQueueCreate;
+
+  static constexpr auto StreamDestroy = cnrtQueueDestroy;
+
+  static constexpr auto StreamSynchronize = cnrtQueueSync;
+
+  static Error StreamWaitEvent(Stream, Event, unsigned int) {
+    return Unsupported();
+  }
+
+  static Error EventCreate(Event*) { return Unsupported(); }
+
+  static Error EventCreateWithFlags(Event*, unsigned int) {
+    return Unsupported();
+  }
+
+  static Error EventRecord(Event, Stream) { return Unsupported(); }
+
+  static Error EventQuery(Event) { return Unsupported(); }
+
+  static Error EventSynchronize(Event) { return Unsupported(); }
+
+  static Error EventDestroy(Event) { return Unsupported(); }
+
+  static Error EventElapsedTime(float*, Event, Event) { return Unsupported(); }
+
+ private:
+  static Error Unsupported() { return static_cast<Error>(1); }
 };
 
 static_assert(Runtime<Device::Type::kCambricon>::Validate());

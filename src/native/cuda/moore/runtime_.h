@@ -3,6 +3,7 @@
 
 #include <musa_runtime.h>
 
+#include <cstddef>
 #include <utility>
 
 #include "native/cuda/moore/device_.h"
@@ -16,6 +17,8 @@ struct Runtime<Device::Type::kMoore>
   using Error = musaError_t;
 
   using Stream = musaStream_t;
+
+  using Event = musaEvent_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kMoore;
 
@@ -39,16 +42,36 @@ struct Runtime<Device::Type::kMoore>
     return musaMalloc(std::forward<decltype(args)>(args)...);
   };
 
+  static constexpr auto MallocHost = [](auto&&... args) {
+    return musaMallocHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto MallocAsync = [](void**, std::size_t, Stream) {
+    return static_cast<Error>(1);
+  };
+
+  static constexpr auto Free = [](auto&&... args) {
+    return musaFree(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto FreeHost = [](auto&&... args) {
+    return musaFreeHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto FreeAsync = [](void*, Stream) {
+    return static_cast<Error>(1);
+  };
+
+  static constexpr auto MemGetInfo = [](auto&&... args) {
+    return musaMemGetInfo(std::forward<decltype(args)>(args)...);
+  };
+
   static constexpr auto Memcpy = [](auto&&... args) {
     return musaMemcpy(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MemcpyAsync = [](auto&&... args) {
     return musaMemcpyAsync(std::forward<decltype(args)>(args)...);
-  };
-
-  static constexpr auto Free = [](auto&&... args) {
-    return musaFree(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto kMemcpyHostToHost = musaMemcpyHostToHost;
@@ -60,6 +83,54 @@ struct Runtime<Device::Type::kMoore>
   static constexpr auto kMemcpyDeviceToDevice = musaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = musaMemset;
+
+  static constexpr auto MemsetAsync = [](auto&&... args) {
+    return musaMemsetAsync(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamCreate = [](auto&&... args) {
+    return musaStreamCreate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamDestroy = [](auto&&... args) {
+    return musaStreamDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamSynchronize = [](auto&&... args) {
+    return musaStreamSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamWaitEvent = [](auto&&... args) {
+    return musaStreamWaitEvent(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreate = [](auto&&... args) {
+    return musaEventCreate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreateWithFlags = [](auto&&... args) {
+    return musaEventCreateWithFlags(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventRecord = [](auto&&... args) {
+    return musaEventRecord(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventQuery = [](auto&&... args) {
+    return musaEventQuery(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventSynchronize = [](auto&&... args) {
+    return musaEventSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventDestroy = [](auto&&... args) {
+    return musaEventDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventElapsedTime = [](auto&&... args) {
+    return musaEventElapsedTime(std::forward<decltype(args)>(args)...);
+  };
 };
 
 static_assert(Runtime<Device::Type::kMoore>::Validate());
