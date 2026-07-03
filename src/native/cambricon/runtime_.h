@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <type_traits>
 
 #include "native/cambricon/device_.h"
 #include "runtime.h"
@@ -20,7 +21,11 @@ struct Runtime<Device::Type::kCambricon>
 
   static constexpr Device::Type kDeviceType = Device::Type::kCambricon;
 
+#ifdef CNRT_RET_SUCCESS
   static constexpr Error kSuccess = CNRT_RET_SUCCESS;
+#else
+  static constexpr Error kSuccess = cnrtSuccess;
+#endif
 
   static constexpr auto SetDevice = cnrtSetDevice;
 
@@ -48,7 +53,12 @@ struct Runtime<Device::Type::kCambricon>
   static constexpr auto MemcpyAsync = [](void* dst, const void* src,
                                          std::size_t size, auto kind,
                                          Stream stream) {
-    return cnrtMemcpyAsync(dst, const_cast<void*>(src), size, kind, stream);
+    if constexpr (std::is_invocable_v<decltype(&cnrtMemcpyAsync), void*, void*,
+                                      std::size_t, decltype(kind), Stream>) {
+      return cnrtMemcpyAsync(dst, const_cast<void*>(src), size, kind, stream);
+    } else {
+      return cnrtMemcpyAsync(dst, const_cast<void*>(src), size, stream, kind);
+    }
   };
 
   static constexpr auto kMemcpyHostToHost = cnrtMemcpyHostToHost;

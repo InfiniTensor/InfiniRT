@@ -19,13 +19,39 @@ int main() {
     return 1;
   }
 
-#if defined(INFINI_RT_CONSUMER_BACKEND_CPU) || \
-    defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA)
+#if defined(INFINI_RT_CONSUMER_BACKEND_CPU) ||       \
+    defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA) ||    \
+    defined(INFINI_RT_CONSUMER_BACKEND_ILUVATAR) ||  \
+    defined(INFINI_RT_CONSUMER_BACKEND_HYGON) ||     \
+    defined(INFINI_RT_CONSUMER_BACKEND_METAX) ||     \
+    defined(INFINI_RT_CONSUMER_BACKEND_MOORE) ||     \
+    defined(INFINI_RT_CONSUMER_BACKEND_CAMBRICON) || \
+    defined(INFINI_RT_CONSUMER_BACKEND_ASCEND)
   namespace runtime = infini::rt::runtime;
 #if defined(INFINI_RT_CONSUMER_BACKEND_CPU)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kCpu;
-#else
+  constexpr bool kExpectAsyncMemcpySuccess = false;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kNvidia;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_ILUVATAR)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kIluvatar;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_HYGON)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kHygon;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_METAX)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kMetax;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_MOORE)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kMoore;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_CAMBRICON)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kCambricon;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_ASCEND)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kAscend;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
 #endif
   infini::rt::set_runtime_device_type(kExpectedDeviceType);
   if (infini::rt::runtime_device_type() != kExpectedDeviceType) {
@@ -35,21 +61,19 @@ int main() {
   std::array<std::uint8_t, 4> input{1, 2, 3, 4};
   std::array<std::uint8_t, 4> output{};
   void* ptr = nullptr;
+  int device_count = 0;
+  if (runtime::GetDeviceCount(&device_count) != runtime::kSuccess ||
+      device_count <= 0) {
+    return 0;
+  }
   if (runtime::SetDevice(0) != runtime::kSuccess) {
-    return 1;
+    return 0;
   }
   int current_device = -1;
   if (runtime::GetDevice(&current_device) != runtime::kSuccess) {
     return 1;
   }
   if (current_device != 0) {
-    return 1;
-  }
-  int device_count = 0;
-  if (runtime::GetDeviceCount(&device_count) != runtime::kSuccess) {
-    return 1;
-  }
-  if (device_count <= 0) {
     return 1;
   }
   if (runtime::Malloc(&ptr, input.size()) != runtime::kSuccess) {
@@ -62,19 +86,15 @@ int main() {
                       runtime::kMemcpyHostToDevice) != runtime::kSuccess) {
     return 1;
   }
-#if defined(INFINI_RT_CONSUMER_BACKEND_CPU)
-  if (runtime::MemcpyAsync(ptr, input.data(), input.size(),
-                           runtime::kMemcpyHostToDevice,
-                           nullptr) == runtime::kSuccess) {
+  runtime::Stream stream{};
+  const auto async_status = runtime::MemcpyAsync(
+      ptr, input.data(), input.size(), runtime::kMemcpyHostToDevice, stream);
+  if (kExpectAsyncMemcpySuccess && async_status != runtime::kSuccess) {
     return 1;
   }
-#else
-  if (runtime::MemcpyAsync(ptr, input.data(), input.size(),
-                           runtime::kMemcpyHostToDevice,
-                           nullptr) != runtime::kSuccess) {
+  if (!kExpectAsyncMemcpySuccess && async_status == runtime::kSuccess) {
     return 1;
   }
-#endif
   if (runtime::DeviceSynchronize() != runtime::kSuccess) {
     return 1;
   }
