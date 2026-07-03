@@ -109,11 +109,10 @@ void TestNvidiaDispatch(infini::rt::test::TestContext* context) {
     return;
   }
 
-  ExpectSuccess(
-      context,
-      runtime::MemcpyAsync(ptr, input.data(), input.size(),
-                           runtime::kMemcpyHostToDevice, nullptr),
-      "NVIDIA dispatch should support async host-to-device copy.");
+  ExpectSuccess(context,
+                runtime::MemcpyAsync(ptr, input.data(), input.size(),
+                                     runtime::kMemcpyHostToDevice, nullptr),
+                "NVIDIA dispatch should support async host-to-device copy.");
   ExpectSuccess(context, runtime::DeviceSynchronize(),
                 "NVIDIA dispatch should synchronize the device.");
   ExpectSuccess(context,
