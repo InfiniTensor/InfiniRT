@@ -5,7 +5,9 @@ function(add_infini_rt_test target)
 endfunction()
 
 function(add_infini_rt_backend_runtime_test backend device_type runtime_header
-         expect_async_memcpy_success)
+         expect_async_memcpy_success supports_host_memory supports_async_memory
+         supports_mem_get_info supports_memset_async supports_stream_wait_event
+         supports_event supports_event_elapsed_time)
     string(TOLOWER "${backend}" backend_lower)
     set(target "test_${backend_lower}_runtime")
     add_infini_rt_test(${target} test_native_runtime.cc)
@@ -14,7 +16,14 @@ function(add_infini_rt_backend_runtime_test backend device_type runtime_header
             "INFINI_RT_TEST_BACKEND_NAME=\"${backend}\""
             "INFINI_RT_TEST_DEVICE_TYPE=${device_type}"
             "INFINI_RT_TEST_RUNTIME_HEADER=\"${runtime_header}\""
-            "INFINI_RT_TEST_EXPECT_ASYNC_MEMCPY_SUCCESS=${expect_async_memcpy_success}")
+            "INFINI_RT_TEST_EXPECT_ASYNC_MEMCPY_SUCCESS=${expect_async_memcpy_success}"
+            "INFINI_RT_TEST_SUPPORTS_HOST_MEMORY=${supports_host_memory}"
+            "INFINI_RT_TEST_SUPPORTS_ASYNC_MEMORY=${supports_async_memory}"
+            "INFINI_RT_TEST_SUPPORTS_MEM_GET_INFO=${supports_mem_get_info}"
+            "INFINI_RT_TEST_SUPPORTS_MEMSET_ASYNC=${supports_memset_async}"
+            "INFINI_RT_TEST_SUPPORTS_STREAM_WAIT_EVENT=${supports_stream_wait_event}"
+            "INFINI_RT_TEST_SUPPORTS_EVENT=${supports_event}"
+            "INFINI_RT_TEST_SUPPORTS_EVENT_ELAPSED_TIME=${supports_event_elapsed_time}")
 endfunction()
 
 add_infini_rt_test(test_smoke test_smoke.cc)
@@ -25,56 +34,64 @@ set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND OFF)
 if(WITH_CPU)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
-        CPU infini::rt::Device::Type::kCpu infini/rt/cpu/runtime_.h 0)
+        CPU infini::rt::Device::Type::kCpu infini/rt/cpu/runtime_.h
+        0 1 0 1 0 1 1 1)
 endif()
 
 if(WITH_NVIDIA)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         NVIDIA infini::rt::Device::Type::kNvidia
-        infini/rt/nvidia/runtime_.h 1)
+        infini/rt/nvidia/runtime_.h
+        1 1 1 1 1 1 1 1)
 endif()
 
 if(WITH_ILUVATAR)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         ILUVATAR infini::rt::Device::Type::kIluvatar
-        infini/rt/iluvatar/runtime_.h 1)
+        infini/rt/iluvatar/runtime_.h
+        1 1 1 1 1 1 1 1)
 endif()
 
 if(WITH_HYGON)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         HYGON infini::rt::Device::Type::kHygon
-        infini/rt/hygon/runtime_.h 1)
+        infini/rt/hygon/runtime_.h
+        1 1 1 1 1 1 1 1)
 endif()
 
 if(WITH_METAX)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         METAX infini::rt::Device::Type::kMetax
-        infini/rt/metax/runtime_.h 1)
+        infini/rt/metax/runtime_.h
+        1 1 1 1 1 1 1 1)
 endif()
 
 if(WITH_MOORE)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         MOORE infini::rt::Device::Type::kMoore
-        infini/rt/moore/runtime_.h 1)
+        infini/rt/moore/runtime_.h
+        1 1 0 1 1 1 1 1)
 endif()
 
 if(WITH_CAMBRICON)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         CAMBRICON infini::rt::Device::Type::kCambricon
-        infini/rt/cambricon/runtime_.h 1)
+        infini/rt/cambricon/runtime_.h
+        1 0 0 0 0 0 0 0)
 endif()
 
 if(WITH_ASCEND)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         ASCEND infini::rt::Device::Type::kAscend
-        infini/rt/ascend/runtime_.h 1)
+        infini/rt/ascend/runtime_.h
+        1 0 0 0 0 0 0 0)
 endif()
 
 if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
