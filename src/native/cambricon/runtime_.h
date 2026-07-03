@@ -16,9 +16,10 @@ struct Runtime<Device::Type::kCambricon>
     : DeviceRuntime<Runtime<Device::Type::kCambricon>> {
   using Stream = cnrtQueue_t;
 
-  using Graph = void*;
+  // CNRT's native graph equivalent is TaskTopo, not a cnrtGraph* API.
+  using Graph = cnrtTaskTopo_t;
 
-  using GraphExec = void*;
+  using GraphExec = cnrtTaskTopoEntity_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kCambricon;
 
@@ -73,17 +74,37 @@ struct Runtime<Device::Type::kCambricon>
 
   static constexpr auto StreamCaptureModeRelaxed = cnrtQueueCaptureModeRelaxed;
 
-  static int StreamBeginCapture(Stream, cnrtQueueCaptureMode_t) { return 1; }
+  static auto StreamBeginCapture(Stream stream, cnrtQueueCaptureMode_t mode) {
+    return cnrtQueueBeginCapture(stream, mode);
+  }
 
-  static int StreamEndCapture(Stream, Graph*) { return 1; }
+  static auto StreamEndCapture(Stream stream, Graph* graph) {
+    assert(graph != nullptr);
+    return cnrtQueueEndCapture(stream, graph);
+  }
 
-  static int GraphDestroy(Graph) { return 1; }
+  static auto GraphDestroy(Graph graph) {
+    if (graph == nullptr) {
+      return cnrtSuccess;
+    }
+    return cnrtTaskTopoDestroy(graph);
+  }
 
-  static int GraphInstantiate(GraphExec*, Graph) { return 1; }
+  static auto GraphInstantiate(GraphExec* graph_exec, Graph graph) {
+    assert(graph_exec != nullptr);
+    return cnrtTaskTopoInstantiate(graph_exec, graph, nullptr, nullptr, 0);
+  }
 
-  static int GraphExecDestroy(GraphExec) { return 1; }
+  static auto GraphExecDestroy(GraphExec graph_exec) {
+    if (graph_exec == nullptr) {
+      return cnrtSuccess;
+    }
+    return cnrtTaskTopoEntityDestroy(graph_exec);
+  }
 
-  static int GraphLaunch(GraphExec, Stream) { return 1; }
+  static auto GraphLaunch(GraphExec graph_exec, Stream stream) {
+    return cnrtTaskTopoEntityInvoke(graph_exec, stream);
+  }
 };
 
 static_assert(Runtime<Device::Type::kCambricon>::Validate());

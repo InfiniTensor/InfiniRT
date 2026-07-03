@@ -10,6 +10,10 @@
 #include "native/ascend/runtime_.h"
 #endif
 
+#if defined(WITH_CAMBRICON)
+#include "native/cambricon/runtime_.h"
+#endif
+
 #if defined(WITH_NVIDIA)
 #include "native/cuda/nvidia/runtime_.h"
 #endif
@@ -142,6 +146,35 @@ auto RawAscendGraphExec(GraphExec graph_exec) {
 }
 #endif
 
+#if defined(WITH_CAMBRICON)
+auto ToCambriconCaptureMode(infiniRtStreamCaptureMode_t mode) {
+  switch (mode) {
+    case INFINI_RT_STREAM_CAPTURE_MODE_GLOBAL:
+      return Runtime<Device::Type::kCambricon>::StreamCaptureModeGlobal;
+    case INFINI_RT_STREAM_CAPTURE_MODE_THREAD_LOCAL:
+      return Runtime<Device::Type::kCambricon>::StreamCaptureModeThreadLocal;
+    case INFINI_RT_STREAM_CAPTURE_MODE_RELAXED:
+      return Runtime<Device::Type::kCambricon>::StreamCaptureModeRelaxed;
+  }
+  return Runtime<Device::Type::kCambricon>::StreamCaptureModeRelaxed;
+}
+
+auto RawCambriconStream(Stream stream) {
+  return static_cast<typename Runtime<Device::Type::kCambricon>::Stream>(
+      stream.raw());
+}
+
+auto RawCambriconGraph(Graph graph) {
+  return static_cast<typename Runtime<Device::Type::kCambricon>::Graph>(
+      graph.raw());
+}
+
+auto RawCambriconGraphExec(GraphExec graph_exec) {
+  return static_cast<typename Runtime<Device::Type::kCambricon>::GraphExec>(
+      graph_exec.raw());
+}
+#endif
+
 CStream* AsStream(infiniRtStream_t stream) {
   return static_cast<CStream*>(stream);
 }
@@ -195,6 +228,14 @@ infiniRtStatus_t infiniRtStreamBeginCapture(infiniRtStream_t stream,
               RawAscendStream(wrapped->stream), ToAscendCaptureMode(mode));
         });
 #endif
+#if defined(WITH_CAMBRICON)
+      case Device::Type::kCambricon:
+        return CheckBackendCall([&] {
+          return Runtime<Device::Type::kCambricon>::StreamBeginCapture(
+              RawCambriconStream(wrapped->stream),
+              ToCambriconCaptureMode(mode));
+        });
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia:
         return CheckBackendCall([&] {
@@ -231,6 +272,21 @@ infiniRtStatus_t infiniRtStreamEndCapture(infiniRtStream_t stream,
         return INFINI_RT_STATUS_SUCCESS;
       }
 #endif
+#if defined(WITH_CAMBRICON)
+      case Device::Type::kCambricon: {
+        typename Runtime<Device::Type::kCambricon>::Graph raw_graph = {};
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kCambricon>::StreamEndCapture(
+              RawCambriconStream(wrapped->stream), &raw_graph);
+        });
+        if (status != INFINI_RT_STATUS_SUCCESS) {
+          return status;
+        }
+        *graph = new CGraph{
+            Graph{Device::Type::kCambricon, static_cast<void*>(raw_graph)}};
+        return INFINI_RT_STATUS_SUCCESS;
+      }
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         typename Runtime<Device::Type::kNvidia>::Graph raw_graph = {};
@@ -264,6 +320,16 @@ infiniRtStatus_t infiniRtGraphDestroy(infiniRtGraph_t graph) {
         const auto status = CheckBackendCall([&] {
           return Runtime<Device::Type::kAscend>::GraphDestroy(
               RawAscendGraph(wrapped->graph));
+        });
+        delete wrapped;
+        return status;
+      }
+#endif
+#if defined(WITH_CAMBRICON)
+      case Device::Type::kCambricon: {
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kCambricon>::GraphDestroy(
+              RawCambriconGraph(wrapped->graph));
         });
         delete wrapped;
         return status;
@@ -311,6 +377,21 @@ infiniRtStatus_t infiniRtGraphInstantiate(infiniRtGraphExec_t* graph_exec,
         return INFINI_RT_STATUS_SUCCESS;
       }
 #endif
+#if defined(WITH_CAMBRICON)
+      case Device::Type::kCambricon: {
+        typename Runtime<Device::Type::kCambricon>::GraphExec raw_exec = {};
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kCambricon>::GraphInstantiate(
+              &raw_exec, RawCambriconGraph(wrapped->graph));
+        });
+        if (status != INFINI_RT_STATUS_SUCCESS) {
+          return status;
+        }
+        *graph_exec = new CGraphExec{
+            GraphExec{Device::Type::kCambricon, static_cast<void*>(raw_exec)}};
+        return INFINI_RT_STATUS_SUCCESS;
+      }
+#endif
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         typename Runtime<Device::Type::kNvidia>::GraphExec raw_exec = {};
@@ -344,6 +425,16 @@ infiniRtStatus_t infiniRtGraphExecDestroy(infiniRtGraphExec_t graph_exec) {
         const auto status = CheckBackendCall([&] {
           return Runtime<Device::Type::kAscend>::GraphExecDestroy(
               RawAscendGraphExec(wrapped->graph_exec));
+        });
+        delete wrapped;
+        return status;
+      }
+#endif
+#if defined(WITH_CAMBRICON)
+      case Device::Type::kCambricon: {
+        const auto status = CheckBackendCall([&] {
+          return Runtime<Device::Type::kCambricon>::GraphExecDestroy(
+              RawCambriconGraphExec(wrapped->graph_exec));
         });
         delete wrapped;
         return status;
@@ -387,6 +478,14 @@ infiniRtStatus_t infiniRtGraphLaunch(infiniRtGraphExec_t graph_exec,
           return Runtime<Device::Type::kAscend>::GraphLaunch(
               RawAscendGraphExec(exec->graph_exec),
               RawAscendStream(wrapped_stream->stream));
+        });
+#endif
+#if defined(WITH_CAMBRICON)
+      case Device::Type::kCambricon:
+        return CheckBackendCall([&] {
+          return Runtime<Device::Type::kCambricon>::GraphLaunch(
+              RawCambriconGraphExec(exec->graph_exec),
+              RawCambriconStream(wrapped_stream->stream));
         });
 #endif
 #if defined(WITH_NVIDIA)
