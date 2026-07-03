@@ -66,24 +66,41 @@ cmake --install build
 #include <infini/rt.h>
 
 int main() {
-  infini::rt::SetDevice({infini::rt::Device::Type::kCpu, 0});
+  infini::rt::runtime::SetDevice(0);
 
   constexpr std::size_t size = 1024;
   void* ptr = nullptr;
 
-  infini::rt::Malloc(&ptr, size);
-  infini::rt::Memset(ptr, 0, size);
-  infini::rt::Free(ptr);
+  infini::rt::runtime::Malloc(&ptr, size);
+  infini::rt::runtime::Memset(ptr, 0, size);
+  infini::rt::runtime::Free(ptr);
 
   return 0;
 }
 ```
 
-For NVIDIA:
+The CUDA Runtime API-aligned layer lives under `infini::rt::runtime`. The
+top-level `infini::rt::set_runtime_device_type` and
+`infini::rt::runtime_device_type` APIs select which enabled backend receives
+those runtime calls. A GPU backend is selected initially when one is enabled;
+otherwise CPU is selected.
 
 ```cpp
-infini::rt::SetDevice({infini::rt::Device::Type::kNvidia, 0});
+constexpr std::size_t size = 1024;
+void* ptr = nullptr;
+
+infini::rt::set_runtime_device_type(infini::rt::Device::Type::kCpu);
+infini::rt::runtime::Malloc(&ptr, size);
+infini::rt::runtime::Free(ptr);
+
+infini::rt::set_runtime_device_type(infini::rt::Device::Type::kNvidia);
+infini::rt::runtime::Malloc(&ptr, size);
+infini::rt::runtime::Free(ptr);
 ```
+
+Use `infini::rt::runtime::Runtime<infini::rt::Device::Type::kCpu>` when CPU
+runtime calls are needed explicitly in a build that also enables an accelerator
+backend.
 
 ## Using Installed InfiniRT From Another Project
 
