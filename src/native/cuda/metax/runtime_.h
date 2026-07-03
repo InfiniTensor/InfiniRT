@@ -9,11 +9,13 @@
 #include "native/cuda/metax/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kMetax>
     : CudaRuntime<Runtime<Device::Type::kMetax>> {
+  using Error = mcError_t;
+
   using Stream = mcStream_t;
 
   using Graph = void*;
@@ -21,6 +23,8 @@ struct Runtime<Device::Type::kMetax>
   using GraphExec = void*;
 
   static constexpr Device::Type kDeviceType = Device::Type::kMetax;
+
+  static constexpr Error kSuccess = mcSuccess;
 
   static constexpr auto SetDevice = mcSetDevice;
 
@@ -38,17 +42,21 @@ struct Runtime<Device::Type::kMetax>
     return mcMemcpy(std::forward<decltype(args)>(args)...);
   };
 
+  static constexpr auto MemcpyAsync = [](auto&&... args) {
+    return mcMemcpyAsync(std::forward<decltype(args)>(args)...);
+  };
+
   static constexpr auto Free = [](auto&&... args) {
     return mcFree(std::forward<decltype(args)>(args)...);
   };
 
-  static constexpr auto MemcpyHostToHost = mcMemcpyHostToHost;
+  static constexpr auto kMemcpyHostToHost = mcMemcpyHostToHost;
 
-  static constexpr auto MemcpyHostToDevice = mcMemcpyHostToDevice;
+  static constexpr auto kMemcpyHostToDevice = mcMemcpyHostToDevice;
 
-  static constexpr auto MemcpyDeviceToHost = mcMemcpyDeviceToHost;
+  static constexpr auto kMemcpyDeviceToHost = mcMemcpyDeviceToHost;
 
-  static constexpr auto MemcpyDeviceToDevice = mcMemcpyDeviceToDevice;
+  static constexpr auto kMemcpyDeviceToDevice = mcMemcpyDeviceToDevice;
 
   static constexpr auto Memset = mcMemset;
 
@@ -58,16 +66,11 @@ struct Runtime<Device::Type::kMetax>
 
   static int StreamSynchronize(Stream) { return 1; }
 
-  static int MemcpyAsync(void*, const void*, std::size_t,
-                         decltype(MemcpyHostToDevice), Stream) {
-    return 1;
-  }
+  static constexpr int kStreamCaptureModeGlobal = 0;
 
-  static constexpr int StreamCaptureModeGlobal = 0;
+  static constexpr int kStreamCaptureModeThreadLocal = 1;
 
-  static constexpr int StreamCaptureModeThreadLocal = 1;
-
-  static constexpr int StreamCaptureModeRelaxed = 2;
+  static constexpr int kStreamCaptureModeRelaxed = 2;
 
   static int StreamBeginCapture(Stream, int) { return 1; }
 
@@ -84,6 +87,6 @@ struct Runtime<Device::Type::kMetax>
 
 static_assert(Runtime<Device::Type::kMetax>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

@@ -9,7 +9,8 @@
 
 namespace {
 
-using NvidiaRuntime = infini::rt::Runtime<infini::rt::Device::Type::kNvidia>;
+using NvidiaRuntime =
+    infini::rt::runtime::Runtime<infini::rt::Device::Type::kNvidia>;
 
 void ExpectCudaSuccess(infini::rt::test::TestContext* context,
                        cudaError_t status, const char* message) {
@@ -41,11 +42,11 @@ void TestMemcpyRoundTrip(infini::rt::test::TestContext* context) {
 
   ExpectCudaSuccess(context,
                     NvidiaRuntime::Memcpy(ptr, input.data(), input.size(),
-                                          NvidiaRuntime::MemcpyHostToDevice),
+                                          NvidiaRuntime::kMemcpyHostToDevice),
                     "NVIDIA runtime should copy host data to device memory.");
   ExpectCudaSuccess(context,
                     NvidiaRuntime::Memcpy(output.data(), ptr, output.size(),
-                                          NvidiaRuntime::MemcpyDeviceToHost),
+                                          NvidiaRuntime::kMemcpyDeviceToHost),
                     "NVIDIA runtime should copy device data to host memory.");
   ExpectCudaSuccess(context, NvidiaRuntime::Free(ptr),
                     "NVIDIA runtime should free copy memory.");
@@ -68,7 +69,7 @@ void TestMemset(infini::rt::test::TestContext* context) {
                     "NVIDIA runtime should memset device memory.");
   ExpectCudaSuccess(context,
                     NvidiaRuntime::Memcpy(output.data(), ptr, output.size(),
-                                          NvidiaRuntime::MemcpyDeviceToHost),
+                                          NvidiaRuntime::kMemcpyDeviceToHost),
                     "NVIDIA runtime should copy memset data to host memory.");
   ExpectCudaSuccess(context, NvidiaRuntime::Free(ptr),
                     "NVIDIA runtime should free memset memory.");

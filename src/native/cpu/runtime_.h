@@ -1,94 +1,113 @@
 #ifndef INFINI_RT_CPU_RUNTIME__H_
 #define INFINI_RT_CPU_RUNTIME__H_
 
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 
 #include "runtime.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kCpu> : RuntimeBase<Runtime<Device::Type::kCpu>> {
-  using Stream = void*;
-
-  using Graph = void*;
-
-  using GraphExec = void*;
-
   static constexpr Device::Type kDeviceType = Device::Type::kCpu;
 
-  static void SetDevice(int index) {
-    if (index != 0) {
-      assert(false && "CPU device index must be 0");
-      std::abort();
+  using Error = int;
+
+  using Stream = void*;
+
+  static constexpr Error kSuccess = 0;
+
+  static constexpr Error kErrorInvalidValue = 1;
+
+  static constexpr Error kErrorMemoryAllocation = 2;
+
+  static Error SetDevice(int device) {
+    if (device != 0) {
+      return kErrorInvalidValue;
     }
+
+    return kSuccess;
   }
 
-  static void GetDevice(int* index) {
-    assert(index != nullptr);
-    *index = 0;
+  static Error GetDevice(int* device) {
+    if (device == nullptr) {
+      return kErrorInvalidValue;
+    }
+
+    *device = 0;
+
+    return kSuccess;
   }
 
-  static void GetDeviceCount(int* count) {
-    assert(count != nullptr);
+  static Error GetDeviceCount(int* count) {
+    if (count == nullptr) {
+      return kErrorInvalidValue;
+    }
+
     *count = 1;
+
+    return kSuccess;
   }
 
-  static void DeviceSynchronize() {}
+  static Error DeviceSynchronize() { return kSuccess; }
 
-  static void Malloc(void** ptr, std::size_t size) { *ptr = std::malloc(size); }
+  static Error Malloc(void** ptr, std::size_t size) {
+    if (ptr == nullptr) {
+      return kErrorInvalidValue;
+    }
 
-  static void Free(void* ptr) { std::free(ptr); }
+    *ptr = std::malloc(size);
 
-  static void Memcpy(void* dst, const void* src, std::size_t size, int) {
+    if (size != 0 && *ptr == nullptr) {
+      return kErrorMemoryAllocation;
+    }
+
+    return kSuccess;
+  }
+
+  static Error Free(void* ptr) {
+    std::free(ptr);
+
+    return kSuccess;
+  }
+
+  static Error Memcpy(void* dst, const void* src, std::size_t size, int) {
+    if ((dst == nullptr || src == nullptr) && size != 0) {
+      return kErrorInvalidValue;
+    }
+
     std::memcpy(dst, src, size);
+
+    return kSuccess;
   }
 
-  static int MemcpyAsync(void*, const void*, std::size_t, int, Stream) {
-    return 1;
-  }
+  static Error Memset(void* ptr, int value, std::size_t count) {
+    if (ptr == nullptr && count != 0) {
+      return kErrorInvalidValue;
+    }
 
-  static constexpr int MemcpyHostToHost = 0;
-
-  static constexpr int MemcpyHostToDevice = 0;
-
-  static constexpr int MemcpyDeviceToHost = 1;
-
-  static constexpr int MemcpyDeviceToDevice = 0;
-
-  static void Memset(void* ptr, int value, std::size_t count) {
     std::memset(ptr, value, count);
+
+    return kSuccess;
   }
 
-  static int StreamCreate(Stream*) { return 1; }
+  static Error MemcpyAsync(void* dst, const void* src, std::size_t size,
+                           int kind, Stream) {
+    return kErrorInvalidValue;
+  }
 
-  static int StreamDestroy(Stream) { return 1; }
+  static constexpr int kMemcpyHostToHost = 0;
 
-  static int StreamSynchronize(Stream) { return 1; }
+  static constexpr int kMemcpyHostToDevice = 1;
 
-  static constexpr int StreamCaptureModeGlobal = 0;
+  static constexpr int kMemcpyDeviceToHost = 2;
 
-  static constexpr int StreamCaptureModeThreadLocal = 1;
-
-  static constexpr int StreamCaptureModeRelaxed = 2;
-
-  static int StreamBeginCapture(Stream, int) { return 1; }
-
-  static int StreamEndCapture(Stream, Graph*) { return 1; }
-
-  static int GraphDestroy(Graph) { return 1; }
-
-  static int GraphInstantiate(GraphExec*, Graph) { return 1; }
-
-  static int GraphExecDestroy(GraphExec) { return 1; }
-
-  static int GraphLaunch(GraphExec, Stream) { return 1; }
+  static constexpr int kMemcpyDeviceToDevice = 3;
 };
 
 static_assert(Runtime<Device::Type::kCpu>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

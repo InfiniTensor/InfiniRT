@@ -13,32 +13,26 @@
 namespace {
 
 using infini::rt::Device;
-using infini::rt::Graph;
-using infini::rt::GraphExec;
-using infini::rt::Runtime;
-using infini::rt::Stream;
+using infini::rt::runtime::Runtime;
 
 struct CStream {
-  Stream stream;
+  Device::Type device_type;
+  void* raw;
 };
 
 struct CGraph {
-  Graph graph;
+  Device::Type device_type;
+  void* raw;
 };
 
 struct CGraphExec {
-  GraphExec graph_exec;
+  Device::Type device_type;
+  void* raw;
 };
 
 template <typename Func>
 infiniRtStatus_t Guard(Func&& func) {
-  try {
-    return std::forward<Func>(func)();
-  } catch (const std::bad_alloc&) {
-    return INFINI_RT_STATUS_RUNTIME_ERROR;
-  } catch (...) {
-    return INFINI_RT_STATUS_RUNTIME_ERROR;
-  }
+  return std::forward<Func>(func)();
 }
 
 template <typename Func>
@@ -84,28 +78,28 @@ Device::Type ToCppDeviceType(infiniRtDeviceType_t type) {
 auto ToNvidiaCaptureMode(infiniRtStreamCaptureMode_t mode) {
   switch (mode) {
     case INFINI_RT_STREAM_CAPTURE_MODE_GLOBAL:
-      return Runtime<Device::Type::kNvidia>::StreamCaptureModeGlobal;
+      return Runtime<Device::Type::kNvidia>::kStreamCaptureModeGlobal;
     case INFINI_RT_STREAM_CAPTURE_MODE_THREAD_LOCAL:
-      return Runtime<Device::Type::kNvidia>::StreamCaptureModeThreadLocal;
+      return Runtime<Device::Type::kNvidia>::kStreamCaptureModeThreadLocal;
     case INFINI_RT_STREAM_CAPTURE_MODE_RELAXED:
-      return Runtime<Device::Type::kNvidia>::StreamCaptureModeRelaxed;
+      return Runtime<Device::Type::kNvidia>::kStreamCaptureModeRelaxed;
   }
-  return Runtime<Device::Type::kNvidia>::StreamCaptureModeRelaxed;
+  return Runtime<Device::Type::kNvidia>::kStreamCaptureModeRelaxed;
 }
 
-auto RawNvidiaStream(Stream stream) {
+auto RawNvidiaStream(const CStream* stream) {
   return static_cast<typename Runtime<Device::Type::kNvidia>::Stream>(
-      stream.raw());
+      stream->raw);
 }
 
-auto RawNvidiaGraph(Graph graph) {
+auto RawNvidiaGraph(const CGraph* graph) {
   return static_cast<typename Runtime<Device::Type::kNvidia>::Graph>(
-      graph.raw());
+      graph->raw);
 }
 
-auto RawNvidiaGraphExec(GraphExec graph_exec) {
+auto RawNvidiaGraphExec(const CGraphExec* graph_exec) {
   return static_cast<typename Runtime<Device::Type::kNvidia>::GraphExec>(
-      graph_exec.raw());
+      graph_exec->raw);
 }
 #endif
 
@@ -134,7 +128,12 @@ infiniRtStatus_t infiniRtStreamWrap(infiniRtDevice_t device,
     if (device_type == Device::Type::kCount) {
       return INFINI_RT_STATUS_UNSUPPORTED_DEVICE;
     }
-    *stream = new CStream{Stream{device_type, native_stream}};
+    auto* wrapped = new (std::nothrow) CStream{device_type, native_stream};
+    if (wrapped == nullptr) {
+      return INFINI_RT_STATUS_RUNTIME_ERROR;
+    }
+    *stream = wrapped;
+
     return INFINI_RT_STATUS_SUCCESS;
   });
 }
@@ -154,12 +153,12 @@ infiniRtStatus_t infiniRtStreamBeginCapture(infiniRtStream_t stream,
   }
   return Guard([&] {
     auto* wrapped = AsStream(stream);
-    switch (wrapped->stream.device_type()) {
+    switch (wrapped->device_type) {
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia:
         return CheckBackendCall([&] {
           return Runtime<Device::Type::kNvidia>::StreamBeginCapture(
-              RawNvidiaStream(wrapped->stream), ToNvidiaCaptureMode(mode));
+              RawNvidiaStream(wrapped), ToNvidiaCaptureMode(mode));
         });
 #endif
       default:
@@ -175,19 +174,24 @@ infiniRtStatus_t infiniRtStreamEndCapture(infiniRtStream_t stream,
   }
   return Guard([&] {
     auto* wrapped = AsStream(stream);
-    switch (wrapped->stream.device_type()) {
+    switch (wrapped->device_type) {
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         typename Runtime<Device::Type::kNvidia>::Graph raw_graph = {};
         const auto status = CheckBackendCall([&] {
           return Runtime<Device::Type::kNvidia>::StreamEndCapture(
-              RawNvidiaStream(wrapped->stream), &raw_graph);
+              RawNvidiaStream(wrapped), &raw_graph);
         });
         if (status != INFINI_RT_STATUS_SUCCESS) {
           return status;
         }
-        *graph = new CGraph{
-            Graph{Device::Type::kNvidia, static_cast<void*>(raw_graph)}};
+        auto* wrapped_graph = new (std::nothrow)
+            CGraph{Device::Type::kNvidia, static_cast<void*>(raw_graph)};
+        if (wrapped_graph == nullptr) {
+          return INFINI_RT_STATUS_RUNTIME_ERROR;
+        }
+        *graph = wrapped_graph;
+
         return INFINI_RT_STATUS_SUCCESS;
       }
 #endif
@@ -203,12 +207,12 @@ infiniRtStatus_t infiniRtGraphDestroy(infiniRtGraph_t graph) {
   }
   return Guard([&] {
     auto* wrapped = AsGraph(graph);
-    switch (wrapped->graph.device_type()) {
+    switch (wrapped->device_type) {
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         const auto status = CheckBackendCall([&] {
           return Runtime<Device::Type::kNvidia>::GraphDestroy(
-              RawNvidiaGraph(wrapped->graph));
+              RawNvidiaGraph(wrapped));
         });
         // The C wrapper owns only the wrapper object. The backend destroy call
         // above owns the native graph handle.
@@ -230,19 +234,24 @@ infiniRtStatus_t infiniRtGraphInstantiate(infiniRtGraphExec_t* graph_exec,
   }
   return Guard([&] {
     auto* wrapped = AsGraph(graph);
-    switch (wrapped->graph.device_type()) {
+    switch (wrapped->device_type) {
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         typename Runtime<Device::Type::kNvidia>::GraphExec raw_exec = {};
         const auto status = CheckBackendCall([&] {
           return Runtime<Device::Type::kNvidia>::GraphInstantiate(
-              &raw_exec, RawNvidiaGraph(wrapped->graph));
+              &raw_exec, RawNvidiaGraph(wrapped));
         });
         if (status != INFINI_RT_STATUS_SUCCESS) {
           return status;
         }
-        *graph_exec = new CGraphExec{
-            GraphExec{Device::Type::kNvidia, static_cast<void*>(raw_exec)}};
+        auto* wrapped_exec = new (std::nothrow)
+            CGraphExec{Device::Type::kNvidia, static_cast<void*>(raw_exec)};
+        if (wrapped_exec == nullptr) {
+          return INFINI_RT_STATUS_RUNTIME_ERROR;
+        }
+        *graph_exec = wrapped_exec;
+
         return INFINI_RT_STATUS_SUCCESS;
       }
 #endif
@@ -258,12 +267,12 @@ infiniRtStatus_t infiniRtGraphExecDestroy(infiniRtGraphExec_t graph_exec) {
   }
   return Guard([&] {
     auto* wrapped = AsGraphExec(graph_exec);
-    switch (wrapped->graph_exec.device_type()) {
+    switch (wrapped->device_type) {
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia: {
         const auto status = CheckBackendCall([&] {
           return Runtime<Device::Type::kNvidia>::GraphExecDestroy(
-              RawNvidiaGraphExec(wrapped->graph_exec));
+              RawNvidiaGraphExec(wrapped));
         });
         // The C wrapper owns only the wrapper object. The backend destroy call
         // above owns the native executable graph handle.
@@ -286,17 +295,15 @@ infiniRtStatus_t infiniRtGraphLaunch(infiniRtGraphExec_t graph_exec,
   return Guard([&] {
     auto* exec = AsGraphExec(graph_exec);
     auto* wrapped_stream = AsStream(stream);
-    if (exec->graph_exec.device_type() !=
-        wrapped_stream->stream.device_type()) {
+    if (exec->device_type != wrapped_stream->device_type) {
       return INFINI_RT_STATUS_INVALID_ARGUMENT;
     }
-    switch (exec->graph_exec.device_type()) {
+    switch (exec->device_type) {
 #if defined(WITH_NVIDIA)
       case Device::Type::kNvidia:
         return CheckBackendCall([&] {
           return Runtime<Device::Type::kNvidia>::GraphLaunch(
-              RawNvidiaGraphExec(exec->graph_exec),
-              RawNvidiaStream(wrapped_stream->stream));
+              RawNvidiaGraphExec(exec), RawNvidiaStream(wrapped_stream));
         });
 #endif
       default:

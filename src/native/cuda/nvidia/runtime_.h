@@ -10,11 +10,13 @@
 #include "native/cuda/nvidia/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kNvidia>
     : CudaRuntime<Runtime<Device::Type::kNvidia>> {
+  using Error = cudaError_t;
+
   using Stream = cudaStream_t;
 
   using Graph = cudaGraph_t;
@@ -22,6 +24,8 @@ struct Runtime<Device::Type::kNvidia>
   using GraphExec = cudaGraphExec_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kNvidia;
+
+  static constexpr Error kSuccess = cudaSuccess;
 
   static constexpr auto SetDevice = cudaSetDevice;
 
@@ -37,15 +41,17 @@ struct Runtime<Device::Type::kNvidia>
 
   static constexpr auto Memcpy = cudaMemcpy;
 
+  static constexpr auto MemcpyAsync = cudaMemcpyAsync;
+
   static constexpr auto Free = cudaFree;
 
-  static constexpr auto MemcpyHostToHost = cudaMemcpyHostToHost;
+  static constexpr auto kMemcpyHostToHost = cudaMemcpyHostToHost;
 
-  static constexpr auto MemcpyHostToDevice = cudaMemcpyHostToDevice;
+  static constexpr auto kMemcpyHostToDevice = cudaMemcpyHostToDevice;
 
-  static constexpr auto MemcpyDeviceToHost = cudaMemcpyDeviceToHost;
+  static constexpr auto kMemcpyDeviceToHost = cudaMemcpyDeviceToHost;
 
-  static constexpr auto MemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
+  static constexpr auto kMemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = cudaMemset;
 
@@ -62,16 +68,13 @@ struct Runtime<Device::Type::kNvidia>
     return cudaStreamSynchronize(std::forward<decltype(args)>(args)...);
   };
 
-  static constexpr auto MemcpyAsync = [](auto&&... args) {
-    return cudaMemcpyAsync(std::forward<decltype(args)>(args)...);
-  };
+  static constexpr auto kStreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;
 
-  static constexpr auto StreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;
-
-  static constexpr auto StreamCaptureModeThreadLocal =
+  static constexpr auto kStreamCaptureModeThreadLocal =
       cudaStreamCaptureModeThreadLocal;
 
-  static constexpr auto StreamCaptureModeRelaxed = cudaStreamCaptureModeRelaxed;
+  static constexpr auto kStreamCaptureModeRelaxed =
+      cudaStreamCaptureModeRelaxed;
 
   static constexpr auto StreamBeginCapture = [](auto&&... args) {
     return cudaStreamBeginCapture(std::forward<decltype(args)>(args)...);
@@ -140,6 +143,6 @@ struct Runtime<Device::Type::kNvidia>
 
 static_assert(Runtime<Device::Type::kNvidia>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

@@ -5,9 +5,8 @@
 #include <type_traits>
 
 #include "device.h"
-#include "graph.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <Device::Type device_type>
 struct Runtime;
@@ -15,8 +14,9 @@ struct Runtime;
 /// ## Interface enforcement via CRTP.
 ///
 /// Inherit from the appropriate base to declare which interface level a
-/// `Runtime` specialization implements. After the struct is fully defined, call
-/// `static_assert(Runtime<...>::Validate())`. The chained `Validate()` checks
+/// `runtime::Runtime` specialization implements. After the struct is fully
+/// defined, call `static_assert(Runtime<...>::Validate())`. The chained
+/// `Validate()` checks
 /// every required member's existence and signature at compile time, analogous
 /// to how `override` catches signature mismatches for virtual functions.
 ///
@@ -31,6 +31,11 @@ struct RuntimeBase {
         std::is_same_v<std::remove_cv_t<decltype(Derived::kDeviceType)>,
                        Device::Type>,
         "`Runtime` must define `static constexpr Device::Type kDeviceType`.");
+    static_assert(sizeof(typename Derived::Error) > 0,
+                  "`Runtime` must define an `Error` type alias.");
+    static_assert(std::is_same_v<std::remove_cv_t<decltype(Derived::kSuccess)>,
+                                 typename Derived::Error>,
+                  "`Runtime` must define `static constexpr Error kSuccess`.");
     return true;
   }
 };
@@ -52,50 +57,6 @@ struct DeviceRuntime : RuntimeBase<Derived> {
   }
 };
 
-enum class MemcpyKind {
-  kHostToHost,
-  kHostToDevice,
-  kDeviceToHost,
-  kDeviceToDevice,
-};
-
-void SetDevice(Device device);
-
-void GetDevice(Device* device);
-
-void GetDeviceCount(int* count, Device::Type type);
-
-void DeviceSynchronize();
-
-void Malloc(void** ptr, std::size_t size);
-
-void Free(void* ptr);
-
-void Memcpy(void* dst, const void* src, std::size_t count, MemcpyKind kind);
-
-void MemcpyAsync(void* dst, const void* src, std::size_t count, MemcpyKind kind,
-                 Stream stream);
-
-void Memset(void* ptr, int value, std::size_t count);
-
-void StreamCreate(Stream* stream);
-
-void StreamDestroy(Stream stream);
-
-void StreamSynchronize(Stream stream);
-
-void StreamBeginCapture(Stream stream, StreamCaptureMode mode);
-
-void StreamEndCapture(Stream stream, Graph* graph);
-
-void GraphDestroy(Graph graph);
-
-void GraphInstantiate(GraphExec* graph_exec, Graph graph);
-
-void GraphExecDestroy(GraphExec graph_exec);
-
-void GraphLaunch(GraphExec graph_exec, Stream stream);
-
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif
