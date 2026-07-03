@@ -22,6 +22,8 @@ struct Runtime<Device::Type::kMoore>
 
   using GraphExec = void*;
 
+  using Event = musaEvent_t;
+
   static constexpr Device::Type kDeviceType = Device::Type::kMoore;
 
   static constexpr Error kSuccess = musaSuccess;
@@ -44,16 +46,36 @@ struct Runtime<Device::Type::kMoore>
     return musaMalloc(std::forward<decltype(args)>(args)...);
   };
 
+  static constexpr auto MallocHost = [](auto&&... args) {
+    return musaMallocHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto MallocAsync = [](void**, std::size_t, Stream) {
+    return static_cast<Error>(1);
+  };
+
+  static constexpr auto Free = [](auto&&... args) {
+    return musaFree(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto FreeHost = [](auto&&... args) {
+    return musaFreeHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto FreeAsync = [](void*, Stream) {
+    return static_cast<Error>(1);
+  };
+
+  static constexpr auto MemGetInfo = [](auto&&... args) {
+    return musaMemGetInfo(std::forward<decltype(args)>(args)...);
+  };
+
   static constexpr auto Memcpy = [](auto&&... args) {
     return musaMemcpy(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MemcpyAsync = [](auto&&... args) {
     return musaMemcpyAsync(std::forward<decltype(args)>(args)...);
-  };
-
-  static constexpr auto Free = [](auto&&... args) {
-    return musaFree(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto kMemcpyHostToHost = musaMemcpyHostToHost;
@@ -66,11 +88,53 @@ struct Runtime<Device::Type::kMoore>
 
   static constexpr auto Memset = musaMemset;
 
-  static int StreamCreate(Stream*) { return 1; }
+  static constexpr auto MemsetAsync = [](auto&&... args) {
+    return musaMemsetAsync(std::forward<decltype(args)>(args)...);
+  };
 
-  static int StreamDestroy(Stream) { return 1; }
+  static constexpr auto StreamCreate = [](auto&&... args) {
+    return musaStreamCreate(std::forward<decltype(args)>(args)...);
+  };
 
-  static int StreamSynchronize(Stream) { return 1; }
+  static constexpr auto StreamDestroy = [](auto&&... args) {
+    return musaStreamDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamSynchronize = [](auto&&... args) {
+    return musaStreamSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamWaitEvent = [](auto&&... args) {
+    return musaStreamWaitEvent(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreate = [](auto&&... args) {
+    return musaEventCreate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreateWithFlags = [](auto&&... args) {
+    return musaEventCreateWithFlags(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventRecord = [](auto&&... args) {
+    return musaEventRecord(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventQuery = [](auto&&... args) {
+    return musaEventQuery(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventSynchronize = [](auto&&... args) {
+    return musaEventSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventDestroy = [](auto&&... args) {
+    return musaEventDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventElapsedTime = [](auto&&... args) {
+    return musaEventElapsedTime(std::forward<decltype(args)>(args)...);
+  };
 
   static constexpr int kStreamCaptureModeGlobal = 0;
 
@@ -78,17 +142,21 @@ struct Runtime<Device::Type::kMoore>
 
   static constexpr int kStreamCaptureModeRelaxed = 2;
 
-  static int StreamBeginCapture(Stream, int) { return 1; }
+  static Error StreamBeginCapture(Stream, int) { return static_cast<Error>(1); }
 
-  static int StreamEndCapture(Stream, Graph*) { return 1; }
+  static Error StreamEndCapture(Stream, Graph*) {
+    return static_cast<Error>(1);
+  }
 
-  static int GraphDestroy(Graph) { return 1; }
+  static Error GraphDestroy(Graph) { return static_cast<Error>(1); }
 
-  static int GraphInstantiate(GraphExec*, Graph) { return 1; }
+  static Error GraphInstantiate(GraphExec*, Graph) {
+    return static_cast<Error>(1);
+  }
 
-  static int GraphExecDestroy(GraphExec) { return 1; }
+  static Error GraphExecDestroy(GraphExec) { return static_cast<Error>(1); }
 
-  static int GraphLaunch(GraphExec, Stream) { return 1; }
+  static Error GraphLaunch(GraphExec, Stream) { return static_cast<Error>(1); }
 };
 
 static_assert(Runtime<Device::Type::kMoore>::Validate());

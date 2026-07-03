@@ -23,6 +23,8 @@ struct Runtime<Device::Type::kNvidia>
 
   using GraphExec = cudaGraphExec_t;
 
+  using Event = cudaEvent_t;
+
   static constexpr Device::Type kDeviceType = Device::Type::kNvidia;
 
   static constexpr Error kSuccess = cudaSuccess;
@@ -39,11 +41,31 @@ struct Runtime<Device::Type::kNvidia>
     return cudaMalloc(std::forward<decltype(args)>(args)...);
   };
 
+  static constexpr auto MallocHost = [](auto&&... args) {
+    return cudaMallocHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto MallocAsync = [](auto&&... args) {
+    return cudaMallocAsync(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto Free = cudaFree;
+
+  static constexpr auto FreeHost = [](auto&&... args) {
+    return cudaFreeHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto FreeAsync = [](auto&&... args) {
+    return cudaFreeAsync(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto MemGetInfo = [](auto&&... args) {
+    return cudaMemGetInfo(std::forward<decltype(args)>(args)...);
+  };
+
   static constexpr auto Memcpy = cudaMemcpy;
 
   static constexpr auto MemcpyAsync = cudaMemcpyAsync;
-
-  static constexpr auto Free = cudaFree;
 
   static constexpr auto kMemcpyHostToHost = cudaMemcpyHostToHost;
 
@@ -54,6 +76,10 @@ struct Runtime<Device::Type::kNvidia>
   static constexpr auto kMemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = cudaMemset;
+
+  static constexpr auto MemsetAsync = [](auto&&... args) {
+    return cudaMemsetAsync(std::forward<decltype(args)>(args)...);
+  };
 
   static constexpr auto StreamCreate = [](auto&&... args) {
     return cudaStreamCreateWithFlags(std::forward<decltype(args)>(args)...,
@@ -66,6 +92,38 @@ struct Runtime<Device::Type::kNvidia>
 
   static constexpr auto StreamSynchronize = [](auto&&... args) {
     return cudaStreamSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamWaitEvent = [](auto&&... args) {
+    return cudaStreamWaitEvent(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreate = [](auto&&... args) {
+    return cudaEventCreate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreateWithFlags = [](auto&&... args) {
+    return cudaEventCreateWithFlags(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventRecord = [](auto&&... args) {
+    return cudaEventRecord(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventQuery = [](auto&&... args) {
+    return cudaEventQuery(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventSynchronize = [](auto&&... args) {
+    return cudaEventSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventDestroy = [](auto&&... args) {
+    return cudaEventDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventElapsedTime = [](auto&&... args) {
+    return cudaEventElapsedTime(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto kStreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;

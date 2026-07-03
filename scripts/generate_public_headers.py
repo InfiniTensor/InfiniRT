@@ -229,6 +229,8 @@ using Error = typename generated_detail::DefaultErrorRuntime::Error;
 
 using Stream = typename generated_detail::DefaultErrorRuntime::Stream;
 
+using Event = void*;
+
 {graph_declarations}
 using MemcpyKind = std::remove_cv_t<
     decltype(generated_detail::DefaultErrorRuntime::kMemcpyHostToHost)>;
@@ -286,15 +288,31 @@ _PUBLIC_RUNTIME_FUNCTIONS = (
         "Malloc",
         (_Param("void**", "ptr"), _Param("std::size_t", "size")),
     ),
-    _Function("Error", "Free", (_Param("void*", "ptr"),)),
     _Function(
         "Error",
-        "Memset",
+        "MallocHost",
+        (_Param("void**", "ptr"), _Param("std::size_t", "size")),
+    ),
+    _Function(
+        "Error",
+        "MallocAsync",
         (
-            _Param("void*", "ptr"),
-            _Param("int", "value"),
-            _Param("std::size_t", "count"),
+            _Param("void**", "ptr"),
+            _Param("std::size_t", "size"),
+            _Param("Stream", "stream"),
         ),
+    ),
+    _Function("Error", "Free", (_Param("void*", "ptr"),)),
+    _Function("Error", "FreeHost", (_Param("void*", "ptr"),)),
+    _Function(
+        "Error",
+        "FreeAsync",
+        (_Param("void*", "ptr"), _Param("Stream", "stream")),
+    ),
+    _Function(
+        "Error",
+        "MemGetInfo",
+        (_Param("std::size_t*", "free"), _Param("std::size_t*", "total")),
     ),
     _Function(
         "Error",
@@ -317,9 +335,60 @@ _PUBLIC_RUNTIME_FUNCTIONS = (
             _Param("Stream", "stream"),
         ),
     ),
+    _Function(
+        "Error",
+        "Memset",
+        (
+            _Param("void*", "ptr"),
+            _Param("int", "value"),
+            _Param("std::size_t", "count"),
+        ),
+    ),
+    _Function(
+        "Error",
+        "MemsetAsync",
+        (
+            _Param("void*", "ptr"),
+            _Param("int", "value"),
+            _Param("std::size_t", "count"),
+            _Param("Stream", "stream"),
+        ),
+    ),
     _Function("Error", "StreamCreate", (_Param("Stream*", "stream"),)),
     _Function("Error", "StreamDestroy", (_Param("Stream", "stream"),)),
     _Function("Error", "StreamSynchronize", (_Param("Stream", "stream"),)),
+    _Function(
+        "Error",
+        "StreamWaitEvent",
+        (
+            _Param("Stream", "stream"),
+            _Param("Event", "event"),
+            _Param("unsigned int", "flags"),
+        ),
+    ),
+    _Function("Error", "EventCreate", (_Param("Event*", "event"),)),
+    _Function(
+        "Error",
+        "EventCreateWithFlags",
+        (_Param("Event*", "event"), _Param("unsigned int", "flags")),
+    ),
+    _Function(
+        "Error",
+        "EventRecord",
+        (_Param("Event", "event"), _Param("Stream", "stream")),
+    ),
+    _Function("Error", "EventQuery", (_Param("Event", "event"),)),
+    _Function("Error", "EventSynchronize", (_Param("Event", "event"),)),
+    _Function("Error", "EventDestroy", (_Param("Event", "event"),)),
+    _Function(
+        "Error",
+        "EventElapsedTime",
+        (
+            _Param("float*", "ms"),
+            _Param("Event", "start"),
+            _Param("Event", "end"),
+        ),
+    ),
     _Function(
         "Error",
         "StreamBeginCapture",
@@ -368,6 +437,12 @@ def _runtime_arg(param, device):
     if param.type == "Stream*":
         return (
             f"reinterpret_cast<typename Runtime<{device_type}>::Stream*>({param.name})"
+        )
+    if param.type == "Event":
+        return f"reinterpret_cast<typename Runtime<{device_type}>::Event>({param.name})"
+    if param.type == "Event*":
+        return (
+            f"reinterpret_cast<typename Runtime<{device_type}>::Event*>({param.name})"
         )
     if param.type == "Graph":
         return f"reinterpret_cast<typename Runtime<{device_type}>::Graph>({param.name})"
@@ -454,6 +529,32 @@ def _public_runtime_functions_for_devices(devices, source_root):
 
 def _write_runtime_dispatch(source_path, source_root, devices):
     functions = _public_runtime_functions_for_devices(devices, source_root)
+    stream_capture_mode_helper = (
+        """
+template <Device::Type device_type>
+auto RuntimeStreamCaptureMode(StreamCaptureMode mode) {
+  using DeviceRuntime = Runtime<device_type>;
+
+  switch (mode) {
+    case StreamCaptureMode::kStreamCaptureModeGlobal:
+      return DeviceRuntime::kStreamCaptureModeGlobal;
+    case StreamCaptureMode::kStreamCaptureModeThreadLocal:
+      return DeviceRuntime::kStreamCaptureModeThreadLocal;
+    case StreamCaptureMode::kStreamCaptureModeRelaxed:
+      return DeviceRuntime::kStreamCaptureModeRelaxed;
+  }
+
+  assert(false && "unsupported stream capture mode");
+  return DeviceRuntime::kStreamCaptureModeRelaxed;
+}
+"""
+        if any(
+            param.type == "StreamCaptureMode"
+            for function in functions
+            for param in function.params
+        )
+        else ""
+    )
     dispatch_functions = "\n".join(
         _write_runtime_dispatch_function(
             function,
@@ -535,23 +636,7 @@ auto RuntimeMemcpyKind(MemcpyKind kind) {{
   return DeviceRuntime::kMemcpyHostToHost;
 }}
 
-template <Device::Type device_type>
-auto RuntimeStreamCaptureMode(StreamCaptureMode mode) {{
-  using DeviceRuntime = Runtime<device_type>;
-
-  switch (mode) {{
-    case StreamCaptureMode::kStreamCaptureModeGlobal:
-      return DeviceRuntime::kStreamCaptureModeGlobal;
-    case StreamCaptureMode::kStreamCaptureModeThreadLocal:
-      return DeviceRuntime::kStreamCaptureModeThreadLocal;
-    case StreamCaptureMode::kStreamCaptureModeRelaxed:
-      return DeviceRuntime::kStreamCaptureModeRelaxed;
-  }}
-
-  assert(false && "unsupported stream capture mode");
-  return DeviceRuntime::kStreamCaptureModeRelaxed;
-}}
-
+{stream_capture_mode_helper}
 }}  // namespace
 
 {dispatch_functions}

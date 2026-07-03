@@ -22,6 +22,8 @@ struct Runtime<Device::Type::kMetax>
 
   using GraphExec = void*;
 
+  using Event = mcEvent_t;
+
   static constexpr Device::Type kDeviceType = Device::Type::kMetax;
 
   static constexpr Error kSuccess = mcSuccess;
@@ -38,16 +40,36 @@ struct Runtime<Device::Type::kMetax>
     return mcMalloc(std::forward<decltype(args)>(args)...);
   };
 
+  static constexpr auto MallocHost = [](auto&&... args) {
+    return mcMallocHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto MallocAsync = [](auto&&... args) {
+    return mcMallocAsync(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto Free = [](auto&&... args) {
+    return mcFree(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto FreeHost = [](auto&&... args) {
+    return mcFreeHost(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto FreeAsync = [](auto&&... args) {
+    return mcFreeAsync(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto MemGetInfo = [](auto&&... args) {
+    return mcMemGetInfo(std::forward<decltype(args)>(args)...);
+  };
+
   static constexpr auto Memcpy = [](auto&&... args) {
     return mcMemcpy(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MemcpyAsync = [](auto&&... args) {
     return mcMemcpyAsync(std::forward<decltype(args)>(args)...);
-  };
-
-  static constexpr auto Free = [](auto&&... args) {
-    return mcFree(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto kMemcpyHostToHost = mcMemcpyHostToHost;
@@ -60,11 +82,53 @@ struct Runtime<Device::Type::kMetax>
 
   static constexpr auto Memset = mcMemset;
 
-  static int StreamCreate(Stream*) { return 1; }
+  static constexpr auto MemsetAsync = [](auto&&... args) {
+    return mcMemsetAsync(std::forward<decltype(args)>(args)...);
+  };
 
-  static int StreamDestroy(Stream) { return 1; }
+  static constexpr auto StreamCreate = [](auto&&... args) {
+    return mcStreamCreate(std::forward<decltype(args)>(args)...);
+  };
 
-  static int StreamSynchronize(Stream) { return 1; }
+  static constexpr auto StreamDestroy = [](auto&&... args) {
+    return mcStreamDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamSynchronize = [](auto&&... args) {
+    return mcStreamSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamWaitEvent = [](auto&&... args) {
+    return mcStreamWaitEvent(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreate = [](auto&&... args) {
+    return mcEventCreate(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventCreateWithFlags = [](auto&&... args) {
+    return mcEventCreateWithFlags(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventRecord = [](auto&&... args) {
+    return mcEventRecord(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventQuery = [](auto&&... args) {
+    return mcEventQuery(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventSynchronize = [](auto&&... args) {
+    return mcEventSynchronize(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventDestroy = [](auto&&... args) {
+    return mcEventDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto EventElapsedTime = [](auto&&... args) {
+    return mcEventElapsedTime(std::forward<decltype(args)>(args)...);
+  };
 
   static constexpr int kStreamCaptureModeGlobal = 0;
 
@@ -72,17 +136,21 @@ struct Runtime<Device::Type::kMetax>
 
   static constexpr int kStreamCaptureModeRelaxed = 2;
 
-  static int StreamBeginCapture(Stream, int) { return 1; }
+  static Error StreamBeginCapture(Stream, int) { return static_cast<Error>(1); }
 
-  static int StreamEndCapture(Stream, Graph*) { return 1; }
+  static Error StreamEndCapture(Stream, Graph*) {
+    return static_cast<Error>(1);
+  }
 
-  static int GraphDestroy(Graph) { return 1; }
+  static Error GraphDestroy(Graph) { return static_cast<Error>(1); }
 
-  static int GraphInstantiate(GraphExec*, Graph) { return 1; }
+  static Error GraphInstantiate(GraphExec*, Graph) {
+    return static_cast<Error>(1);
+  }
 
-  static int GraphExecDestroy(GraphExec) { return 1; }
+  static Error GraphExecDestroy(GraphExec) { return static_cast<Error>(1); }
 
-  static int GraphLaunch(GraphExec, Stream) { return 1; }
+  static Error GraphLaunch(GraphExec, Stream) { return static_cast<Error>(1); }
 };
 
 static_assert(Runtime<Device::Type::kMetax>::Validate());

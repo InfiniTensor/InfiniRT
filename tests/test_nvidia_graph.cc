@@ -90,6 +90,8 @@ int main() {
       "Failed to refresh first source buffer.");
   ExpectSuccess(&context, runtime::Memset(dst, 0, replay_input_1.size()),
                 "Failed to clear first destination buffer.");
+  ExpectSuccess(&context, runtime::DeviceSynchronize(),
+                "Failed to synchronize first replay inputs.");
   ExpectSuccess(&context, runtime::GraphLaunch(graph_exec, stream),
                 "Failed to launch first graph replay.");
   ExpectSuccess(&context, runtime::StreamSynchronize(stream),
@@ -104,6 +106,8 @@ int main() {
       "Failed to refresh second source buffer.");
   ExpectSuccess(&context, runtime::Memset(dst, 0, replay_input_2.size()),
                 "Failed to clear second destination buffer.");
+  ExpectSuccess(&context, runtime::DeviceSynchronize(),
+                "Failed to synchronize second replay inputs.");
   ExpectSuccess(&context, runtime::GraphLaunch(graph_exec, stream),
                 "Failed to launch second graph replay.");
   ExpectSuccess(&context, runtime::StreamSynchronize(stream),
