@@ -161,6 +161,7 @@ def _write_generated_header(include_root, devices):
     default_device_type = _DEVICE_TYPES[default_device]
     includes = [
         "#include <cstddef>",
+        "#include <cstdint>",
         "#include <type_traits>",
         f"#include {_detail_include('data_type.h')}",
         f"#include {_detail_include('device.h')}",
@@ -205,6 +206,8 @@ inline constexpr Device::Type kDefaultDeviceType = {default_device_type};
 using Error = typename generated_detail::DefaultErrorRuntime::Error;
 
 using Stream = typename generated_detail::DefaultErrorRuntime::Stream;
+
+using Event = void*;
 
 using MemcpyKind = std::remove_cv_t<
     decltype(generated_detail::DefaultErrorRuntime::kMemcpyHostToHost)>;
@@ -262,15 +265,31 @@ _PUBLIC_RUNTIME_FUNCTIONS = (
         "Malloc",
         (_Param("void**", "ptr"), _Param("std::size_t", "size")),
     ),
-    _Function("Error", "Free", (_Param("void*", "ptr"),)),
     _Function(
         "Error",
-        "Memset",
+        "MallocHost",
+        (_Param("void**", "ptr"), _Param("std::size_t", "size")),
+    ),
+    _Function(
+        "Error",
+        "MallocAsync",
         (
-            _Param("void*", "ptr"),
-            _Param("int", "value"),
-            _Param("std::size_t", "count"),
+            _Param("void**", "ptr"),
+            _Param("std::size_t", "size"),
+            _Param("Stream", "stream"),
         ),
+    ),
+    _Function("Error", "Free", (_Param("void*", "ptr"),)),
+    _Function("Error", "FreeHost", (_Param("void*", "ptr"),)),
+    _Function(
+        "Error",
+        "FreeAsync",
+        (_Param("void*", "ptr"), _Param("Stream", "stream")),
+    ),
+    _Function(
+        "Error",
+        "MemGetInfo",
+        (_Param("std::size_t*", "free"), _Param("std::size_t*", "total")),
     ),
     _Function(
         "Error",
@@ -293,6 +312,60 @@ _PUBLIC_RUNTIME_FUNCTIONS = (
             _Param("Stream", "stream"),
         ),
     ),
+    _Function(
+        "Error",
+        "Memset",
+        (
+            _Param("void*", "ptr"),
+            _Param("int", "value"),
+            _Param("std::size_t", "count"),
+        ),
+    ),
+    _Function(
+        "Error",
+        "MemsetAsync",
+        (
+            _Param("void*", "ptr"),
+            _Param("int", "value"),
+            _Param("std::size_t", "count"),
+            _Param("Stream", "stream"),
+        ),
+    ),
+    _Function("Error", "StreamCreate", (_Param("Stream*", "stream"),)),
+    _Function("Error", "StreamDestroy", (_Param("Stream", "stream"),)),
+    _Function("Error", "StreamSynchronize", (_Param("Stream", "stream"),)),
+    _Function(
+        "Error",
+        "StreamWaitEvent",
+        (
+            _Param("Stream", "stream"),
+            _Param("Event", "event"),
+            _Param("unsigned int", "flags"),
+        ),
+    ),
+    _Function("Error", "EventCreate", (_Param("Event*", "event"),)),
+    _Function(
+        "Error",
+        "EventCreateWithFlags",
+        (_Param("Event*", "event"), _Param("unsigned int", "flags")),
+    ),
+    _Function(
+        "Error",
+        "EventRecord",
+        (_Param("Event", "event"), _Param("Stream", "stream")),
+    ),
+    _Function("Error", "EventQuery", (_Param("Event", "event"),)),
+    _Function("Error", "EventSynchronize", (_Param("Event", "event"),)),
+    _Function("Error", "EventDestroy", (_Param("Event", "event"),)),
+    _Function(
+        "Error",
+        "EventElapsedTime",
+        (
+            _Param("float*", "ms"),
+            _Param("Event", "start"),
+            _Param("Event", "end"),
+        ),
+    ),
 )
 
 
@@ -311,6 +384,16 @@ def _runtime_arg(param, device):
     if param.type == "Stream":
         return (
             f"reinterpret_cast<typename Runtime<{device_type}>::Stream>({param.name})"
+        )
+    if param.type == "Stream*":
+        return (
+            f"reinterpret_cast<typename Runtime<{device_type}>::Stream*>({param.name})"
+        )
+    if param.type == "Event":
+        return f"reinterpret_cast<typename Runtime<{device_type}>::Event>({param.name})"
+    if param.type == "Event*":
+        return (
+            f"reinterpret_cast<typename Runtime<{device_type}>::Event*>({param.name})"
         )
 
     return param.name
@@ -351,10 +434,31 @@ def _write_runtime_dispatch_function(function, devices):
 """
 
 
-def _write_runtime_dispatch(source_path, devices):
+def _runtime_header_for_device(source_root, device):
+    for _, header_name, target in _DEVICE_HEADERS[device]:
+        if header_name == "runtime_.h":
+            return source_root / target
+
+    raise ValueError(f"device {device!r} does not have a runtime header")
+
+
+def _devices_for_function(function, devices, source_root):
+    pattern = re.compile(r"\b" + re.escape(function.name) + r"\b")
+
+    return tuple(
+        device
+        for device in devices
+        if pattern.search(_runtime_header_for_device(source_root, device).read_text())
+    )
+
+
+def _write_runtime_dispatch(source_path, source_root, devices):
     functions = _PUBLIC_RUNTIME_FUNCTIONS
     dispatch_functions = "\n".join(
-        _write_runtime_dispatch_function(function, devices=devices)
+        _write_runtime_dispatch_function(
+            function,
+            devices=_devices_for_function(function, devices, source_root),
+        )
         for function in functions
     )
     set_device_type_cases = "\n".join(
@@ -463,7 +567,7 @@ def main():
             _write_wrapper(include_root, wrapper_device, header_name, target)
 
     _write_generated_header(include_root, devices)
-    _write_runtime_dispatch(pathlib.Path(args.source_output), devices)
+    _write_runtime_dispatch(pathlib.Path(args.source_output), source_root, devices)
 
 
 if __name__ == "__main__":
