@@ -1,7 +1,9 @@
 #include <infini/rt.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "test_helper.h"
@@ -11,6 +13,9 @@ namespace {
 using infini::rt::DataType;
 using infini::rt::Device;
 using infini::rt::TensorView;
+
+static_assert(!std::is_constructible_v<TensorView, std::vector<TensorView>>,
+              "TensorView should not treat tensor containers as tensor-like.");
 
 void TestDevice(infini::rt::test::TestContext* context) {
   const Device cpu{Device::Type::kCpu};

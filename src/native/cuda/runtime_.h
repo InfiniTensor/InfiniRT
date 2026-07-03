@@ -5,7 +5,7 @@
 
 #include "runtime.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 /// ## CUDA-like runtime interface enforcement via CRTP.
 ///
@@ -17,13 +17,19 @@ struct CudaRuntime : DeviceRuntime<Derived> {
     DeviceRuntime<Derived>::Validate();
     static_assert(
         std::is_invocable_v<decltype(Derived::Memcpy), void*, const void*,
-                            size_t, decltype(Derived::MemcpyHostToDevice)>,
+                            size_t, decltype(Derived::kMemcpyHostToDevice)>,
         "`Runtime::Memcpy` must be callable with "
-        "`(void*, const void*, size_t, MemcpyHostToDevice)`.");
+        "`(void*, const void*, size_t, kMemcpyHostToDevice)`.");
+    static_assert(
+        std::is_invocable_v<decltype(Derived::MemcpyAsync), void*, const void*,
+                            size_t, decltype(Derived::kMemcpyHostToDevice),
+                            typename Derived::Stream>,
+        "`Runtime::MemcpyAsync` must be callable with "
+        "`(void*, const void*, size_t, kMemcpyHostToDevice, Stream)`.");
     return true;
   }
 };
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif

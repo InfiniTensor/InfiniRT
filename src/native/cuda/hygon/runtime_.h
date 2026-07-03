@@ -10,14 +10,26 @@
 #include "native/cuda/hygon/device_.h"
 #include "native/cuda/runtime_.h"
 
-namespace infini::rt {
+namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kHygon>
     : CudaRuntime<Runtime<Device::Type::kHygon>> {
+  using Error = cudaError_t;
+
   using Stream = cudaStream_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kHygon;
+
+  static constexpr Error kSuccess = cudaSuccess;
+
+  static constexpr auto SetDevice = cudaSetDevice;
+
+  static constexpr auto GetDevice = cudaGetDevice;
+
+  static constexpr auto GetDeviceCount = cudaGetDeviceCount;
+
+  static constexpr auto DeviceSynchronize = cudaDeviceSynchronize;
 
   static constexpr auto Malloc = [](auto&&... args) {
     return cudaMalloc(std::forward<decltype(args)>(args)...);
@@ -25,19 +37,25 @@ struct Runtime<Device::Type::kHygon>
 
   static constexpr auto Memcpy = cudaMemcpy;
 
+  static constexpr auto MemcpyAsync = cudaMemcpyAsync;
+
   static constexpr auto Free = [](auto&&... args) {
     return cudaFree(std::forward<decltype(args)>(args)...);
   };
 
-  static constexpr auto MemcpyHostToDevice = cudaMemcpyHostToDevice;
+  static constexpr auto kMemcpyHostToHost = cudaMemcpyHostToHost;
 
-  static constexpr auto MemcpyDeviceToHost = cudaMemcpyDeviceToHost;
+  static constexpr auto kMemcpyHostToDevice = cudaMemcpyHostToDevice;
+
+  static constexpr auto kMemcpyDeviceToHost = cudaMemcpyDeviceToHost;
+
+  static constexpr auto kMemcpyDeviceToDevice = cudaMemcpyDeviceToDevice;
 
   static constexpr auto Memset = cudaMemset;
 };
 
 static_assert(Runtime<Device::Type::kHygon>::Validate());
 
-}  // namespace infini::rt
+}  // namespace infini::rt::runtime
 
 #endif
