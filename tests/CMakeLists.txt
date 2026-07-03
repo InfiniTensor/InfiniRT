@@ -4,11 +4,82 @@ function(add_infini_rt_test target)
     add_test(NAME ${target} COMMAND ${target})
 endfunction()
 
+function(add_infini_rt_backend_runtime_test backend device_type runtime_header
+         expect_async_memcpy_success)
+    string(TOLOWER "${backend}" backend_lower)
+    set(target "test_${backend_lower}_runtime")
+    add_infini_rt_test(${target} test_native_runtime.cc)
+    target_compile_definitions(${target}
+        PRIVATE
+            "INFINI_RT_TEST_BACKEND_NAME=\"${backend}\""
+            "INFINI_RT_TEST_DEVICE_TYPE=${device_type}"
+            "INFINI_RT_TEST_RUNTIME_HEADER=\"${runtime_header}\""
+            "INFINI_RT_TEST_EXPECT_ASYNC_MEMCPY_SUCCESS=${expect_async_memcpy_success}")
+endfunction()
+
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
 
-if(WITH_CPU OR WITH_NVIDIA)
+set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND OFF)
+
+if(WITH_CPU)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        CPU infini::rt::Device::Type::kCpu infini/rt/cpu/runtime_.h 0)
+endif()
+
+if(WITH_NVIDIA)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        NVIDIA infini::rt::Device::Type::kNvidia
+        infini/rt/nvidia/runtime_.h 1)
+endif()
+
+if(WITH_ILUVATAR)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        ILUVATAR infini::rt::Device::Type::kIluvatar
+        infini/rt/iluvatar/runtime_.h 1)
+endif()
+
+if(WITH_HYGON)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        HYGON infini::rt::Device::Type::kHygon
+        infini/rt/hygon/runtime_.h 1)
+endif()
+
+if(WITH_METAX)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        METAX infini::rt::Device::Type::kMetax
+        infini/rt/metax/runtime_.h 1)
+endif()
+
+if(WITH_MOORE)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        MOORE infini::rt::Device::Type::kMoore
+        infini/rt/moore/runtime_.h 1)
+endif()
+
+if(WITH_CAMBRICON)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        CAMBRICON infini::rt::Device::Type::kCambricon
+        infini/rt/cambricon/runtime_.h 1)
+endif()
+
+if(WITH_ASCEND)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        ASCEND infini::rt::Device::Type::kAscend
+        infini/rt/ascend/runtime_.h 1)
+endif()
+
+if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
     add_infini_rt_test(test_runtime_dispatch test_runtime_dispatch.cc)
+
     if(WITH_CPU)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_CPU=1)
@@ -17,14 +88,30 @@ if(WITH_CPU OR WITH_NVIDIA)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_NVIDIA=1)
     endif()
-endif()
-
-if(WITH_CPU)
-    add_infini_rt_test(test_cpu_runtime test_cpu_runtime.cc)
-endif()
-
-if(WITH_NVIDIA)
-    add_infini_rt_test(test_nvidia_runtime test_nvidia_runtime.cc)
+    if(WITH_ILUVATAR)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_ILUVATAR=1)
+    endif()
+    if(WITH_HYGON)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_HYGON=1)
+    endif()
+    if(WITH_METAX)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_METAX=1)
+    endif()
+    if(WITH_MOORE)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_MOORE=1)
+    endif()
+    if(WITH_CAMBRICON)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_CAMBRICON=1)
+    endif()
+    if(WITH_ASCEND)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_ASCEND=1)
+    endif()
 endif()
 
 set(INFINI_RT_TEST_INSTALL_PREFIX
@@ -35,8 +122,7 @@ set(INFINI_RT_TEST_EXTRA_LIBRARY_DIRS "")
 set(INFINI_RT_TEST_EXTRA_INCLUDE_DIRS "")
 set(INFINI_RT_TEST_CONSUMER_BACKEND NONE)
 
-if(WITH_NVIDIA)
-    set(INFINI_RT_TEST_CONSUMER_BACKEND NVIDIA)
+if(WITH_NVIDIA OR WITH_ILUVATAR OR WITH_HYGON)
     if(CUDAToolkit_INCLUDE_DIRS)
         list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
              ${CUDAToolkit_INCLUDE_DIRS})
@@ -44,6 +130,59 @@ if(WITH_NVIDIA)
         list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
              ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
     endif()
+
+    if(CUDAToolkit_LIBRARY_DIR)
+        list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+             "${CUDAToolkit_LIBRARY_DIR}")
+    endif()
+    if(CUDAToolkit_TARGET_DIR)
+        list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+             "${CUDAToolkit_TARGET_DIR}/lib64")
+    endif()
+    if(CUDAToolkit_ROOT_DIR)
+        list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+             "${CUDAToolkit_ROOT_DIR}/lib64")
+    endif()
+endif()
+
+if(WITH_NVIDIA)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND NVIDIA)
+elseif(WITH_ILUVATAR)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND ILUVATAR)
+elseif(WITH_HYGON)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND HYGON)
+    if(HYGON_CUDA_ROOT)
+        list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
+             "${HYGON_CUDA_ROOT}/include")
+        list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+             "${HYGON_CUDA_ROOT}/lib64")
+    endif()
+elseif(WITH_METAX)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND METAX)
+    list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
+         "${MACA_PATH}/include")
+    list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+         "${MACA_PATH}/lib")
+elseif(WITH_MOORE)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND MOORE)
+    list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
+         "${MUSA_ROOT}/include")
+    list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+         "${MUSA_ROOT}/lib")
+elseif(WITH_CAMBRICON)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND CAMBRICON)
+    list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
+         "${NEUWARE_HOME}/include")
+    list(APPEND INFINI_RT_TEST_EXTRA_LIBRARY_DIRS
+         "${NEUWARE_HOME}/lib"
+         "${NEUWARE_HOME}/lib64")
+elseif(WITH_ASCEND)
+    # The install-consumer smoke checks Ascend public headers and linkage.
+    # Runtime behavior is covered by test_ascend_runtime and dispatch tests.
+    list(APPEND INFINI_RT_TEST_EXTRA_INCLUDE_DIRS
+         "${ASCEND_HOME}/include"
+         "${ASCEND_HOME}/include/aclnn"
+         "${ASCEND_HOME}/include/aclnnop")
 elseif(WITH_CPU)
     set(INFINI_RT_TEST_CONSUMER_BACKEND CPU)
 endif()
