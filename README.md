@@ -1,12 +1,17 @@
 # InfiniRT
 
-InfiniRT is the runtime library of the InfiniCore project. It provides a stable runtime API for device management and memory operations across supported backends such as CPU and NVIDIA.
+InfiniRT is the runtime library of the InfiniCore project. It provides the
+public runtime entry for supported accelerator backends, starting with device
+management and memory operations and growing with higher-level runtime
+features.
 
 The recommended public entry is:
 
 ```cpp
 #include <infini/rt.h>
 ```
+
+Full user documentation is available in [docs/README.md](docs/README.md).
 
 ## Build and Install
 
@@ -63,6 +68,7 @@ cmake --install build
 
 ```cpp
 #include <cstddef>
+
 #include <infini/rt.h>
 
 int main() {
@@ -127,6 +133,9 @@ At runtime, make sure the dynamic linker can find `libinfinirt.so`, for example:
 ```bash
 export LD_LIBRARY_PATH=/path/to/infini-rt-prefix/lib:$LD_LIBRARY_PATH
 ```
+
+See [examples/consumer_cmake](examples/consumer_cmake) for a minimal CMake
+consumer project.
 
 ## Tests
 
