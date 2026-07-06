@@ -33,6 +33,7 @@ option(WITH_ASCEND "Enable Ascend backend" OFF)
 
 option(AUTO_DETECT_DEVICES "Automatically detect available devices" OFF)
 option(INFINI_RT_BUILD_TESTING "Build InfiniRT tests" OFF)
+option(INFINI_RT_BUILD_DOCS "Build InfiniRT documentation" OFF)
 
 if(AUTO_DETECT_DEVICES)
     message(STATUS "Auto-detecting available devices...")
@@ -335,4 +336,23 @@ add_subdirectory(src)
 if(INFINI_RT_BUILD_TESTING)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(INFINI_RT_BUILD_DOCS)
+    find_package(Doxygen REQUIRED)
+
+    set(INFINI_RT_DOXYGEN_OUTPUT_DIRECTORY
+        "${CMAKE_BINARY_DIR}/docs/reference")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in"
+        "${CMAKE_BINARY_DIR}/docs/Doxyfile"
+        @ONLY)
+
+    add_custom_target(infinirt_docs
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                "${INFINI_RT_DOXYGEN_OUTPUT_DIRECTORY}"
+        COMMAND ${DOXYGEN_EXECUTABLE} "${CMAKE_BINARY_DIR}/docs/Doxyfile"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Generating InfiniRT documentation"
+        VERBATIM)
 endif()
