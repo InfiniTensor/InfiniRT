@@ -14,7 +14,8 @@ namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kIluvatar>
-    : CudaRuntime<Runtime<Device::Type::kIluvatar>> {
+    : GraphRuntime<Runtime<Device::Type::kIluvatar>,
+                   CudaRuntime<Runtime<Device::Type::kIluvatar>>> {
   using Error = cudaError_t;
 
   using Stream = cudaStream_t;
@@ -24,6 +25,8 @@ struct Runtime<Device::Type::kIluvatar>
   using GraphExec = cudaGraphExec_t;
 
   using Event = cudaEvent_t;
+
+  using StreamCaptureMode = cudaStreamCaptureMode;
 
   static constexpr Device::Type kDeviceType = Device::Type::kIluvatar;
 
@@ -81,10 +84,7 @@ struct Runtime<Device::Type::kIluvatar>
     return cudaMemsetAsync(std::forward<decltype(args)>(args)...);
   };
 
-  static constexpr auto StreamCreate = [](auto&&... args) {
-    return cudaStreamCreateWithFlags(std::forward<decltype(args)>(args)...,
-                                     cudaStreamNonBlocking);
-  };
+  static constexpr auto StreamCreate = cudaStreamCreate;
 
   static constexpr auto StreamDestroy = [](auto&&... args) {
     return cudaStreamDestroy(std::forward<decltype(args)>(args)...);

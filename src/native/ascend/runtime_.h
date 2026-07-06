@@ -1,10 +1,11 @@
 #ifndef INFINI_RT_ASCEND_RUNTIME__H_
 #define INFINI_RT_ASCEND_RUNTIME__H_
 
+#include <dlfcn.h>
+
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <dlfcn.h>
 
 // clang-format off
 #include "acl/acl.h"
@@ -17,7 +18,7 @@ namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kAscend>
-    : DeviceRuntime<Runtime<Device::Type::kAscend>> {
+    : GraphRuntime<Runtime<Device::Type::kAscend>> {
   using Error = aclError;
 
   using Stream = aclrtStream;
@@ -27,6 +28,8 @@ struct Runtime<Device::Type::kAscend>
   using GraphExec = void*;
 
   using Event = void*;
+
+  using StreamCaptureMode = int;
 
   static constexpr Device::Type kDeviceType = Device::Type::kAscend;
 
@@ -46,7 +49,7 @@ struct Runtime<Device::Type::kAscend>
 
   static constexpr auto DeviceSynchronize = aclrtSynchronizeDevice;
 
-  static constexpr auto Malloc = [](void** ptr, size_t size) {
+  static constexpr auto Malloc = [](void** ptr, std::size_t size) {
     return aclrtMalloc(ptr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   };
 
@@ -64,14 +67,14 @@ struct Runtime<Device::Type::kAscend>
 
   static Error MemGetInfo(std::size_t*, std::size_t*) { return Unsupported(); }
 
-  static constexpr auto Memcpy = [](void* dst, const void* src, size_t count,
-                                    aclrtMemcpyKind kind) {
+  static constexpr auto Memcpy = [](void* dst, const void* src,
+                                    std::size_t count, aclrtMemcpyKind kind) {
     return aclrtMemcpy(dst, count, src, count, kind);
   };
 
   static constexpr auto MemcpyAsync = [](void* dst, const void* src,
-                                         size_t count, aclrtMemcpyKind kind,
-                                         Stream stream) {
+                                         std::size_t count,
+                                         aclrtMemcpyKind kind, Stream stream) {
     return aclrtMemcpyAsync(dst, count, src, count, kind, stream);
   };
 
@@ -83,7 +86,7 @@ struct Runtime<Device::Type::kAscend>
 
   static constexpr auto kMemcpyDeviceToDevice = ACL_MEMCPY_DEVICE_TO_DEVICE;
 
-  static constexpr auto Memset = [](void* ptr, int value, size_t count) {
+  static constexpr auto Memset = [](void* ptr, int value, std::size_t count) {
     return aclrtMemset(ptr, count, value, count);
   };
 
@@ -117,49 +120,107 @@ struct Runtime<Device::Type::kAscend>
 
   static Error EventElapsedTime(float*, Event, Event) { return Unsupported(); }
 
-  static constexpr int kStreamCaptureModeGlobal = 0;
+  static constexpr StreamCaptureMode kStreamCaptureModeGlobal = 0;
 
-  static constexpr int kStreamCaptureModeThreadLocal = 1;
+  static constexpr StreamCaptureMode kStreamCaptureModeThreadLocal = 1;
 
-  static constexpr int kStreamCaptureModeRelaxed = 2;
+  static constexpr StreamCaptureMode kStreamCaptureModeRelaxed = 2;
 
-  struct RIApi {
-    using CaptureBeginFn = aclError (*)(aclrtStream, int);
-    using CaptureGetInfoFn = aclError (*)(aclrtStream, int*, void**);
-    using CaptureEndFn = aclError (*)(aclrtStream, void**);
-    using RIExecuteAsyncFn = aclError (*)(void*, aclrtStream);
-    using RIDestroyFn = aclError (*)(void*);
+  static Error StreamBeginCapture(Stream stream, StreamCaptureMode mode) {
+    const auto& api = GraphApi();
+    if (!api.Available()) {
+      return UnsupportedGraphApi();
+    }
+    return api.CaptureBegin(stream, mode);
+  }
 
-    CaptureBeginFn capture_begin = nullptr;
-    CaptureGetInfoFn capture_get_info = nullptr;
-    CaptureEndFn capture_end = nullptr;
-    RIExecuteAsyncFn execute_async = nullptr;
-    RIDestroyFn destroy = nullptr;
+  static Error StreamEndCapture(Stream stream, Graph* graph) {
+    assert(graph != nullptr);
+    const auto& api = GraphApi();
+    if (!api.Available()) {
+      return UnsupportedGraphApi();
+    }
+    int capture_status = 0;
+    void* capturing_model_ri = nullptr;
+    const auto info_status =
+        api.CaptureGetInfo(stream, &capture_status, &capturing_model_ri);
+    if (info_status != ACL_SUCCESS) {
+      return info_status;
+    }
+    void* model_ri = nullptr;
+    const auto status = api.CaptureEnd(stream, &model_ri);
+    if (status != ACL_SUCCESS) {
+      return status;
+    }
+    *graph = model_ri;
+    return ACL_SUCCESS;
+  }
 
-    bool available() const {
-      return capture_begin != nullptr && capture_get_info != nullptr &&
-             capture_end != nullptr && execute_async != nullptr;
+  static Error GraphDestroy(Graph graph) {
+    const auto& api = GraphApi();
+    if (api.Destroy == nullptr || graph == nullptr) {
+      return ACL_SUCCESS;
+    }
+    return api.Destroy(graph);
+  }
+
+  static Error GraphInstantiate(GraphExec* graph_exec, Graph graph) {
+    assert(graph_exec != nullptr);
+    *graph_exec = graph;
+    return ACL_SUCCESS;
+  }
+
+  static Error GraphExecDestroy(GraphExec) { return ACL_SUCCESS; }
+
+  static Error GraphLaunch(GraphExec graph_exec, Stream stream) {
+    const auto& api = GraphApi();
+    if (!api.Available()) {
+      return UnsupportedGraphApi();
+    }
+    return api.ExecuteAsync(graph_exec, stream);
+  }
+
+ private:
+  struct RiApi {
+    using CaptureBeginFn = Error (*)(Stream, int);
+    using CaptureGetInfoFn = Error (*)(Stream, int*, void**);
+    using CaptureEndFn = Error (*)(Stream, void**);
+    using RiExecuteAsyncFn = Error (*)(void*, Stream);
+    using RiDestroyFn = Error (*)(void*);
+
+    CaptureBeginFn CaptureBegin = nullptr;
+    CaptureGetInfoFn CaptureGetInfo = nullptr;
+    CaptureEndFn CaptureEnd = nullptr;
+    RiExecuteAsyncFn ExecuteAsync = nullptr;
+    RiDestroyFn Destroy = nullptr;
+
+    bool Available() const {
+      return CaptureBegin != nullptr && CaptureGetInfo != nullptr &&
+             CaptureEnd != nullptr && ExecuteAsync != nullptr;
     }
   };
 
-  static const RIApi& GraphApi() {
-    static const RIApi api = [] {
-      RIApi loaded{};
-      auto load_symbols = [](void* lib, RIApi* api) {
-        api->capture_begin = reinterpret_cast<RIApi::CaptureBeginFn>(
+  static const RiApi& GraphApi() {
+    static const RiApi api = [] {
+      RiApi loaded{};
+      // Some CANN releases do not expose the aclmdlRI* graph symbols in
+      // headers or shared objects. Probe them at runtime so non-RI
+      // environments can still build and report graph capture as unsupported.
+      auto load_symbols = [](void* lib, RiApi* api) {
+        api->CaptureBegin = reinterpret_cast<RiApi::CaptureBeginFn>(
             dlsym(lib, "aclmdlRICaptureBegin"));
-        api->capture_get_info = reinterpret_cast<RIApi::CaptureGetInfoFn>(
+        api->CaptureGetInfo = reinterpret_cast<RiApi::CaptureGetInfoFn>(
             dlsym(lib, "aclmdlRICaptureGetInfo"));
-        api->capture_end = reinterpret_cast<RIApi::CaptureEndFn>(
+        api->CaptureEnd = reinterpret_cast<RiApi::CaptureEndFn>(
             dlsym(lib, "aclmdlRICaptureEnd"));
-        api->execute_async = reinterpret_cast<RIApi::RIExecuteAsyncFn>(
+        api->ExecuteAsync = reinterpret_cast<RiApi::RiExecuteAsyncFn>(
             dlsym(lib, "aclmdlRIExecuteAsync"));
-        api->destroy =
-            reinterpret_cast<RIApi::RIDestroyFn>(dlsym(lib, "aclmdlRIDestroy"));
+        api->Destroy =
+            reinterpret_cast<RiApi::RiDestroyFn>(dlsym(lib, "aclmdlRIDestroy"));
       };
 
       load_symbols(RTLD_DEFAULT, &loaded);
-      if (loaded.available()) {
+      if (loaded.Available()) {
         return loaded;
       }
 
@@ -177,63 +238,8 @@ struct Runtime<Device::Type::kAscend>
     return api;
   }
 
-  static aclError UnsupportedGraphApi() { return static_cast<aclError>(1); }
+  static Error UnsupportedGraphApi() { return static_cast<Error>(1); }
 
-  static aclError StreamBeginCapture(Stream stream, int mode) {
-    const auto& api = GraphApi();
-    if (!api.available()) {
-      return UnsupportedGraphApi();
-    }
-    return api.capture_begin(stream, mode);
-  }
-
-  static aclError StreamEndCapture(Stream stream, Graph* graph) {
-    assert(graph != nullptr);
-    const auto& api = GraphApi();
-    if (!api.available()) {
-      return UnsupportedGraphApi();
-    }
-    int capture_status = 0;
-    void* capturing_model_ri = nullptr;
-    const auto info_status =
-        api.capture_get_info(stream, &capture_status, &capturing_model_ri);
-    if (info_status != ACL_SUCCESS) {
-      return info_status;
-    }
-    void* model_ri = nullptr;
-    const auto status = api.capture_end(stream, &model_ri);
-    if (status != ACL_SUCCESS) {
-      return status;
-    }
-    *graph = model_ri;
-    return ACL_SUCCESS;
-  }
-
-  static aclError GraphDestroy(Graph graph) {
-    const auto& api = GraphApi();
-    if (api.destroy == nullptr || graph == nullptr) {
-      return ACL_SUCCESS;
-    }
-    return api.destroy(graph);
-  }
-
-  static aclError GraphInstantiate(GraphExec* graph_exec, Graph graph) {
-    assert(graph_exec != nullptr);
-    *graph_exec = graph;
-    return ACL_SUCCESS;
-  }
-
-  static aclError GraphExecDestroy(GraphExec) { return ACL_SUCCESS; }
-
-  static aclError GraphLaunch(GraphExec graph_exec, Stream stream) {
-    const auto& api = GraphApi();
-    if (!api.available()) {
-      return UnsupportedGraphApi();
-    }
-    return api.execute_async(graph_exec, stream);
-  }
-
- private:
   static Error Unsupported() { return static_cast<Error>(1); }
 };
 
