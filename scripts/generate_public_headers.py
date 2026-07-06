@@ -423,8 +423,50 @@ def _dispatch_cases(devices, function):
 
 
 def _write_runtime_dispatch_function(function, devices):
+    if function.name == "SetDevice":
+        dispatch_cases = "\n".join(
+            f"""    case {_DEVICE_TYPES[device]}: {{
+      Error status = CheckCall([&] {{ return {_runtime_call(function, device)}; }});
+      if (status == kSuccess) {{
+        runtime_device_ = Device{{runtime_device_.type(), device}};
+      }}
+      return status;
+    }}"""
+            for device in devices
+        )
+        return f"""{function.signature()} {{
+  switch (runtime_device_.type()) {{
+{dispatch_cases}
+  }}
+
+  assert(false && "unsupported runtime device type");
+  return InvalidValueError();
+}}
+"""
+
+    if function.name == "GetDevice":
+        dispatch_cases = "\n".join(
+            f"""    case {_DEVICE_TYPES[device]}: {{
+      Error status = CheckCall([&] {{ return {_runtime_call(function, device)}; }});
+      if (status == kSuccess && device != nullptr) {{
+        runtime_device_ = Device{{runtime_device_.type(), *device}};
+      }}
+      return status;
+    }}"""
+            for device in devices
+        )
+        return f"""{function.signature()} {{
+  switch (runtime_device_.type()) {{
+{dispatch_cases}
+  }}
+
+  assert(false && "unsupported runtime device type");
+  return InvalidValueError();
+}}
+"""
+
     return f"""{function.signature()} {{
-  switch (infini::rt::runtime_device_type()) {{
+  switch (runtime_device_.type()) {{
 {_dispatch_cases(devices, function)}
   }}
 
@@ -463,7 +505,7 @@ def _write_runtime_dispatch(source_path, source_root, devices):
     )
     set_device_type_cases = "\n".join(
         f"""    case {_DEVICE_TYPES[device]}:
-      runtime_device_type_ = device_type;
+      runtime_device_ = Device{{device_type, 0}};
       return;"""
         for device in devices
     )
@@ -480,8 +522,8 @@ def _write_runtime_dispatch(source_path, source_root, devices):
 namespace infini::rt {{
 namespace {{
 
-thread_local Device::Type runtime_device_type_ =
-    runtime::generated_detail::kDefaultDeviceType;
+thread_local Device runtime_device_{{runtime::generated_detail::kDefaultDeviceType,
+                              0}};
 
 }}  // namespace
 
@@ -494,7 +536,7 @@ void set_runtime_device_type(Device::Type device_type) {{
 }}
 
 Device::Type runtime_device_type() {{
-  return runtime_device_type_;
+  return runtime_device_.type();
 }}
 
 }}  // namespace infini::rt
