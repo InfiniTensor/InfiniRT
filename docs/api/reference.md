@@ -41,6 +41,15 @@ http://localhost:8000/
 The Doxygen page includes a left-side tree view and search box, which are the
 recommended way to inspect the rendered API structure.
 
+## GitHub Pages
+
+Documentation changes are checked in pull requests by building the same
+`infinirt_docs` target and uploading the generated HTML as a Pages artifact.
+Merges to `master` deploy the generated HTML to GitHub Pages through the
+Documentation Pages workflow.
+
+The repository GitHub Pages source must be configured to use GitHub Actions.
+
 ## Reference Scope
 
 The Doxygen configuration is intentionally scoped to the public entry header,
