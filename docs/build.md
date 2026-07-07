@@ -98,3 +98,7 @@ To preview the generated structure, serve the HTML directory:
 ```bash
 python3 -m http.server 8000 --directory build/docs/reference/html
 ```
+
+The Documentation Pages workflow uses the same `infinirt_docs` target. Pull
+requests build and upload the generated HTML as a Pages artifact for
+validation; pushes to `master` deploy it to GitHub Pages.
