@@ -50,6 +50,11 @@ Documentation Pages workflow.
 
 The repository GitHub Pages source must be configured to use GitHub Actions.
 
+## Theme Assets
+
+The generated reference uses the default Doxygen HTML theme with a small
+InfiniRT-specific stylesheet under `docs/assets`.
+
 ## Reference Scope
 
 The Doxygen configuration is intentionally scoped to the public entry header,
