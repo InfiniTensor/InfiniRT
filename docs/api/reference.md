@@ -52,8 +52,10 @@ The repository GitHub Pages source must be configured to use GitHub Actions.
 
 ## Theme Assets
 
-The generated reference uses the default Doxygen HTML theme with a small
-InfiniRT-specific stylesheet under `docs/assets`.
+The generated reference uses Doxygen Awesome through CMake `FetchContent` plus
+a small InfiniRT-specific stylesheet under `docs/assets`. The theme source is
+downloaded at configure time for documentation builds and is not checked into
+this repository.
 
 ## Reference Scope
 

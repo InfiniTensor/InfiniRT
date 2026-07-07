@@ -339,10 +339,24 @@ if(INFINI_RT_BUILD_TESTING)
 endif()
 
 if(INFINI_RT_BUILD_DOCS)
+    include(FetchContent)
     find_package(Doxygen REQUIRED)
+
+    FetchContent_Declare(
+        doxygen_awesome
+        URL https://github.com/jothepro/doxygen-awesome-css/archive/refs/tags/v2.4.2.tar.gz
+        URL_HASH SHA256=6f527e5733723bfd7243c28f24588dca4714cf977fea6147fdb4ae2050244409
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+    FetchContent_MakeAvailable(doxygen_awesome)
 
     set(INFINI_RT_DOXYGEN_OUTPUT_DIRECTORY
         "${CMAKE_BINARY_DIR}/docs/reference")
+    set(INFINI_RT_DOXYGEN_AWESOME_STYLESHEET
+        "${doxygen_awesome_SOURCE_DIR}/doxygen-awesome.css")
+    set(INFINI_RT_DOXYGEN_STYLESHEET
+        "${CMAKE_CURRENT_SOURCE_DIR}/docs/assets/infini-rt.css")
+    set(INFINI_RT_DOXYGEN_AWESOME_LICENSE
+        "${doxygen_awesome_SOURCE_DIR}/LICENSE")
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in"
         "${CMAKE_BINARY_DIR}/docs/Doxyfile"
@@ -352,6 +366,9 @@ if(INFINI_RT_BUILD_DOCS)
         COMMAND ${CMAKE_COMMAND} -E make_directory
                 "${INFINI_RT_DOXYGEN_OUTPUT_DIRECTORY}"
         COMMAND ${DOXYGEN_EXECUTABLE} "${CMAKE_BINARY_DIR}/docs/Doxyfile"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${INFINI_RT_DOXYGEN_AWESOME_LICENSE}"
+                "${INFINI_RT_DOXYGEN_OUTPUT_DIRECTORY}/html/doxygen-awesome.LICENSE"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Generating InfiniRT documentation"
         VERBATIM)
