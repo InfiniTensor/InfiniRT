@@ -1,7 +1,38 @@
-/* InfiniRT documentation style overrides for the default Doxygen theme. */
+/* InfiniRT documentation style overrides for Doxygen Awesome. */
+
+html,
+html.dark-mode,
+html:not(.light-mode) {
+    --primary-color: #1d74c4;
+    --primary-dark-color: #155a9a;
+    --primary-light-color: #6aa8e8;
+    --link-color: #1b7fcf;
+    --page-background-color: #ffffff;
+    --page-foreground-color: #172033;
+    --page-secondary-foreground-color: #506075;
+    --separator-color: #d8e0ea;
+    --header-background: #17191d;
+    --header-foreground: #f5f7fb;
+    --side-nav-background: #f5f8fc;
+    --side-nav-foreground: #334155;
+    --searchbar-background: #24272d;
+    --searchbar-foreground: #f5f7fb;
+    --menu-selected-background: rgba(255, 255, 255, 0.08);
+    --code-background: #eef3f8;
+    --code-foreground: #172033;
+    --fragment-background: #252a32;
+    --fragment-foreground: #e7edf5;
+    --fragment-keyword: #9cdcfe;
+    --fragment-keywordtype: #4ec9b0;
+    --fragment-keywordflow: #c586c0;
+    --fragment-token: #dcdcaa;
+    --fragment-comment: #8f9aa6;
+    --fragment-link: #8cbaf2;
+    --fragment-preprocessor: #7dd3c7;
+    --content-maxwidth: 1180px;
+}
 
 body {
-    color: #172033;
     font-family:
         Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
         "Segoe UI", sans-serif;
@@ -12,7 +43,8 @@ body {
 }
 
 #top {
-    border-bottom: 1px solid #d9e1ef;
+    border-bottom: 1px solid #30343b;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
 }
 
 #titlearea {
@@ -20,25 +52,64 @@ body {
 }
 
 #projectname {
-    color: #0f172a;
+    color: #f5f7fb;
     font-weight: 700;
 }
 
 #projectbrief {
-    color: #64748b;
+    color: #aab6c6;
+}
+
+#main-menu a,
+#main-menu a:visited {
+    color: #eef3fb;
+}
+
+#main-menu a:hover,
+#main-menu a:focus {
+    color: #ffffff;
+}
+
+#main-menu a span.sub-arrow {
+    border-color: #cbd5e1 transparent transparent transparent;
+}
+
+#MSearchBox {
+    border-color: #3a3f48;
 }
 
 #nav-tree {
-    background: #f8fafc;
+    background: #f5f8fc;
 }
 
 #side-nav {
-    border-right: 1px solid #d9e1ef;
+    border-right: 1px solid #cdd7e4;
+}
+
+#nav-tree a,
+#nav-tree .label,
+#nav-tree .item {
+    color: #334155 !important;
+}
+
+#nav-tree a:hover,
+#nav-tree span.label a:hover {
+    color: #0f4f8f !important;
 }
 
 #nav-tree .selected {
-    background: rgba(37, 99, 235, 0.1);
+    background: #dbeafe;
     border-radius: 4px;
+}
+
+#nav-tree .selected a,
+#nav-tree .selected .label {
+    color: #0f5fa8 !important;
+    font-weight: 700;
+}
+
+#nav-tree .arrow {
+    opacity: 0.45;
 }
 
 div.contents {
@@ -56,17 +127,22 @@ div.contents {
 }
 
 .contents h2 {
-    border-bottom: 1px solid #d9e1ef;
+    border-bottom: 1px solid #d8e0ea;
     padding-bottom: 0.35rem;
 }
 
 .fragment,
 pre.fragment {
-    border: 1px solid #dbeafe;
-    background: #f8fafc;
+    border: 1px solid #38404b;
+    background: #252a32;
     font-family:
         "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     font-size: 13.6px;
+}
+
+code,
+span.tt {
+    border: 1px solid #d6e0ea;
 }
 
 table.markdownTable,
@@ -84,7 +160,7 @@ table.markdownTable th {
 .memtitle,
 .memproto,
 .memdoc {
-    border-color: #dbeafe;
+    border-color: #d7e2ef;
 }
 
 .memtitle {
@@ -102,11 +178,6 @@ a:visited {
 
 a:hover {
     text-decoration-color: #2563eb;
-}
-
-.directory .levels,
-.directory .levels span {
-    color: #475569;
 }
 
 @media (max-width: 767px) {
