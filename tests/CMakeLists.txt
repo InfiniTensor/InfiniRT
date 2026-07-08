@@ -26,6 +26,17 @@ function(add_infini_rt_backend_runtime_test backend device_type runtime_header
             "INFINI_RT_TEST_SUPPORTS_EVENT_ELAPSED_TIME=${supports_event_elapsed_time}")
 endfunction()
 
+function(add_infini_rt_backend_graph_test backend device_type supports_graph_capture)
+    string(TOLOWER "${backend}" backend_lower)
+    set(target "test_${backend_lower}_graph")
+    add_infini_rt_test(${target} test_native_graph.cc)
+    target_compile_definitions(${target}
+        PRIVATE
+            "INFINI_RT_TEST_BACKEND_NAME=\"${backend}\""
+            "INFINI_RT_TEST_DEVICE_TYPE=${device_type}"
+            "INFINI_RT_TEST_SUPPORTS_GRAPH_CAPTURE=${supports_graph_capture}")
+endfunction()
+
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
 
@@ -44,6 +55,8 @@ if(WITH_NVIDIA)
         NVIDIA infini::rt::Device::Type::kNvidia
         infini/rt/nvidia/runtime_.h
         1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        NVIDIA infini::rt::Device::Type::kNvidia 1)
 endif()
 
 if(WITH_ILUVATAR)
@@ -52,6 +65,8 @@ if(WITH_ILUVATAR)
         ILUVATAR infini::rt::Device::Type::kIluvatar
         infini/rt/iluvatar/runtime_.h
         1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        ILUVATAR infini::rt::Device::Type::kIluvatar 1)
 endif()
 
 if(WITH_HYGON)
