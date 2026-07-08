@@ -90,9 +90,10 @@ struct Runtime<Device::Type::kAscend>
     return aclrtMemset(ptr, count, value, count);
   };
 
-  static Error MemsetAsync(void*, int, std::size_t, Stream) {
-    return Unsupported();
-  }
+  static constexpr auto MemsetAsync = [](void* ptr, int value,
+                                         std::size_t count, Stream stream) {
+    return aclrtMemsetAsync(ptr, count, value, count, stream);
+  };
 
   static constexpr auto StreamCreate = aclrtCreateStream;
 
