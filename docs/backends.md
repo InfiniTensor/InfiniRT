@@ -28,16 +28,16 @@ status on backends that do not support them.
 
 Current test expectations are:
 
-| Backend | Async memcpy | Host memory | Async memory | Memory info | Async memset | Events |
-| --- | --- | --- | --- | --- | --- | --- |
-| CPU | No | Yes | No | Yes | No | Yes |
-| NVIDIA | Yes | Yes | Yes | Yes | Yes | Yes |
-| Iluvatar | Yes | Yes | Yes | Yes | Yes | Yes |
-| MetaX | Yes | Yes | Yes | Yes | Yes | Yes |
-| Moore | Yes | Yes | No | Yes | Yes | Yes |
-| Hygon | Yes | Yes | Yes | Yes | Yes | Yes |
-| Cambricon | Yes | No | No | No | No | No |
-| Ascend | Yes | No | No | No | No | No |
+| Backend | Async memcpy | Host memory | Async memory | Memory info | Async memset | Events | Graph capture |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CPU | No | Yes | No | Yes | No | Yes | No |
+| NVIDIA | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Iluvatar | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| MetaX | Yes | Yes | Yes | Yes | Yes | Yes | No |
+| Moore | Yes | Yes | No | Yes | Yes | Yes | No |
+| Hygon | Yes | Yes | Yes | Yes | Yes | Yes | No |
+| Cambricon | Yes | No | No | No | No | No | No |
+| Ascend | Yes | No | No | No | No | No | Yes |
 
 Treat a non-`kSuccess` status as the portable way to detect unsupported
 operations.
