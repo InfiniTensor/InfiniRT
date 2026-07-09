@@ -18,7 +18,7 @@ The stable user-facing surface is:
 - `infini::rt::TensorView`
 - `infini::rt::set_runtime_device_type`
 - `infini::rt::runtime_device_type`
-- `infini::rt::runtime` dispatching functions and constants documented in
+- `infini::rt::runtime` types, dispatching functions, and constants documented in
   [Runtime API](api/runtime.md)
 
 ## Implementation-Facing Headers

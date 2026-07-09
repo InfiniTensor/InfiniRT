@@ -50,12 +50,24 @@ otherwise.
 runtime::Error
 runtime::Stream
 runtime::Event
+runtime::Graph
+runtime::GraphExec
+runtime::StreamCaptureMode
 runtime::MemcpyKind
 runtime::kSuccess
 runtime::kMemcpyHostToHost
 runtime::kMemcpyHostToDevice
 runtime::kMemcpyDeviceToHost
 runtime::kMemcpyDeviceToDevice
+```
+
+`StreamCaptureMode` supports the same capture scopes used by CUDA-style stream
+capture:
+
+```cpp
+runtime::StreamCaptureMode::kStreamCaptureModeGlobal
+runtime::StreamCaptureMode::kStreamCaptureModeThreadLocal
+runtime::StreamCaptureMode::kStreamCaptureModeRelaxed
 ```
 
 ## Device Functions
@@ -106,6 +118,58 @@ runtime::Error EventDestroy(runtime::Event event);
 runtime::Error EventElapsedTime(float* ms, runtime::Event start,
                                 runtime::Event end);
 ```
+
+## Graph Capture and Replay Functions
+
+When the configured build includes a graph-capable backend, the generated
+runtime API also includes graph capture and replay entry points.
+
+The graph API captures stream work into a reusable `Graph`, instantiates it as a
+launchable `GraphExec`, and replays it on a stream:
+
+```cpp
+runtime::Error StreamBeginCapture(runtime::Stream stream,
+                                  runtime::StreamCaptureMode mode);
+runtime::Error StreamEndCapture(runtime::Stream stream, runtime::Graph* graph);
+runtime::Error GraphDestroy(runtime::Graph graph);
+runtime::Error GraphInstantiate(runtime::GraphExec* graph_exec,
+                                runtime::Graph graph);
+runtime::Error GraphExecDestroy(runtime::GraphExec graph_exec);
+runtime::Error GraphLaunch(runtime::GraphExec graph_exec,
+                           runtime::Stream stream);
+```
+
+Use the same stream for `StreamBeginCapture` and `StreamEndCapture`. Operations
+issued to that stream between the two calls become part of the captured graph.
+After `GraphInstantiate` succeeds, the executable graph can be launched multiple
+times while inputs and outputs remain at the recorded addresses.
+
+```cpp
+namespace rt = infini::rt::runtime;
+
+rt::Stream stream = nullptr;
+rt::Graph graph = nullptr;
+rt::GraphExec graph_exec = nullptr;
+
+rt::StreamCreate(&stream);
+
+rt::StreamBeginCapture(
+    stream, rt::StreamCaptureMode::kStreamCaptureModeRelaxed);
+rt::MemcpyAsync(dst, src, count, rt::kMemcpyDeviceToDevice, stream);
+rt::StreamEndCapture(stream, &graph);
+
+rt::GraphInstantiate(&graph_exec, graph);
+rt::GraphLaunch(graph_exec, stream);
+rt::StreamSynchronize(stream);
+
+rt::GraphExecDestroy(graph_exec);
+rt::GraphDestroy(graph);
+rt::StreamDestroy(stream);
+```
+
+Backends that do not support graph capture return a non-success status for the
+graph entry points when those functions are present in the configured public
+header. See [Backends](../backends.md) for current support.
 
 ## Backend-Specific Runtime Templates
 
