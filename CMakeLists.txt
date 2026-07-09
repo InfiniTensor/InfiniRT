@@ -33,6 +33,7 @@ option(WITH_ASCEND "Enable Ascend backend" OFF)
 
 option(AUTO_DETECT_DEVICES "Automatically detect available devices" OFF)
 option(INFINI_RT_BUILD_TESTING "Build InfiniRT tests" OFF)
+option(INFINI_RT_BUILD_PERFORMANCE_TESTING "Build InfiniRT performance tests" OFF)
 option(INFINI_RT_BUILD_DOCS "Build InfiniRT documentation" OFF)
 
 if(AUTO_DETECT_DEVICES)
@@ -333,7 +334,7 @@ endif()
 
 add_subdirectory(src)
 
-if(INFINI_RT_BUILD_TESTING)
+if(INFINI_RT_BUILD_TESTING OR INFINI_RT_BUILD_PERFORMANCE_TESTING)
     enable_testing()
     add_subdirectory(tests)
 endif()

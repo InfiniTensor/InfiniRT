@@ -1,3 +1,5 @@
+if(INFINI_RT_BUILD_TESTING)
+
 function(add_infini_rt_test target)
     add_executable(${target} ${ARGN})
     target_link_libraries(${target} PRIVATE infinirt)
@@ -237,3 +239,9 @@ add_test(
             -P "${CMAKE_CURRENT_SOURCE_DIR}/compile_install_consumer.cmake")
 set_tests_properties(test_install_consumer PROPERTIES
     FIXTURES_REQUIRED infini_rt_install)
+
+endif()
+
+if(INFINI_RT_BUILD_PERFORMANCE_TESTING)
+    add_subdirectory(performance)
+endif()
