@@ -15,6 +15,7 @@ InfiniRT uses CMake and C++17.
 -DWITH_ASCEND=ON
 -DAUTO_DETECT_DEVICES=ON
 -DINFINI_RT_BUILD_TESTING=ON
+-DINFINI_RT_BUILD_PERFORMANCE_TESTING=ON
 -DINFINI_RT_BUILD_DOCS=ON
 ```
 
@@ -80,6 +81,40 @@ ctest --test-dir build --output-on-failure
 
 The `test_install_consumer` test installs InfiniRT to a temporary prefix,
 compiles a small external consumer against the installed prefix, and runs it.
+
+## Performance Tests
+
+Performance tests are built separately from functional tests:
+
+```bash
+cmake -S . -B build-perf \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DWITH_CPU=ON \
+  -DINFINI_RT_BUILD_PERFORMANCE_TESTING=ON
+cmake --build build-perf -j
+ctest --test-dir build-perf -L performance --output-on-failure
+```
+
+Collect JSON results with:
+
+```bash
+python3 scripts/run_performance_tests.py \
+  --build-dir build-perf \
+  --backend cpu \
+  --output perf-current.json
+```
+
+Compare two local runs with:
+
+```bash
+python3 scripts/compare_performance_results.py \
+  --baseline perf-baseline.json \
+  --candidate perf-current.json
+```
+
+Each result reports `unit`, `mean`, and `median` as separate fields. The default
+memory sweep runs up to 16 MiB; set `INFINI_RT_PERF_ENABLE_LARGE=1` to include
+the 256 MiB case.
 
 ## Documentation
 
