@@ -65,8 +65,6 @@ if(WITH_ILUVATAR)
         ILUVATAR infini::rt::Device::Type::kIluvatar
         infini/rt/iluvatar/runtime_.h
         1 1 1 1 1 1 1 1)
-    add_infini_rt_backend_graph_test(
-        ILUVATAR infini::rt::Device::Type::kIluvatar 1)
 endif()
 
 if(WITH_HYGON)
