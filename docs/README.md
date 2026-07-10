@@ -22,5 +22,7 @@ Start with these pages:
 - [Core Types](api/core-types.md): `Device`, `DataType`, and `TensorView`.
 - [Backends](backends.md): supported backend options and API support notes.
 - [Compatibility](compatibility.md): stable API boundary and internal headers.
+- [Contributing](../CONTRIBUTING.md): code style, commit conventions, PR
+  workflow, development commands, and troubleshooting.
 
 API reference generation is described in [API Reference](api/reference.md).
