@@ -146,8 +146,26 @@ struct Runtime<Device::Type::kIluvatar>
     return cudaGraphDestroy(std::forward<decltype(args)>(args)...);
   };
 
-  static constexpr auto GraphInstantiate = [](auto&&... args) {
-    return cudaGraphInstantiate(std::forward<decltype(args)>(args)...);
+ private:
+  template <typename GraphExecPtr, typename GraphType>
+  static auto GraphInstantiateImpl(GraphExecPtr graph_exec, GraphType graph,
+                                   int)
+      -> decltype(cudaGraphInstantiate(graph_exec, graph)) {
+    return cudaGraphInstantiate(graph_exec, graph);
+  }
+
+  template <typename GraphExecPtr, typename GraphType>
+  static auto GraphInstantiateImpl(GraphExecPtr graph_exec, GraphType graph,
+                                   long)
+      -> decltype(cudaGraphInstantiate(graph_exec, graph, nullptr, nullptr,
+                                       0)) {
+    return cudaGraphInstantiate(graph_exec, graph, nullptr, nullptr, 0);
+  }
+
+ public:
+  static constexpr auto GraphInstantiate = [](GraphExec* graph_exec,
+                                              Graph graph) {
+    return GraphInstantiateImpl(graph_exec, graph, 0);
   };
 
   static constexpr auto GraphExecDestroy = [](auto&&... args) {
