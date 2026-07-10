@@ -164,4 +164,5 @@ ruff check .
 
 ## Contributing
 
-Please follow the repository's `CONTRIBUTING.md`.
+Please follow [CONTRIBUTING.md](CONTRIBUTING.md) for code style, commit
+conventions, PR workflow, development commands, and troubleshooting.
