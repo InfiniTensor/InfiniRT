@@ -85,6 +85,8 @@ if(WITH_METAX)
         METAX infini::rt::Device::Type::kMetax
         infini/rt/metax/runtime_.h
         1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        METAX infini::rt::Device::Type::kMetax 1)
 endif()
 
 if(WITH_MOORE)
