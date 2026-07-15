@@ -16,7 +16,7 @@ Then build this consumer:
 
 ```bash
 cmake -S . -B build \
-  -DINFINI_RT_PREFIX=/path/to/infini-rt-prefix
+  -DCMAKE_PREFIX_PATH=/path/to/infini-rt-prefix
 cmake --build build -j
 ./build/infinirt_consumer
 ```

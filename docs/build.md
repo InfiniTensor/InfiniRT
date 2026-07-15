@@ -79,8 +79,9 @@ Run them with:
 ctest --test-dir build --output-on-failure
 ```
 
-The `test_install_consumer` test installs InfiniRT to a temporary prefix,
-compiles a small external consumer against the installed prefix, and runs it.
+The `test_install_consumer` test installs InfiniRT to a temporary prefix, uses
+`find_package(InfiniRT CONFIG REQUIRED)` from a separate CMake project, links
+that project to `InfiniRT::infinirt`, and runs it.
 
 ## Performance Tests
 
