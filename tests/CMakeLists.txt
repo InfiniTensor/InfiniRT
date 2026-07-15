@@ -121,6 +121,8 @@ if(WITH_MOORE)
         MOORE infini::rt::Device::Type::kMoore
         infini/rt/moore/runtime_.h
         1 1 0 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        MOORE infini::rt::Device::Type::kMoore 1)
 endif()
 
 if(WITH_CAMBRICON)

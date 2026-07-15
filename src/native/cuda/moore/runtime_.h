@@ -13,12 +13,19 @@ namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kMoore>
-    : CudaRuntime<Runtime<Device::Type::kMoore>> {
+    : GraphRuntime<Runtime<Device::Type::kMoore>,
+                   CudaRuntime<Runtime<Device::Type::kMoore>>> {
   using Error = musaError_t;
 
   using Stream = musaStream_t;
 
+  using Graph = musaGraph_t;
+
+  using GraphExec = musaGraphExec_t;
+
   using Event = musaEvent_t;
+
+  using StreamCaptureMode = musaStreamCaptureMode;
 
   static constexpr Device::Type kDeviceType = Device::Type::kMoore;
 
@@ -130,6 +137,38 @@ struct Runtime<Device::Type::kMoore>
 
   static constexpr auto EventElapsedTime = [](auto&&... args) {
     return musaEventElapsedTime(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto kStreamCaptureModeGlobal = musaStreamCaptureModeGlobal;
+
+  static constexpr auto kStreamCaptureModeThreadLocal =
+      musaStreamCaptureModeThreadLocal;
+
+  static constexpr auto kStreamCaptureModeRelaxed =
+      musaStreamCaptureModeRelaxed;
+
+  static constexpr auto StreamBeginCapture = [](auto&&... args) {
+    return musaStreamBeginCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamEndCapture = [](auto&&... args) {
+    return musaStreamEndCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphDestroy = [](auto&&... args) {
+    return musaGraphDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static Error GraphInstantiate(GraphExec* graph_exec, Graph graph) {
+    return musaGraphInstantiate(graph_exec, graph, 0);
+  }
+
+  static constexpr auto GraphExecDestroy = [](auto&&... args) {
+    return musaGraphExecDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphLaunch = [](auto&&... args) {
+    return musaGraphLaunch(std::forward<decltype(args)>(args)...);
   };
 };
 
