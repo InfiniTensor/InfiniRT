@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.18)
-project(InfiniRT LANGUAGES CXX)
+project(InfiniRT VERSION 0.1.0 LANGUAGES CXX)
+
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+set(INFINI_RT_INSTALL_CMAKEDIR
+    "${CMAKE_INSTALL_LIBDIR}/cmake/InfiniRT"
+    CACHE STRING "Directory for the installed InfiniRT CMake package")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -333,6 +340,34 @@ if(NOT INFINI_RT_PUBLIC_HEADER_RESULT EQUAL 0)
 endif()
 
 add_subdirectory(src)
+
+set(INFINI_RT_PACKAGE_NEEDS_CUDATOOLKIT OFF)
+if(WITH_NVIDIA OR WITH_ILUVATAR OR WITH_HYGON)
+    set(INFINI_RT_PACKAGE_NEEDS_CUDATOOLKIT ON)
+endif()
+
+set(INFINI_RT_PACKAGE_VENDOR_BACKEND "")
+foreach(_backend METAX MOORE CAMBRICON ASCEND)
+    if(WITH_${_backend})
+        set(INFINI_RT_PACKAGE_VENDOR_BACKEND "${_backend}")
+    endif()
+endforeach()
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/InfiniRTConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/InfiniRTConfig.cmake"
+    INSTALL_DESTINATION "${INFINI_RT_INSTALL_CMAKEDIR}")
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/InfiniRTConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMinorVersion)
+
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/InfiniRTConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/InfiniRTConfigVersion.cmake"
+    DESTINATION "${INFINI_RT_INSTALL_CMAKEDIR}")
 
 if(INFINI_RT_BUILD_TESTING OR INFINI_RT_BUILD_PERFORMANCE_TESTING)
     enable_testing()

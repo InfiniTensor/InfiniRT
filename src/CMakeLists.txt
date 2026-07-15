@@ -1,6 +1,13 @@
 add_library(infinirt SHARED)
+add_library(InfiniRT::infinirt ALIAS infinirt)
 
-include(GNUInstallDirs)
+function(_infinirt_use_backend_runtime include_dirs link_libraries)
+    add_library(InfiniRT::BackendRuntime INTERFACE IMPORTED GLOBAL)
+    set_target_properties(InfiniRT::BackendRuntime PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${include_dirs}"
+        INTERFACE_LINK_LIBRARIES "${link_libraries}")
+    target_link_libraries(infinirt PUBLIC InfiniRT::BackendRuntime)
+endfunction()
 
 file(GLOB BASE_SRCS CONFIGURE_DEPENDS "*.cc")
 target_sources(infinirt PRIVATE
@@ -58,23 +65,23 @@ endif()
 
 if(WITH_METAX)
     target_compile_definitions(infinirt PRIVATE WITH_METAX=1)
-
-    target_include_directories(infinirt PUBLIC "${MACA_PATH}/include")
-    target_link_libraries(infinirt PUBLIC ${MACA_RUNTIME_LIB})
+    _infinirt_use_backend_runtime(
+        "${MACA_PATH}/include"
+        "${MACA_RUNTIME_LIB}")
 endif()
 
 if(WITH_MOORE)
     target_compile_definitions(infinirt PRIVATE WITH_MOORE=1)
-
-    target_include_directories(infinirt PUBLIC "${MUSA_ROOT}/include")
-    target_link_libraries(infinirt PUBLIC ${MUSA_LIB} ${MUSART_LIB})
+    _infinirt_use_backend_runtime(
+        "${MUSA_ROOT}/include"
+        "${MUSA_LIB};${MUSART_LIB}")
 endif()
 
 if(WITH_CAMBRICON)
     target_compile_definitions(infinirt PRIVATE WITH_CAMBRICON=1)
-
-    target_include_directories(infinirt PUBLIC "${NEUWARE_HOME}/include")
-    target_link_libraries(infinirt PUBLIC ${CAMBRICON_RUNTIME_LIB})
+    _infinirt_use_backend_runtime(
+        "${NEUWARE_HOME}/include"
+        "${CAMBRICON_RUNTIME_LIB}")
 endif()
 
 if(WITH_ASCEND)
@@ -102,14 +109,16 @@ if(WITH_ASCEND)
         message(FATAL_ERROR "libascend_hal.so not found (tried ${ASCEND_HAL_REAL}, ${ASCEND_HAL_STUB}, and ${ASCEND_HAL_DEVLIB})")
     endif()
 
-    target_include_directories(infinirt PUBLIC
-        "${ASCEND_HOME}/include"
-        "${ASCEND_HOME}/include/aclnn"
-        "${ASCEND_HOME}/include/aclnnop")
-    target_link_libraries(infinirt PUBLIC
-        "${ASCEND_HOME}/lib64/libascendcl.so"
-        "${ASCEND_HAL_LIB}"
-        ${CMAKE_DL_LIBS})
+    set(INFINI_RT_ASCEND_INCLUDE_DIRS "${ASCEND_HOME}/include")
+    foreach(_include_subdir aclnn aclnnop)
+        if(IS_DIRECTORY "${ASCEND_HOME}/include/${_include_subdir}")
+            list(APPEND INFINI_RT_ASCEND_INCLUDE_DIRS
+                "${ASCEND_HOME}/include/${_include_subdir}")
+        endif()
+    endforeach()
+    _infinirt_use_backend_runtime(
+        "${INFINI_RT_ASCEND_INCLUDE_DIRS}"
+        "${ASCEND_HOME}/lib64/libascendcl.so;${ASCEND_HAL_LIB};${CMAKE_DL_LIBS}")
 endif()
 
 target_include_directories(infinirt
@@ -120,10 +129,19 @@ target_include_directories(infinirt
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
+target_compile_features(infinirt PUBLIC cxx_std_17)
+
 install(TARGETS infinirt
+    EXPORT InfiniRTTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(EXPORT InfiniRTTargets
+    FILE InfiniRTTargets.cmake
+    NAMESPACE InfiniRT::
+    DESTINATION ${INFINI_RT_INSTALL_CMAKEDIR}
 )
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/

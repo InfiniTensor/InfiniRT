@@ -110,29 +110,28 @@ backend.
 
 ## Using Installed InfiniRT From Another Project
 
-Downstream projects should consume the installed headers and libraries instead of depending on the InfiniRT source tree.
+Downstream projects should consume the installed CMake package instead of
+depending on the InfiniRT source tree:
 
-Typical include and library paths are:
+```cmake
+find_package(InfiniRT 0.1 CONFIG REQUIRED)
 
-```text
-/path/to/infini-rt-prefix/include
-/path/to/infini-rt-prefix/lib
+add_executable(app main.cc)
+target_link_libraries(app PRIVATE InfiniRT::infinirt)
 ```
 
-A simple compile command may look like:
+Point CMake at the installation prefix when configuring the consumer:
 
 ```bash
-c++ main.cc \
-  -I/path/to/infini-rt-prefix/include \
-  -L/path/to/infini-rt-prefix/lib \
-  -linfinirt
+cmake -S . -B build \
+  -DCMAKE_PREFIX_PATH=/path/to/infini-rt-prefix
+cmake --build build -j
 ```
 
-At runtime, make sure the dynamic linker can find `libinfinirt.so`, for example:
-
-```bash
-export LD_LIBRARY_PATH=/path/to/infini-rt-prefix/lib:$LD_LIBRARY_PATH
-```
+The imported target provides the installed include directory, library, C++17
+requirement, and required backend link dependencies. `InfiniRT_ENABLED_BACKENDS`
+and the `InfiniRT_WITH_<BACKEND>` variables report the backends compiled into
+the installed library.
 
 See [examples/consumer_cmake](examples/consumer_cmake) for a minimal CMake
 consumer project.

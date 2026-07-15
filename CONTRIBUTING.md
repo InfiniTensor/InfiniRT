@@ -205,8 +205,9 @@ ruff check .
    build directory per platform or delete the stale build directory.
 3. **Generated headers are stale**: Re-run CMake configure. Public headers are
    generated during configuration.
-4. **`test_install_consumer` fails to link or run**: Verify that the install
-   prefix contains both headers and libraries, and that the backend SDK library
-   paths are available to the consumer build and runtime linker.
+4. **`test_install_consumer` fails to configure, link, or run**: Verify that the
+   install prefix contains the CMake package, headers, and libraries. Check that
+   `CMAKE_PREFIX_PATH` and the backend SDK root variables documented above are
+   available to the consumer build and runtime linker.
 5. **Documentation build cannot find Doxygen**: Install Doxygen and Graphviz, or
    rely on the Documentation Pages workflow for validation.
