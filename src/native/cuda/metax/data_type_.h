@@ -3,7 +3,11 @@
 
 #include <common/maca_bfloat16.h>
 #include <common/maca_fp16.h>
+#if defined(INFINIRT_METAX_USE_HPCC) || defined(USE_HPCC)
+#include <hcr/hc_runtime.h>
+#else
 #include <mcr/mc_runtime.h>
+#endif
 
 #include "data_type.h"
 #include "native/cuda/metax/device_.h"

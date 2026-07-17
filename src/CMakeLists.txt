@@ -65,6 +65,9 @@ endif()
 
 if(WITH_METAX)
     target_compile_definitions(infinirt PRIVATE WITH_METAX=1)
+    if(INFINI_RT_METAX_USE_HPCC)
+        target_compile_definitions(infinirt PUBLIC INFINIRT_METAX_USE_HPCC=1)
+    endif()
     _infinirt_use_backend_runtime(
         "${MACA_PATH}/include"
         "${MACA_RUNTIME_LIB}")

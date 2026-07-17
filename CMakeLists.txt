@@ -220,16 +220,27 @@ endif()
 if(WITH_METAX)
     add_compile_definitions(WITH_METAX=1)
 
-    # Normally can be found at: `/opt/maca/`.
+    # MACA is normally installed under /opt/maca, while HPCC uses /opt/hpcc.
     set(MACA_PATH $ENV{MACA_PATH})
-    set(CMAKE_C_COMPILER   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/mxcc_wrapper.sh)
-    set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_SOURCE_DIR}/scripts/mxcc_wrapper.sh)
+    if(EXISTS "${MACA_PATH}/include/hcr/hc_runtime.h" AND
+       EXISTS "${MACA_PATH}/htgpu_llvm/bin/htcc")
+        set(INFINI_RT_METAX_USE_HPCC ON)
+        message(STATUS "MetaX: using HPCC SDK at ${MACA_PATH}")
+    else()
+        set(INFINI_RT_METAX_USE_HPCC OFF)
+        set(CMAKE_C_COMPILER   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/mxcc_wrapper.sh)
+        set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_SOURCE_DIR}/scripts/mxcc_wrapper.sh)
+        message(STATUS "MetaX: using MACA SDK at ${MACA_PATH}")
+    endif()
 
     include_directories("${MACA_PATH}/include")
     link_directories("${MACA_PATH}/lib")
 
-    # Libraries: mcruntime / mcdnn / mcblas.
-    find_library(MACA_RUNTIME_LIB NAMES mcruntime HINTS "${MACA_PATH}/lib" REQUIRED)
+    if(INFINI_RT_METAX_USE_HPCC)
+        find_library(MACA_RUNTIME_LIB NAMES hcruntime HINTS "${MACA_PATH}/lib" REQUIRED)
+    else()
+        find_library(MACA_RUNTIME_LIB NAMES mcruntime HINTS "${MACA_PATH}/lib" REQUIRED)
+    endif()
 endif()
 
 if(WITH_MOORE)

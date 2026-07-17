@@ -1,7 +1,19 @@
 #ifndef INFINI_RT_METAX_RUNTIME__H_
 #define INFINI_RT_METAX_RUNTIME__H_
 
+#if defined(INFINIRT_METAX_USE_HPCC) || defined(USE_HPCC)
+#include <hcr/hc_runtime.h>
+#define INFINIRT_METAX_RUNTIME_API_(prefix, name) prefix##name
+#define INFINIRT_METAX_RUNTIME_API(prefix, name) \
+  INFINIRT_METAX_RUNTIME_API_(prefix, name)
+#define INFINIRT_METAX_API(name) INFINIRT_METAX_RUNTIME_API(hc, name)
+#else
 #include <mcr/mc_runtime.h>
+#define INFINIRT_METAX_RUNTIME_API_(prefix, name) prefix##name
+#define INFINIRT_METAX_RUNTIME_API(prefix, name) \
+  INFINIRT_METAX_RUNTIME_API_(prefix, name)
+#define INFINIRT_METAX_API(name) INFINIRT_METAX_RUNTIME_API(mc, name)
+#endif
 
 #include <utility>
 
@@ -14,160 +26,193 @@ template <>
 struct Runtime<Device::Type::kMetax>
     : GraphRuntime<Runtime<Device::Type::kMetax>,
                    CudaRuntime<Runtime<Device::Type::kMetax>>> {
-  using Error = mcError_t;
+  using Error = INFINIRT_METAX_API(Error_t);
 
-  using Stream = mcStream_t;
+  using Stream = INFINIRT_METAX_API(Stream_t);
 
-  using Graph = mcGraph_t;
+  using Graph = INFINIRT_METAX_API(Graph_t);
 
-  using GraphExec = mcGraphExec_t;
+  using GraphExec = INFINIRT_METAX_API(GraphExec_t);
 
-  using Event = mcEvent_t;
+  using Event = INFINIRT_METAX_API(Event_t);
 
-  using StreamCaptureMode = mcStreamCaptureMode;
+  using StreamCaptureMode = INFINIRT_METAX_API(StreamCaptureMode);
 
   static constexpr Device::Type kDeviceType = Device::Type::kMetax;
 
-  static constexpr Error kSuccess = mcSuccess;
+  static constexpr Error kSuccess = INFINIRT_METAX_API(Success);
 
-  static constexpr auto SetDevice = mcSetDevice;
+  static constexpr auto SetDevice = INFINIRT_METAX_API(SetDevice);
 
-  static constexpr auto GetDevice = mcGetDevice;
+  static constexpr auto GetDevice = INFINIRT_METAX_API(GetDevice);
 
-  static constexpr auto GetDeviceCount = mcGetDeviceCount;
+  static constexpr auto GetDeviceCount = INFINIRT_METAX_API(GetDeviceCount);
 
-  static constexpr auto DeviceSynchronize = mcDeviceSynchronize;
+  static constexpr auto DeviceSynchronize =
+      INFINIRT_METAX_API(DeviceSynchronize);
 
   static constexpr auto Malloc = [](auto&&... args) {
-    return mcMalloc(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(Malloc)(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MallocHost = [](auto&&... args) {
-    return mcMallocHost(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(MallocHost)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MallocAsync = [](auto&&... args) {
-    return mcMallocAsync(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(MallocAsync)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto Free = [](auto&&... args) {
-    return mcFree(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(Free)(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto FreeHost = [](auto&&... args) {
-    return mcFreeHost(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(FreeHost)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto FreeAsync = [](auto&&... args) {
-    return mcFreeAsync(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(FreeAsync)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MemGetInfo = [](auto&&... args) {
-    return mcMemGetInfo(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(MemGetInfo)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto Memcpy = [](auto&&... args) {
-    return mcMemcpy(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(Memcpy)(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MemcpyAsync = [](auto&&... args) {
-    return mcMemcpyAsync(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(MemcpyAsync)(
+        std::forward<decltype(args)>(args)...);
   };
 
-  static constexpr auto kMemcpyHostToHost = mcMemcpyHostToHost;
+  static constexpr auto kMemcpyHostToHost =
+      INFINIRT_METAX_API(MemcpyHostToHost);
 
-  static constexpr auto kMemcpyHostToDevice = mcMemcpyHostToDevice;
+  static constexpr auto kMemcpyHostToDevice =
+      INFINIRT_METAX_API(MemcpyHostToDevice);
 
-  static constexpr auto kMemcpyDeviceToHost = mcMemcpyDeviceToHost;
+  static constexpr auto kMemcpyDeviceToHost =
+      INFINIRT_METAX_API(MemcpyDeviceToHost);
 
-  static constexpr auto kMemcpyDeviceToDevice = mcMemcpyDeviceToDevice;
+  static constexpr auto kMemcpyDeviceToDevice =
+      INFINIRT_METAX_API(MemcpyDeviceToDevice);
 
-  static constexpr auto Memset = mcMemset;
+  static constexpr auto Memset = INFINIRT_METAX_API(Memset);
 
   static constexpr auto MemsetAsync = [](auto&&... args) {
-    return mcMemsetAsync(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(MemsetAsync)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto StreamCreate = [](auto&&... args) {
-    return mcStreamCreate(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(StreamCreate)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto StreamDestroy = [](auto&&... args) {
-    return mcStreamDestroy(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(StreamDestroy)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto StreamSynchronize = [](auto&&... args) {
-    return mcStreamSynchronize(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(StreamSynchronize)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto StreamWaitEvent = [](auto&&... args) {
-    return mcStreamWaitEvent(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(StreamWaitEvent)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto EventCreate = [](auto&&... args) {
-    return mcEventCreate(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(EventCreate)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto EventCreateWithFlags = [](auto&&... args) {
-    return mcEventCreateWithFlags(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(EventCreateWithFlags)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto EventRecord = [](auto&&... args) {
-    return mcEventRecord(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(EventRecord)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto EventQuery = [](auto&&... args) {
-    return mcEventQuery(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(EventQuery)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto EventSynchronize = [](auto&&... args) {
-    return mcEventSynchronize(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(EventSynchronize)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto EventDestroy = [](auto&&... args) {
-    return mcEventDestroy(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(EventDestroy)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto EventElapsedTime = [](auto&&... args) {
-    return mcEventElapsedTime(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(EventElapsedTime)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto kStreamCaptureModeGlobal =
-      mcStreamCaptureModeGlobal;
+      INFINIRT_METAX_API(StreamCaptureModeGlobal);
 
   static constexpr auto kStreamCaptureModeThreadLocal =
-      mcStreamCaptureModeThreadLocal;
+      INFINIRT_METAX_API(StreamCaptureModeThreadLocal);
 
   static constexpr auto kStreamCaptureModeRelaxed =
-      mcStreamCaptureModeRelaxed;
+      INFINIRT_METAX_API(StreamCaptureModeRelaxed);
 
   static constexpr auto StreamBeginCapture = [](auto&&... args) {
-    return mcStreamBeginCapture(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(StreamBeginCapture)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto StreamEndCapture = [](auto&&... args) {
-    return mcStreamEndCapture(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(StreamEndCapture)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto GraphDestroy = [](auto&&... args) {
-    return mcGraphDestroy(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(GraphDestroy)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static Error GraphInstantiate(GraphExec* graph_exec, Graph graph) {
-    return mcGraphInstantiate(graph_exec, graph, nullptr, nullptr, 0);
+    return INFINIRT_METAX_API(GraphInstantiate)(
+        graph_exec, graph, nullptr, nullptr, 0);
   }
 
   static constexpr auto GraphExecDestroy = [](auto&&... args) {
-    return mcGraphExecDestroy(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(GraphExecDestroy)(
+        std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto GraphLaunch = [](auto&&... args) {
-    return mcGraphLaunch(std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(GraphLaunch)(
+        std::forward<decltype(args)>(args)...);
   };
 };
 
 static_assert(Runtime<Device::Type::kMetax>::Validate());
 
 }  // namespace infini::rt::runtime
+
+#undef INFINIRT_METAX_API
+#undef INFINIRT_METAX_RUNTIME_API
+#undef INFINIRT_METAX_RUNTIME_API_
 
 #endif
