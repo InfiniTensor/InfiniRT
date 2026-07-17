@@ -70,13 +70,11 @@ struct Runtime<Device::Type::kMetax>
   };
 
   static constexpr auto FreeHost = [](auto&&... args) {
-    return INFINIRT_METAX_API(FreeHost)(
-        std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(FreeHost)(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto FreeAsync = [](auto&&... args) {
-    return INFINIRT_METAX_API(FreeAsync)(
-        std::forward<decltype(args)>(args)...);
+    return INFINIRT_METAX_API(FreeAsync)(std::forward<decltype(args)>(args)...);
   };
 
   static constexpr auto MemGetInfo = [](auto&&... args) {
@@ -192,8 +190,8 @@ struct Runtime<Device::Type::kMetax>
   };
 
   static Error GraphInstantiate(GraphExec* graph_exec, Graph graph) {
-    return INFINIRT_METAX_API(GraphInstantiate)(
-        graph_exec, graph, nullptr, nullptr, 0);
+    return INFINIRT_METAX_API(GraphInstantiate)(graph_exec, graph, nullptr,
+                                                nullptr, 0);
   }
 
   static constexpr auto GraphExecDestroy = [](auto&&... args) {
