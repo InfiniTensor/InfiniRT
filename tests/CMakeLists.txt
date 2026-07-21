@@ -77,6 +77,8 @@ if(WITH_HYGON)
         HYGON infini::rt::Device::Type::kHygon
         infini/rt/hygon/runtime_.h
         1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        HYGON infini::rt::Device::Type::kHygon 1)
 endif()
 
 if(WITH_METAX)
