@@ -10,7 +10,7 @@ set(InfiniRT_WITH_NVIDIA @WITH_NVIDIA@)
 set(InfiniRT_WITH_ILUVATAR @WITH_ILUVATAR@)
 set(InfiniRT_WITH_HYGON @WITH_HYGON@)
 set(InfiniRT_WITH_METAX @WITH_METAX@)
-set(InfiniRT_METAX_USE_HPCC @INFINI_RT_METAX_USE_HPCC@)
+set(InfiniRT_WITH_MARS @WITH_MARS@)
 set(InfiniRT_WITH_MOORE @WITH_MOORE@)
 set(InfiniRT_WITH_CAMBRICON @WITH_CAMBRICON@)
 set(InfiniRT_WITH_ASCEND @WITH_ASCEND@)
@@ -35,30 +35,44 @@ if(_InfiniRT_VENDOR_BACKEND STREQUAL "METAX")
     if(DEFINED ENV{MACA_PATH})
         list(APPEND _InfiniRT_ROOT_HINTS "$ENV{MACA_PATH}")
     endif()
-    if(InfiniRT_METAX_USE_HPCC)
-        find_path(_InfiniRT_BACKEND_INCLUDE_DIR
-            NAMES hcr/hc_runtime.h
-            HINTS ${_InfiniRT_ROOT_HINTS}
-            PATH_SUFFIXES include)
-        find_library(_InfiniRT_BACKEND_RUNTIME_LIBRARY
-            NAMES hcruntime
-            HINTS ${_InfiniRT_ROOT_HINTS}
-            PATH_SUFFIXES lib lib64)
-    else()
-        find_path(_InfiniRT_BACKEND_INCLUDE_DIR
-            NAMES mcr/mc_runtime.h
-            HINTS ${_InfiniRT_ROOT_HINTS}
-            PATH_SUFFIXES include)
-        find_library(_InfiniRT_BACKEND_RUNTIME_LIBRARY
-            NAMES mcruntime
-            HINTS ${_InfiniRT_ROOT_HINTS}
-            PATH_SUFFIXES lib lib64)
-    endif()
+    list(APPEND _InfiniRT_ROOT_HINTS /opt/maca)
+    find_path(_InfiniRT_BACKEND_INCLUDE_DIR
+        NAMES mcr/mc_runtime.h
+        HINTS ${_InfiniRT_ROOT_HINTS}
+        PATH_SUFFIXES include)
+    find_library(_InfiniRT_BACKEND_RUNTIME_LIBRARY
+        NAMES mcruntime
+        HINTS ${_InfiniRT_ROOT_HINTS}
+        PATH_SUFFIXES lib lib64)
     if(NOT _InfiniRT_BACKEND_INCLUDE_DIR OR
        NOT _InfiniRT_BACKEND_RUNTIME_LIBRARY)
         set(InfiniRT_FOUND FALSE)
         set(InfiniRT_NOT_FOUND_MESSAGE
             "MetaX SDK not found. Set InfiniRT_METAX_ROOT or MACA_PATH.")
+        return()
+    endif()
+    _infinirt_define_backend_runtime(
+        "${_InfiniRT_BACKEND_INCLUDE_DIR}"
+        "${_InfiniRT_BACKEND_RUNTIME_LIBRARY}")
+elseif(_InfiniRT_VENDOR_BACKEND STREQUAL "MARS")
+    set(_InfiniRT_ROOT_HINTS "${InfiniRT_MARS_ROOT}")
+    if(DEFINED ENV{HPCC_PATH})
+        list(APPEND _InfiniRT_ROOT_HINTS "$ENV{HPCC_PATH}")
+    endif()
+    list(APPEND _InfiniRT_ROOT_HINTS /opt/hpcc)
+    find_path(_InfiniRT_BACKEND_INCLUDE_DIR
+        NAMES hcr/hc_runtime.h
+        HINTS ${_InfiniRT_ROOT_HINTS}
+        PATH_SUFFIXES include)
+    find_library(_InfiniRT_BACKEND_RUNTIME_LIBRARY
+        NAMES hcruntime
+        HINTS ${_InfiniRT_ROOT_HINTS}
+        PATH_SUFFIXES lib lib64)
+    if(NOT _InfiniRT_BACKEND_INCLUDE_DIR OR
+       NOT _InfiniRT_BACKEND_RUNTIME_LIBRARY)
+        set(InfiniRT_FOUND FALSE)
+        set(InfiniRT_NOT_FOUND_MESSAGE
+            "Mars HPCC SDK not found. Set InfiniRT_MARS_ROOT or HPCC_PATH.")
         return()
     endif()
     _infinirt_define_backend_runtime(

@@ -12,6 +12,7 @@ backend.
 | NVIDIA | `WITH_NVIDIA` | Requires CUDA toolkit. |
 | Iluvatar | `WITH_ILUVATAR` | CUDA-compatible backend using clang with ivcore flags. |
 | MetaX | `WITH_METAX` | Requires `MACA_PATH`. |
+| Mars | `WITH_MARS` | Requires the HPCC SDK from `HPCC_PATH` or `/opt/hpcc`. |
 | Moore | `WITH_MOORE` | Requires `MUSA_ROOT`, `MUSA_HOME`, or `MUSA_PATH`. |
 | Hygon | `WITH_HYGON` | Requires DTK and a DTK CUDA toolkit. |
 | Cambricon | `WITH_CAMBRICON` | Requires `NEUWARE_HOME`. |
@@ -34,6 +35,7 @@ Current test expectations are:
 | NVIDIA | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Iluvatar | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | MetaX | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Mars | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Moore | Yes | Yes | No | Yes | Yes | Yes | No |
 | Hygon | Yes | Yes | Yes | Yes | Yes | Yes | No |
 | Cambricon | Yes | No | No | No | No | No | No |

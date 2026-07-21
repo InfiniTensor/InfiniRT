@@ -12,6 +12,7 @@ _BACKEND_OPTIONS = (
     ("WITH_ILUVATAR", "iluvatar"),
     ("WITH_HYGON", "hygon"),
     ("WITH_METAX", "metax"),
+    ("WITH_MARS", "mars"),
     ("WITH_MOORE", "moore"),
     ("WITH_CAMBRICON", "cambricon"),
     ("WITH_ASCEND", "ascend"),

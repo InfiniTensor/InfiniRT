@@ -2,6 +2,7 @@ import argparse
 import dataclasses
 import pathlib
 import re
+import shutil
 
 
 _DETAIL_PREFIX = "infini/rt/detail"
@@ -28,9 +29,14 @@ _DEVICE_HEADERS = {
         ("hygon", "runtime_.h", "native/cuda/hygon/runtime_.h"),
     ),
     "metax": (
-        ("metax", "data_type_.h", "native/cuda/metax/data_type_.h"),
-        ("metax", "device_.h", "native/cuda/metax/device_.h"),
-        ("metax", "runtime_.h", "native/cuda/metax/runtime_.h"),
+        ("metax", "data_type_.h", "native/maca/metax/data_type_.h"),
+        ("metax", "device_.h", "native/maca/metax/device_.h"),
+        ("metax", "runtime_.h", "native/maca/metax/runtime_.h"),
+    ),
+    "mars": (
+        ("mars", "data_type_.h", "native/hpcc/mars/data_type_.h"),
+        ("mars", "device_.h", "native/hpcc/mars/device_.h"),
+        ("mars", "runtime_.h", "native/hpcc/mars/runtime_.h"),
     ),
     "moore": (
         ("moore", "data_type_.h", "native/cuda/moore/data_type_.h"),
@@ -55,6 +61,7 @@ _DEVICE_TYPES = {
     "iluvatar": "Device::Type::kIluvatar",
     "hygon": "Device::Type::kHygon",
     "metax": "Device::Type::kMetax",
+    "mars": "Device::Type::kMars",
     "moore": "Device::Type::kMoore",
     "cambricon": "Device::Type::kCambricon",
     "ascend": "Device::Type::kAscend",
@@ -65,6 +72,7 @@ _DEFAULT_DEVICE_PRIORITY = (
     "iluvatar",
     "hygon",
     "metax",
+    "mars",
     "moore",
     "cambricon",
     "ascend",
@@ -662,6 +670,9 @@ def main():
 
     include_root = pathlib.Path(args.output_dir)
     source_root = pathlib.Path(args.runtime_header).parent
+
+    if include_root.exists():
+        shutil.rmtree(include_root)
 
     _write_detail_headers(include_root, source_root, devices)
     for device in devices:

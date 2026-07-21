@@ -64,13 +64,17 @@ if(WITH_HYGON)
 endif()
 
 if(WITH_METAX)
-    target_compile_definitions(infinirt PRIVATE WITH_METAX=1)
-    if(INFINI_RT_METAX_USE_HPCC)
-        target_compile_definitions(infinirt PUBLIC INFINIRT_METAX_USE_HPCC=1)
-    endif()
+    target_compile_definitions(infinirt PUBLIC WITH_METAX=1)
     _infinirt_use_backend_runtime(
         "${MACA_PATH}/include"
         "${MACA_RUNTIME_LIB}")
+endif()
+
+if(WITH_MARS)
+    target_compile_definitions(infinirt PUBLIC WITH_MARS=1)
+    _infinirt_use_backend_runtime(
+        "${HPCC_PATH}/include"
+        "${HPCC_RUNTIME_LIB}")
 endif()
 
 if(WITH_MOORE)

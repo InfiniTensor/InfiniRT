@@ -425,6 +425,11 @@ int main() {
                {true, true, true, true, true, true, true, true});
 #endif
 
+#if defined(INFINI_RT_TEST_WITH_MARS)
+  TestDispatch(&context, infini::rt::Device::Type::kMars, "MARS",
+               {true, true, true, true, true, true, true, true});
+#endif
+
 #if defined(INFINI_RT_TEST_WITH_MOORE)
   TestDispatch(&context, infini::rt::Device::Type::kMoore, "MOORE",
                {true, true, false, true, true, true, true, true});
