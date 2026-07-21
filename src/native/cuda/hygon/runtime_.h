@@ -14,12 +14,19 @@ namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kHygon>
-    : CudaRuntime<Runtime<Device::Type::kHygon>> {
+    : GraphRuntime<Runtime<Device::Type::kHygon>,
+                   CudaRuntime<Runtime<Device::Type::kHygon>>> {
   using Error = cudaError_t;
 
   using Stream = cudaStream_t;
 
+  using Graph = cudaGraph_t;
+
+  using GraphExec = cudaGraphExec_t;
+
   using Event = cudaEvent_t;
+
+  using StreamCaptureMode = cudaStreamCaptureMode;
 
   static constexpr Device::Type kDeviceType = Device::Type::kHygon;
 
@@ -121,6 +128,39 @@ struct Runtime<Device::Type::kHygon>
 
   static constexpr auto EventElapsedTime = [](auto&&... args) {
     return cudaEventElapsedTime(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto kStreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;
+
+  static constexpr auto kStreamCaptureModeThreadLocal =
+      cudaStreamCaptureModeThreadLocal;
+
+  static constexpr auto kStreamCaptureModeRelaxed =
+      cudaStreamCaptureModeRelaxed;
+
+  static constexpr auto StreamBeginCapture = [](auto&&... args) {
+    return cudaStreamBeginCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto StreamEndCapture = [](auto&&... args) {
+    return cudaStreamEndCapture(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphDestroy = [](auto&&... args) {
+    return cudaGraphDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphInstantiate = [](GraphExec* graph_exec,
+                                              Graph graph) {
+    return cudaGraphInstantiate(graph_exec, graph);
+  };
+
+  static constexpr auto GraphExecDestroy = [](auto&&... args) {
+    return cudaGraphExecDestroy(std::forward<decltype(args)>(args)...);
+  };
+
+  static constexpr auto GraphLaunch = [](auto&&... args) {
+    return cudaGraphLaunch(std::forward<decltype(args)>(args)...);
   };
 };
 
