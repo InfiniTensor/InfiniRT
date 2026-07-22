@@ -32,10 +32,39 @@ int main() {
                        perf::DoNotOptimize(tensor);
                      });
 
+  perf::RunBenchmark("perf_tensor_view.construct_rvalue_full_metadata",
+                     {perf::NumberParam("ndim", 2)}, kIterations, "ns", [&] {
+                       TensorView tensor{data.data(), TensorView::Shape{32, 64},
+                                         DataType::kFloat32, cpu_device,
+                                         TensorView::Strides{64, 1}};
+                       perf::DoNotOptimize(tensor);
+                     });
+
+  perf::RunBenchmark("perf_tensor_view.construct_rvalue_default_strides",
+                     {perf::NumberParam("ndim", 2)}, kIterations, "ns", [&] {
+                       TensorView tensor{data.data(), TensorView::Shape{32, 64},
+                                         DataType::kFloat32, cpu_device};
+                       perf::DoNotOptimize(tensor);
+                     });
+
+  perf::RunBenchmark(
+      "perf_tensor_view.construct_initializer_list",
+      {perf::NumberParam("ndim", 2)}, kIterations, "ns", [&] {
+        TensorView tensor{
+            data.data(), {32, 64}, DataType::kFloat32, cpu_device, {64, 1}};
+        perf::DoNotOptimize(tensor);
+      });
+
   TensorView contiguous{data.data(), shape, DataType::kFloat32, cpu_device,
                         contiguous_strides};
   TensorView transposed{data.data(), shape, DataType::kFloat32, cpu_device,
                         transposed_strides};
+
+  perf::RunBenchmark("perf_tensor_view.transpose",
+                     {perf::NumberParam("ndim", 2)}, kIterations, "ns", [&] {
+                       const auto result = contiguous.T();
+                       perf::DoNotOptimize(result);
+                     });
 
   perf::RunBenchmark("perf_tensor_view.operator_index",
                      {perf::NumberParam("ndim", 2)}, kIterations, "ns", [&] {

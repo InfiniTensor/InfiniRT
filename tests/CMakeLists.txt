@@ -41,6 +41,10 @@ endfunction()
 
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_infini_rt_test(test_tensor_view_allocations
+                       test_tensor_view_allocations.cc)
+endif()
 
 set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND OFF)
 
