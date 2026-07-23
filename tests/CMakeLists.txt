@@ -41,6 +41,7 @@ endfunction()
 
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
+add_infini_rt_test(test_small_vector test_small_vector.cc)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_infini_rt_test(test_tensor_view_allocations
                        test_tensor_view_allocations.cc)
