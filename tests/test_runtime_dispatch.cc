@@ -420,6 +420,11 @@ int main() {
                {true, true, true, true, true, true, true, true});
 #endif
 
+#if defined(INFINI_RT_TEST_WITH_THEAD)
+  TestDispatch(&context, infini::rt::Device::Type::kThead, "THEAD",
+               {true, true, true, true, true, true, true, true});
+#endif
+
 #if defined(INFINI_RT_TEST_WITH_METAX)
   TestDispatch(&context, infini::rt::Device::Type::kMetax, "METAX",
                {true, true, true, true, true, true, true, true});

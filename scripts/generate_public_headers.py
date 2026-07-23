@@ -3,7 +3,6 @@ import dataclasses
 import pathlib
 import re
 
-
 _DETAIL_PREFIX = "infini/rt/detail"
 
 _DEVICE_HEADERS = {
@@ -26,6 +25,11 @@ _DEVICE_HEADERS = {
         ("hygon", "data_type_.h", "native/cuda/hygon/data_type_.h"),
         ("hygon", "device_.h", "native/cuda/hygon/device_.h"),
         ("hygon", "runtime_.h", "native/cuda/hygon/runtime_.h"),
+    ),
+    "thead": (
+        ("thead", "data_type_.h", "native/cuda/thead/data_type_.h"),
+        ("thead", "device_.h", "native/cuda/thead/device_.h"),
+        ("thead", "runtime_.h", "native/cuda/thead/runtime_.h"),
     ),
     "metax": (
         ("metax", "data_type_.h", "native/cuda/metax/data_type_.h"),
@@ -54,6 +58,7 @@ _DEVICE_TYPES = {
     "nvidia": "Device::Type::kNvidia",
     "iluvatar": "Device::Type::kIluvatar",
     "hygon": "Device::Type::kHygon",
+    "thead": "Device::Type::kThead",
     "metax": "Device::Type::kMetax",
     "moore": "Device::Type::kMoore",
     "cambricon": "Device::Type::kCambricon",
@@ -64,6 +69,7 @@ _DEFAULT_DEVICE_PRIORITY = (
     "nvidia",
     "iluvatar",
     "hygon",
+    "thead",
     "metax",
     "moore",
     "cambricon",

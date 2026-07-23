@@ -21,6 +21,7 @@ class Device {
     kMoore = 5,
     kIluvatar = 6,
     kHygon = 7,
+    kThead = 8,
     kCount
   };
 
@@ -64,6 +65,7 @@ class Device {
           {Type::kMoore, "moore"},
           {Type::kIluvatar, "iluvatar"},
           {Type::kHygon, "hygon"},
+          {Type::kThead, "thead"},
       }}};
 
   static constexpr ConstexprMap<std::string_view, Device::Type,
@@ -77,6 +79,7 @@ class Device {
           {"moore", Type::kMoore},
           {"iluvatar", Type::kIluvatar},
           {"hygon", Type::kHygon},
+          {"thead", Type::kThead},
       }}};
 
   int index_{0};
@@ -91,7 +94,7 @@ struct DeviceEnabled : std::false_type {};
 using AllDeviceTypes =
     List<Device::Type::kCpu, Device::Type::kNvidia, Device::Type::kCambricon,
          Device::Type::kAscend, Device::Type::kMetax, Device::Type::kMoore,
-         Device::Type::kIluvatar, Device::Type::kHygon>;
+         Device::Type::kIluvatar, Device::Type::kHygon, Device::Type::kThead>;
 
 // Deferred computation of active devices. The `Filter` and `FilterList`
 // evaluation are nested inside a class template so that `DeviceEnabled`
