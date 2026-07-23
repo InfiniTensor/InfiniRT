@@ -27,6 +27,11 @@ _DEVICE_HEADERS = {
         ("hygon", "device_.h", "native/cuda/hygon/device_.h"),
         ("hygon", "runtime_.h", "native/cuda/hygon/runtime_.h"),
     ),
+    "ali": (
+        ("ali", "data_type_.h", "native/cuda/ali/data_type_.h"),
+        ("ali", "device_.h", "native/cuda/ali/device_.h"),
+        ("ali", "runtime_.h", "native/cuda/ali/runtime_.h"),
+    ),
     "metax": (
         ("metax", "data_type_.h", "native/cuda/metax/data_type_.h"),
         ("metax", "device_.h", "native/cuda/metax/device_.h"),
@@ -54,6 +59,7 @@ _DEVICE_TYPES = {
     "nvidia": "Device::Type::kNvidia",
     "iluvatar": "Device::Type::kIluvatar",
     "hygon": "Device::Type::kHygon",
+    "ali": "Device::Type::kAli",
     "metax": "Device::Type::kMetax",
     "moore": "Device::Type::kMoore",
     "cambricon": "Device::Type::kCambricon",
@@ -64,6 +70,7 @@ _DEFAULT_DEVICE_PRIORITY = (
     "nvidia",
     "iluvatar",
     "hygon",
+    "ali",
     "metax",
     "moore",
     "cambricon",

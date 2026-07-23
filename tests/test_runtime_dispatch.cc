@@ -420,6 +420,11 @@ int main() {
                {true, true, true, true, true, true, true, true});
 #endif
 
+#if defined(INFINI_RT_TEST_WITH_ALI)
+  TestDispatch(&context, infini::rt::Device::Type::kAli, "ALI",
+               {true, true, true, true, true, true, true, true});
+#endif
+
 #if defined(INFINI_RT_TEST_WITH_METAX)
   TestDispatch(&context, infini::rt::Device::Type::kMetax, "METAX",
                {true, true, true, true, true, true, true, true});

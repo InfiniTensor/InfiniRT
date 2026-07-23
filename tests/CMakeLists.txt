@@ -81,6 +81,16 @@ if(WITH_HYGON)
         HYGON infini::rt::Device::Type::kHygon 1)
 endif()
 
+if(WITH_ALI)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        ALI infini::rt::Device::Type::kAli
+        infini/rt/ali/runtime_.h
+        1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        ALI infini::rt::Device::Type::kAli 1)
+endif()
+
 if(WITH_METAX)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
@@ -132,6 +142,10 @@ if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_HYGON=1)
     endif()
+    if(WITH_ALI)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_ALI=1)
+    endif()
     if(WITH_METAX)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_METAX=1)
@@ -173,6 +187,11 @@ elseif(WITH_HYGON)
     set(INFINI_RT_TEST_CONSUMER_BACKEND HYGON)
     if(NOT INFINI_RT_TEST_CUDATOOLKIT_ROOT)
         set(INFINI_RT_TEST_CUDATOOLKIT_ROOT "${HYGON_CUDA_ROOT}")
+    endif()
+elseif(WITH_ALI)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND ALI)
+    if(NOT INFINI_RT_TEST_CUDATOOLKIT_ROOT)
+        set(INFINI_RT_TEST_CUDATOOLKIT_ROOT "${ALI_CUDA_ROOT}")
     endif()
 elseif(WITH_METAX)
     set(INFINI_RT_TEST_CONSUMER_BACKEND METAX)

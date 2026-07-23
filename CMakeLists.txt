@@ -33,6 +33,7 @@ option(WITH_CPU "Enable CPU backend" OFF)
 option(WITH_NVIDIA "Enable CUDA backend" OFF)
 option(WITH_ILUVATAR "Enable Iluvatar GPU backend" OFF)
 option(WITH_HYGON "Enable Hygon GPU backend" OFF)
+option(WITH_ALI "Enable Ali PPU backend" OFF)
 option(WITH_METAX "Enable MetaX backend" OFF)
 option(WITH_CAMBRICON "Enable Cambricon backend" OFF)
 option(WITH_MOORE "Enable Moore backend" OFF)
@@ -118,7 +119,7 @@ if(AUTO_DETECT_DEVICES)
 
     if(WITH_NVIDIA)
         set(_non_nvidia_gpu_detected FALSE)
-        foreach(_gpu_backend WITH_ILUVATAR WITH_HYGON WITH_METAX WITH_CAMBRICON WITH_MOORE WITH_ASCEND)
+        foreach(_gpu_backend WITH_ILUVATAR WITH_HYGON WITH_ALI WITH_METAX WITH_CAMBRICON WITH_MOORE WITH_ASCEND)
             if(${_gpu_backend})
                 set(_non_nvidia_gpu_detected TRUE)
             endif()
@@ -135,14 +136,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Only one CUDA-like GPU backend can be enabled at a time.
 set(_gpu_backend_count 0)
-foreach(_gpu_backend WITH_NVIDIA WITH_ILUVATAR WITH_HYGON WITH_METAX WITH_MOORE WITH_ASCEND)
+foreach(_gpu_backend WITH_NVIDIA WITH_ILUVATAR WITH_HYGON WITH_ALI WITH_METAX WITH_MOORE WITH_ASCEND)
     if(${_gpu_backend})
         math(EXPR _gpu_backend_count "${_gpu_backend_count} + 1")
     endif()
 endforeach()
 
 if(_gpu_backend_count GREATER 1)
-    message(FATAL_ERROR "`WITH_NVIDIA`, `WITH_ILUVATAR`, `WITH_HYGON`, `WITH_METAX`, `WITH_MOORE`, and `WITH_ASCEND` are mutually exclusive. Build one GPU backend at a time.")
+    message(FATAL_ERROR "`WITH_NVIDIA`, `WITH_ILUVATAR`, `WITH_HYGON`, `WITH_ALI`, `WITH_METAX`, `WITH_MOORE`, and `WITH_ASCEND` are mutually exclusive. Build one GPU backend at a time.")
 endif()
 
 if(WITH_NVIDIA)
@@ -213,6 +214,44 @@ if(WITH_HYGON)
     include_directories("${HYGON_CUDA_ROOT}/include")
     link_directories("${HYGON_CUDA_ROOT}/lib64")
     message(STATUS "Hygon: CUDA compiler ${CMAKE_CUDA_COMPILER}, arch ${HYGON_ARCH}, DTK root ${DTK_ROOT}")
+    enable_language(CUDA)
+    find_package(CUDAToolkit REQUIRED)
+endif()
+
+if(WITH_ALI)
+    add_compile_definitions(WITH_ALI=1)
+
+    set(ALI_CUDA_ROOT "")
+    foreach(_ali_cuda_env ALI_CUDA_ROOT PPU_CUDA_ROOT)
+        if(NOT ALI_CUDA_ROOT AND DEFINED ENV{${_ali_cuda_env}} AND
+           NOT "$ENV{${_ali_cuda_env}}" STREQUAL "")
+            set(ALI_CUDA_ROOT "$ENV{${_ali_cuda_env}}")
+        endif()
+    endforeach()
+    if(NOT ALI_CUDA_ROOT AND DEFINED ENV{PPU_SDK_ROOT} AND
+       NOT "$ENV{PPU_SDK_ROOT}" STREQUAL "")
+        set(ALI_CUDA_ROOT "$ENV{PPU_SDK_ROOT}/CUDA_SDK")
+    endif()
+    if(NOT ALI_CUDA_ROOT AND EXISTS "/usr/local/PPU_SDK/CUDA_SDK")
+        set(ALI_CUDA_ROOT "/usr/local/PPU_SDK/CUDA_SDK")
+    endif()
+
+    if(NOT ALI_CUDA_ROOT OR NOT EXISTS "${ALI_CUDA_ROOT}/bin/nvcc")
+        message(FATAL_ERROR
+            "`WITH_ALI` is `ON` but the Ali PPU CUDA SDK was not found. "
+            "Set `ALI_CUDA_ROOT`, `PPU_CUDA_ROOT`, or `PPU_SDK_ROOT`.")
+    endif()
+
+    set(CMAKE_CUDA_COMPILER "${ALI_CUDA_ROOT}/bin/nvcc"
+        CACHE FILEPATH "Ali PPU CUDA compiler" FORCE)
+    set(CUDAToolkit_ROOT "${ALI_CUDA_ROOT}"
+        CACHE PATH "Ali PPU CUDA toolkit root" FORCE)
+    if(NOT CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES 80 CACHE STRING
+            "Ali PPU CUDA architecture" FORCE)
+    endif()
+
+    message(STATUS "Ali PPU: CUDA toolkit ${ALI_CUDA_ROOT}")
     enable_language(CUDA)
     find_package(CUDAToolkit REQUIRED)
 endif()
@@ -294,7 +333,7 @@ if(WITH_ASCEND)
 endif()
 
 # If all other platforms are not enabled, CPU is enabled by default.
-if(NOT WITH_NVIDIA AND NOT WITH_ILUVATAR AND NOT WITH_HYGON AND NOT WITH_METAX AND NOT WITH_MOORE AND NOT WITH_CAMBRICON AND NOT WITH_ASCEND)
+if(NOT WITH_NVIDIA AND NOT WITH_ILUVATAR AND NOT WITH_HYGON AND NOT WITH_ALI AND NOT WITH_METAX AND NOT WITH_MOORE AND NOT WITH_CAMBRICON AND NOT WITH_ASCEND)
     set(WITH_CPU ON)
     add_compile_definitions(WITH_CPU=1)
 endif()
@@ -311,6 +350,9 @@ if(WITH_ILUVATAR)
 endif()
 if(WITH_HYGON)
     list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES hygon)
+endif()
+if(WITH_ALI)
+    list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES ali)
 endif()
 if(WITH_METAX)
     list(APPEND INFINI_RT_PUBLIC_HEADER_DEVICES metax)
@@ -342,7 +384,7 @@ endif()
 add_subdirectory(src)
 
 set(INFINI_RT_PACKAGE_NEEDS_CUDATOOLKIT OFF)
-if(WITH_NVIDIA OR WITH_ILUVATAR OR WITH_HYGON)
+if(WITH_NVIDIA OR WITH_ILUVATAR OR WITH_HYGON OR WITH_ALI)
     set(INFINI_RT_PACKAGE_NEEDS_CUDATOOLKIT ON)
 endif()
 

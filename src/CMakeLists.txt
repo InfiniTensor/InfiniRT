@@ -63,6 +63,20 @@ if(WITH_HYGON)
     )
 endif()
 
+if(WITH_ALI)
+    enable_language(CUDA)
+
+    target_compile_definitions(infinirt PUBLIC WITH_ALI=1)
+
+    find_package(CUDAToolkit REQUIRED)
+    target_link_libraries(infinirt PUBLIC CUDA::cudart)
+
+    set_target_properties(infinirt PROPERTIES
+        CUDA_STANDARD 17
+        CUDA_STANDARD_REQUIRED ON
+    )
+endif()
+
 if(WITH_METAX)
     target_compile_definitions(infinirt PRIVATE WITH_METAX=1)
     _infinirt_use_backend_runtime(

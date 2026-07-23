@@ -23,6 +23,7 @@ int main() {
     defined(INFINI_RT_CONSUMER_BACKEND_NVIDIA) ||    \
     defined(INFINI_RT_CONSUMER_BACKEND_ILUVATAR) ||  \
     defined(INFINI_RT_CONSUMER_BACKEND_HYGON) ||     \
+    defined(INFINI_RT_CONSUMER_BACKEND_ALI) ||       \
     defined(INFINI_RT_CONSUMER_BACKEND_METAX) ||     \
     defined(INFINI_RT_CONSUMER_BACKEND_MOORE) ||     \
     defined(INFINI_RT_CONSUMER_BACKEND_CAMBRICON) || \
@@ -39,6 +40,9 @@ int main() {
   constexpr bool kExpectAsyncMemcpySuccess = true;
 #elif defined(INFINI_RT_CONSUMER_BACKEND_HYGON)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kHygon;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_ALI)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kAli;
   constexpr bool kExpectAsyncMemcpySuccess = true;
 #elif defined(INFINI_RT_CONSUMER_BACKEND_METAX)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kMetax;
