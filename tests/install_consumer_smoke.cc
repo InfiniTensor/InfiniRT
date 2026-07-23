@@ -8,14 +8,30 @@
 int main() {
   std::vector<float> data{1.0f, 2.0f, 3.0f, 4.0f};
   const infini::rt::Device device{infini::rt::Device::Type::kCpu};
-  const infini::rt::TensorView tensor{data.data(), std::vector<std::size_t>{4},
-                                      infini::rt::DataType::kFloat32, device};
+  const std::vector<std::size_t> shape{2, 2};
+  const std::vector<std::ptrdiff_t> default_strides{2, 1};
+  const std::vector<std::ptrdiff_t> explicit_strides{1, 2};
+  const infini::rt::TensorView default_view{
+      data.data(), shape, infini::rt::DataType::kFloat32, device};
+  const infini::rt::TensorView explicit_view{
+      data.data(), shape, infini::rt::DataType::kFloat32, device,
+      explicit_strides};
 
   if (device.ToString() != "cpu:0") {
     return 1;
   }
 
-  if (tensor.numel() != 4 || !tensor.IsContiguous()) {
+  if (default_view.numel() != 4 || !default_view.IsContiguous() ||
+      default_view.shape() != shape ||
+      default_view.strides() != default_strides ||
+      default_view.size(-1) != 2 || default_view.stride(-1) != 1) {
+    return 1;
+  }
+
+  if (explicit_view.numel() != 4 || explicit_view.IsContiguous() ||
+      explicit_view.shape() != shape ||
+      explicit_view.strides() != explicit_strides ||
+      explicit_view.size(0) != 2 || explicit_view.stride(0) != 1) {
     return 1;
   }
 
