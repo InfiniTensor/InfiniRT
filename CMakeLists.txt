@@ -77,15 +77,48 @@ if(AUTO_DETECT_DEVICES)
         endif()
     endif()
 
-    if((DEFINED ENV{HPCC_PATH} AND
-        EXISTS "$ENV{HPCC_PATH}/include/hcr/hc_runtime.h") OR
-       EXISTS "/opt/hpcc/include/hcr/hc_runtime.h")
+    set(_infinirt_hpcc_env_root "")
+    if(DEFINED ENV{HPCC_PATH} AND
+       EXISTS "$ENV{HPCC_PATH}/include/hcr/hc_runtime.h")
+        set(_infinirt_hpcc_env_root "$ENV{HPCC_PATH}")
+    endif()
+
+    set(_infinirt_maca_env_root "")
+    if(DEFINED ENV{MACA_PATH} AND
+       EXISTS "$ENV{MACA_PATH}/include/mcr/mc_runtime.h")
+        set(_infinirt_maca_env_root "$ENV{MACA_PATH}")
+    endif()
+
+    set(_infinirt_default_hpcc_available FALSE)
+    if(EXISTS "/opt/hpcc/include/hcr/hc_runtime.h")
+        set(_infinirt_default_hpcc_available TRUE)
+    endif()
+
+    set(_infinirt_default_maca_available FALSE)
+    if(EXISTS "/opt/maca/include/mcr/mc_runtime.h")
+        set(_infinirt_default_maca_available TRUE)
+    endif()
+
+    if(WITH_MARS OR WITH_METAX)
+        message(STATUS "Skipping MetaX-family auto-detection because a backend was explicitly enabled")
+    elseif(_infinirt_hpcc_env_root AND _infinirt_maca_env_root)
+        message(FATAL_ERROR
+                "Both HPCC_PATH and MACA_PATH identify valid SDKs. Select Mars with -DWITH_MARS=ON or MetaX with -DWITH_METAX=ON.")
+    elseif(_infinirt_hpcc_env_root)
         set(WITH_MARS ON)
-        message(STATUS "Auto-detected Mars HPCC environment")
-    elseif(DEFINED ENV{MACA_PATH} AND
-           EXISTS "$ENV{MACA_PATH}/include/mcr/mc_runtime.h")
+        message(STATUS "Auto-detected Mars HPCC environment from HPCC_PATH")
+    elseif(_infinirt_maca_env_root)
         set(WITH_METAX ON)
         message(STATUS "Auto-detected MetaX MACA environment from MACA_PATH")
+    elseif(_infinirt_default_hpcc_available AND _infinirt_default_maca_available)
+        message(FATAL_ERROR
+                "Both /opt/hpcc and /opt/maca contain valid SDKs. Select Mars with -DWITH_MARS=ON or MetaX with -DWITH_METAX=ON.")
+    elseif(_infinirt_default_hpcc_available)
+        set(WITH_MARS ON)
+        message(STATUS "Auto-detected Mars HPCC environment from /opt/hpcc")
+    elseif(_infinirt_default_maca_available)
+        set(WITH_METAX ON)
+        message(STATUS "Auto-detected MetaX MACA environment from /opt/maca")
     else()
         execute_process(
             COMMAND sh -c "grep -h 9999 /sys/bus/pci/devices/*/vendor 2>/dev/null"

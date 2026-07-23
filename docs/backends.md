@@ -21,6 +21,9 @@ backend.
 Only one accelerator backend can be enabled at a time. CPU can be enabled
 together with the selected accelerator backend.
 
+When both HPCC and MACA SDKs are installed, select `WITH_MARS` or `WITH_METAX`
+explicitly. Automatic detection rejects an ambiguous MetaX-family environment.
+
 ## Runtime API Support
 
 All enabled runtime backends provide the core device and memory entry points

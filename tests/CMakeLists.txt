@@ -42,6 +42,13 @@ endfunction()
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
 
+add_test(
+    NAME test_ambiguous_metax_family_autodetect
+    COMMAND "${CMAKE_COMMAND}"
+            "-DINFINI_RT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+            "-DINFINI_RT_TEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/ambiguous_metax_family"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/test_ambiguous_metax_family_autodetect.cmake")
+
 set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND OFF)
 
 if(WITH_CPU)

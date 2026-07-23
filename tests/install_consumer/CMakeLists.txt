@@ -24,7 +24,7 @@ if(NOT "${InfiniRT_ENABLED_BACKENDS}" STREQUAL
             "InfiniRT reported enabled backends '${InfiniRT_ENABLED_BACKENDS}', expected '${_infinirt_expected_backends}'.")
 endif()
 
-foreach(_infinirt_backend CPU NVIDIA ILUVATAR HYGON METAX MOORE CAMBRICON ASCEND)
+foreach(_infinirt_backend CPU NVIDIA ILUVATAR HYGON METAX MARS MOORE CAMBRICON ASCEND)
     string(TOLOWER "${_infinirt_backend}" _infinirt_backend_lower)
     list(FIND _infinirt_expected_backends "${_infinirt_backend_lower}"
          _infinirt_backend_index)
