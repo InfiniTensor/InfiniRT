@@ -51,6 +51,13 @@ class TensorView {
         device_{tensor.device()},
         strides_{tensor.strides()} {}
 
+  TensorView(void* data, Shape shape)
+      : data_{data},
+        shape_{std::move(shape)},
+        dtype_{DefaultDataType()},
+        device_{DefaultDevice()},
+        strides_{DefaultStrides(shape_)} {}
+
   template <typename Shape>
   TensorView(void* data, const Shape& shape)
       : data_{data},
@@ -58,6 +65,13 @@ class TensorView {
         dtype_{DefaultDataType()},
         device_{DefaultDevice()},
         strides_{DefaultStrides(shape)} {}
+
+  TensorView(void* data, Shape shape, const DataType& dtype)
+      : data_{data},
+        shape_{std::move(shape)},
+        dtype_{dtype},
+        device_{DefaultDevice()},
+        strides_{DefaultStrides(shape_)} {}
 
   template <typename Shape>
   TensorView(void* data, const Shape& shape, const DataType& dtype)
@@ -67,6 +81,13 @@ class TensorView {
         device_{DefaultDevice()},
         strides_{DefaultStrides(shape)} {}
 
+  TensorView(void* data, Shape shape, const Device& device)
+      : data_{data},
+        shape_{std::move(shape)},
+        dtype_{DefaultDataType()},
+        device_{device},
+        strides_{DefaultStrides(shape_)} {}
+
   template <typename Shape>
   TensorView(void* data, const Shape& shape, const Device& device)
       : data_{data},
@@ -74,6 +95,14 @@ class TensorView {
         dtype_{DefaultDataType()},
         device_{device},
         strides_{DefaultStrides(shape)} {}
+
+  TensorView(void* data, Shape shape, const DataType& dtype,
+             const Device& device)
+      : data_{data},
+        shape_{std::move(shape)},
+        dtype_{dtype},
+        device_{device},
+        strides_{DefaultStrides(shape_)} {}
 
   template <typename Shape>
   TensorView(void* data, const Shape& shape, const DataType& dtype,
@@ -83,6 +112,14 @@ class TensorView {
         dtype_{dtype},
         device_{device},
         strides_{DefaultStrides(shape)} {}
+
+  TensorView(void* data, Shape shape, const DataType& dtype,
+             const Device& device, Strides strides)
+      : data_{data},
+        shape_{std::move(shape)},
+        dtype_{dtype},
+        device_{device},
+        strides_{std::move(strides)} {}
 
   template <typename Shape, typename Strides>
   TensorView(void* data, const Shape& shape, const DataType& dtype,

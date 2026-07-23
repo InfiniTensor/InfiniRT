@@ -16,8 +16,11 @@ static TensorView::Index GetEffectiveIndex(TensorView::Index index,
 TensorView::TensorView(void* data, std::initializer_list<Size> shape,
                        const DataType& dtype, const Device& device,
                        std::initializer_list<Stride> strides)
-    : TensorView{data, decltype(shape_){shape}, dtype, device,
-                 decltype(strides_){strides}} {}
+    : data_{data},
+      shape_{shape},
+      dtype_{dtype},
+      device_{device},
+      strides_{strides} {}
 
 TensorView TensorView::operator[](const Index& index) const {
   return {
