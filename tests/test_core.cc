@@ -123,7 +123,7 @@ void TestDataType(infini::rt::test::TestContext* context) {
 void TestTensorViewRanks(infini::rt::test::TestContext* context) {
   std::array<float, 512> data{};
   const Device cpu{Device::Type::kCpu};
-  const std::array<std::size_t, 8> ranks{0, 1, 2, 3, 4, 5, 8, 9};
+  const std::array<std::size_t, 10> ranks{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
   for (const std::size_t rank : ranks) {
     const std::vector<std::size_t> shape = MakeShape(rank);
