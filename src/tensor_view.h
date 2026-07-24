@@ -1,13 +1,15 @@
 #ifndef INFINI_RT_TENSOR_VIEW_H_
 #define INFINI_RT_TENSOR_VIEW_H_
 
+#include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <iterator>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "common/small_vector.h"
+#include "common/tensor_metadata.h"
 #include "data_type.h"
 #include "device.h"
 #include "hash.h"
@@ -16,12 +18,7 @@ namespace infini::rt {
 
 namespace tensor_view_detail {
 
-inline constexpr std::size_t kInlineMetadataCapacity = 8;
-
-template <typename Metadata, typename Range>
-Metadata CopyMetadata(const Range& range) {
-  return Metadata(std::begin(range), std::end(range));
-}
+inline constexpr std::size_t kInlineMetadataCapacity = 4;
 
 template <typename T, typename = void>
 struct IsTensorLike : std::false_type {};
@@ -45,101 +42,143 @@ class TensorView {
 
   using Index = Stride;
 
-  using Shape =
-      detail::SmallVector<Size, tensor_view_detail::kInlineMetadataCapacity>;
+ private:
+  using Metadata =
+      detail::TensorMetadata<Size, Stride,
+                             tensor_view_detail::kInlineMetadataCapacity>;
 
-  using Strides =
-      detail::SmallVector<Stride, tensor_view_detail::kInlineMetadataCapacity>;
+ public:
+  using Shape = typename Metadata::Shape;
+
+  using Strides = typename Metadata::Strides;
+
+  using ShapeView = typename Metadata::ShapeView;
+
+  using StridesView = typename Metadata::StridesView;
 
   template <typename TensorLike,
             typename = std::enable_if_t<
                 tensor_view_detail::IsTensorLike<TensorLike>::value>>
   TensorView(const TensorLike& tensor)
       : data_{const_cast<void*>(static_cast<const void*>(tensor.data()))},
-        shape_{tensor_view_detail::CopyMetadata<Shape>(tensor.shape())},
+        metadata_{tensor.shape(), tensor.strides()},
         dtype_{tensor.dtype()},
-        device_{tensor.device()},
-        strides_{
-            tensor_view_detail::CopyMetadata<Strides>(tensor.strides())} {}
+        device_{tensor.device()} {}
 
-  TensorView(void* data, Shape shape)
+  TensorView(void* data, const Shape& shape)
       : data_{data},
-        shape_{std::move(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{DefaultDataType()},
-        device_{DefaultDevice()},
-        strides_{DefaultStrides(shape_)} {}
+        device_{DefaultDevice()} {}
+
+  TensorView(void* data, Shape&& shape)
+      : data_{data},
+        metadata_{std::move(shape), detail::DefaultStridesTag{}},
+        dtype_{DefaultDataType()},
+        device_{DefaultDevice()} {}
 
   template <typename ShapeLike>
   TensorView(void* data, const ShapeLike& shape)
       : data_{data},
-        shape_{std::begin(shape), std::end(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{DefaultDataType()},
-        device_{DefaultDevice()},
-        strides_{DefaultStrides(shape_)} {}
+        device_{DefaultDevice()} {}
 
-  TensorView(void* data, Shape shape, const DataType& dtype)
+  TensorView(void* data, const Shape& shape, const DataType& dtype)
       : data_{data},
-        shape_{std::move(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{dtype},
-        device_{DefaultDevice()},
-        strides_{DefaultStrides(shape_)} {}
+        device_{DefaultDevice()} {}
+
+  TensorView(void* data, Shape&& shape, const DataType& dtype)
+      : data_{data},
+        metadata_{std::move(shape), detail::DefaultStridesTag{}},
+        dtype_{dtype},
+        device_{DefaultDevice()} {}
 
   template <typename ShapeLike>
   TensorView(void* data, const ShapeLike& shape, const DataType& dtype)
       : data_{data},
-        shape_{std::begin(shape), std::end(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{dtype},
-        device_{DefaultDevice()},
-        strides_{DefaultStrides(shape_)} {}
+        device_{DefaultDevice()} {}
 
-  TensorView(void* data, Shape shape, const Device& device)
+  TensorView(void* data, const Shape& shape, const Device& device)
       : data_{data},
-        shape_{std::move(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{DefaultDataType()},
-        device_{device},
-        strides_{DefaultStrides(shape_)} {}
+        device_{device} {}
+
+  TensorView(void* data, Shape&& shape, const Device& device)
+      : data_{data},
+        metadata_{std::move(shape), detail::DefaultStridesTag{}},
+        dtype_{DefaultDataType()},
+        device_{device} {}
 
   template <typename ShapeLike>
   TensorView(void* data, const ShapeLike& shape, const Device& device)
       : data_{data},
-        shape_{std::begin(shape), std::end(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{DefaultDataType()},
-        device_{device},
-        strides_{DefaultStrides(shape_)} {}
+        device_{device} {}
 
-  TensorView(void* data, Shape shape, const DataType& dtype,
+  TensorView(void* data, const Shape& shape, const DataType& dtype,
              const Device& device)
       : data_{data},
-        shape_{std::move(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{dtype},
-        device_{device},
-        strides_{DefaultStrides(shape_)} {}
+        device_{device} {}
+
+  TensorView(void* data, Shape&& shape, const DataType& dtype,
+             const Device& device)
+      : data_{data},
+        metadata_{std::move(shape), detail::DefaultStridesTag{}},
+        dtype_{dtype},
+        device_{device} {}
 
   template <typename ShapeLike>
   TensorView(void* data, const ShapeLike& shape, const DataType& dtype,
              const Device& device)
       : data_{data},
-        shape_{std::begin(shape), std::end(shape)},
+        metadata_{shape, detail::DefaultStridesTag{}},
         dtype_{dtype},
-        device_{device},
-        strides_{DefaultStrides(shape_)} {}
+        device_{device} {}
 
-  TensorView(void* data, Shape shape, const DataType& dtype,
-             const Device& device, Strides strides)
+  TensorView(void* data, const Shape& shape, const DataType& dtype,
+             const Device& device, const Strides& strides)
       : data_{data},
-        shape_{std::move(shape)},
+        metadata_{shape, strides},
         dtype_{dtype},
-        device_{device},
-        strides_{std::move(strides)} {}
+        device_{device} {}
+
+  TensorView(void* data, Shape&& shape, const DataType& dtype,
+             const Device& device, Strides&& strides)
+      : data_{data},
+        metadata_{std::move(shape), std::move(strides)},
+        dtype_{dtype},
+        device_{device} {}
+
+  TensorView(void* data, Shape&& shape, const DataType& dtype,
+             const Device& device, const Strides& strides)
+      : data_{data},
+        metadata_{std::move(shape), strides},
+        dtype_{dtype},
+        device_{device} {}
+
+  TensorView(void* data, const Shape& shape, const DataType& dtype,
+             const Device& device, Strides&& strides)
+      : data_{data},
+        metadata_{shape, std::move(strides)},
+        dtype_{dtype},
+        device_{device} {}
 
   template <typename ShapeLike, typename StridesLike>
   TensorView(void* data, const ShapeLike& shape, const DataType& dtype,
              const Device& device, const StridesLike& strides)
       : data_{data},
-        shape_{std::begin(shape), std::end(shape)},
+        metadata_{shape, strides},
         dtype_{dtype},
-        device_{device},
-        strides_{std::begin(strides), std::end(strides)} {}
+        device_{device} {}
 
   TensorView(void* data, std::initializer_list<Size> shape,
              const DataType& dtype, const Device& device,
@@ -155,9 +194,17 @@ class TensorView {
 
   const Device& device() const;
 
-  const Shape& shape() const;
+  ShapeView shape() const & noexcept;
 
-  const Strides& strides() const;
+  Shape shape() &&;
+
+  Shape shape() const &&;
+
+  StridesView strides() const & noexcept;
+
+  Strides strides() &&;
+
+  Strides strides() const &&;
 
   Size size(const Index& index) const;
 
@@ -182,21 +229,17 @@ class TensorView {
 
   static Device DefaultDevice();
 
-  static Strides DefaultStrides(const Shape& shape);
-
   std::string ToStringHelper() const;
 
   bool IsMergeable(Size dim_start, Size dim_end) const;
 
   void* data_{nullptr};
 
-  Shape shape_;
+  Metadata metadata_;
 
   const DataType dtype_;
 
   Device device_;
-
-  Strides strides_;
 };
 
 }  // namespace infini::rt

@@ -6,6 +6,7 @@
 #include <functional>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "test_helper.h"
@@ -41,6 +42,19 @@ static_assert(
     std::is_same_v<decltype(std::declval<TensorView&&>().strides()),
                    TensorView::Strides>,
     "TensorView rvalues should return owning strides.");
+static_assert(
+    std::is_same_v<decltype(std::declval<const TensorView&&>().shape()),
+                   TensorView::Shape>,
+    "Const TensorView rvalues should return an owning shape.");
+static_assert(
+    std::is_same_v<decltype(std::declval<const TensorView&&>().strides()),
+                   TensorView::Strides>,
+    "Const TensorView rvalues should return owning strides.");
+static_assert(!std::is_convertible_v<TensorView::ShapeView, TensorView::Shape>,
+              "A borrowed shape should not hide an owning allocation.");
+static_assert(
+    !std::is_convertible_v<TensorView::StridesView, TensorView::Strides>,
+    "Borrowed strides should not hide an owning allocation.");
 
 struct VectorTensorLike {
   void* data_value;
@@ -296,6 +310,61 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
       "Shape access on a temporary TensorView should return owned metadata.");
 }
 
+void TestTensorViewHeapRepresentations(
+    infini::rt::test::TestContext* context) {
+  std::array<float, 512> data{};
+  const Device cpu{Device::Type::kCpu};
+  const TensorView::Shape shape{2, 2, 2, 2, 2, 2, 2, 2, 2};
+  const TensorView::Strides strides{256, 128, 64, 32, 16, 8, 4, 2, 1};
+  const TensorView combined{data.data(), shape, DataType::kFloat32, cpu,
+                            strides};
+  const TensorView split{
+      data.data(), TensorView::Shape{shape.begin(), shape.end()},
+      DataType::kFloat32, cpu,
+      TensorView::Strides{strides.begin(), strides.end()}};
+
+  context->Expect(std::equal_to<TensorView>{}(combined, split),
+                  "Combined and split metadata should compare equal.");
+  context->ExpectEqual(
+      std::hash<TensorView>{}(combined), std::hash<TensorView>{}(split),
+      "Combined and split metadata should have the same hash.");
+
+  const TensorView indexed = split[1];
+  const std::vector<std::size_t> indexed_shape(8, 2);
+  const std::vector<std::ptrdiff_t> indexed_strides{128, 64, 32, 16,
+                                                    8,   4,  2,  1};
+  context->ExpectEqual(indexed.shape(), indexed_shape,
+                       "High-rank indexing should preserve the shape suffix.");
+  context->ExpectEqual(
+      indexed.strides(), indexed_strides,
+      "High-rank indexing should preserve the stride suffix.");
+  context->ExpectEqual(
+      indexed.data(), static_cast<const void*>(data.data() + 256),
+      "High-rank indexing should preserve the data offset.");
+
+  const TensorView copied{split};
+  context->ExpectEqual(copied.shape(), shape,
+                       "Copying split metadata should preserve its shape.");
+  context->ExpectEqual(copied.strides(), strides,
+                       "Copying split metadata should preserve its strides.");
+
+  TensorView split_move_source{
+      data.data(), TensorView::Shape{shape.begin(), shape.end()},
+      DataType::kFloat32, cpu,
+      TensorView::Strides{strides.begin(), strides.end()}};
+  TensorView moved{std::move(split_move_source)};
+  context->ExpectEqual(moved.shape(), shape,
+                       "Moving split metadata should preserve its shape.");
+  context->ExpectEqual(moved.strides(), strides,
+                       "Moving split metadata should preserve its strides.");
+
+  TensorView::Strides owned_temporary_strides =
+      TensorView{data.data(), shape}.strides();
+  context->ExpectEqual(
+      owned_temporary_strides, strides,
+      "Stride access on a temporary TensorView should return owned metadata.");
+}
+
 }  // namespace
 
 int main() {
@@ -306,6 +375,7 @@ int main() {
   TestTensorViewRanks(&context);
   TestTensorLikeValueAccessors(&context);
   TestTensorViewOperations(&context);
+  TestTensorViewHeapRepresentations(&context);
 
   return context.ExitCode();
 }

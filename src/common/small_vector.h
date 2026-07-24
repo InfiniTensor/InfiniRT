@@ -1,6 +1,7 @@
 #ifndef INFINI_RT_COMMON_SMALL_VECTOR_H_
 #define INFINI_RT_COMMON_SMALL_VECTOR_H_
 
+#include <algorithm>
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
@@ -63,6 +64,9 @@ class SmallVector {
   static_assert(std::is_nothrow_copy_constructible_v<T>,
                 "SmallVector requires T to be nothrow copy constructible.");
 
+  static_assert(std::is_nothrow_copy_assignable_v<T>,
+                "SmallVector requires T to be nothrow copy assignable.");
+
  public:
   using value_type = T;
 
@@ -71,6 +75,74 @@ class SmallVector {
   using iterator = T*;
 
   using const_iterator = const T*;
+
+  class HeapAllocation {
+   public:
+    HeapAllocation() = default;
+
+    HeapAllocation(const HeapAllocation&) = delete;
+
+    HeapAllocation& operator=(const HeapAllocation&) = delete;
+
+    HeapAllocation(HeapAllocation&& other) noexcept
+        : data_(other.data_),
+          size_(other.size_),
+          capacity_(other.capacity_) {
+      other.Clear();
+    }
+
+    HeapAllocation& operator=(HeapAllocation&& other) noexcept {
+      if (this == &other) return *this;
+
+      Reset();
+      data_ = other.data_;
+      size_ = other.size_;
+      capacity_ = other.capacity_;
+      other.Clear();
+      return *this;
+    }
+
+    ~HeapAllocation() { Reset(); }
+
+    T* data() noexcept { return data_; }
+
+    const T* data() const noexcept { return data_; }
+
+    size_type size() const noexcept { return size_; }
+
+    size_type capacity() const noexcept { return capacity_; }
+
+    bool empty() const noexcept { return data_ == nullptr; }
+
+    T* release() noexcept {
+      T* data = data_;
+      Clear();
+      return data;
+    }
+
+   private:
+    friend class SmallVector;
+
+    HeapAllocation(T* data, size_type size, size_type capacity) noexcept
+        : data_(data), size_(size), capacity_(capacity) {}
+
+    void Clear() noexcept {
+      data_ = nullptr;
+      size_ = 0;
+      capacity_ = 0;
+    }
+
+    void Reset() noexcept {
+      if (data_ != nullptr) Deallocate(data_, capacity_);
+      Clear();
+    }
+
+    T* data_{nullptr};
+
+    size_type size_{0};
+
+    size_type capacity_{0};
+  };
 
   SmallVector() = default;
 
@@ -82,9 +154,17 @@ class SmallVector {
   template <typename InputIt,
             std::enable_if_t<!std::is_integral_v<InputIt>, int> = 0>
   SmallVector(InputIt first, InputIt last) {
-    SmallVector replacement;
-    replacement.InitializeRange(first, last);
-    MoveConstructFrom(replacement);
+    using IteratorCategory =
+        typename std::iterator_traits<InputIt>::iterator_category;
+
+    if constexpr (
+        std::is_base_of_v<std::forward_iterator_tag, IteratorCategory>) {
+      InitializeForwardRange(first, last);
+    } else {
+      SmallVector replacement;
+      replacement.InitializeInputRange(first, last);
+      MoveConstructFrom(replacement);
+    }
   }
 
   template <
@@ -136,11 +216,11 @@ class SmallVector {
   bool empty() const noexcept { return size_ == 0; }
 
   T* data() noexcept {
-    return IsHeap() ? storage_.heap_data : storage_.inline_data;
+    return IsHeap() ? storage_.heap_data : storage_.inline_storage.data;
   }
 
   const T* data() const noexcept {
-    return IsHeap() ? storage_.heap_data : storage_.inline_data;
+    return IsHeap() ? storage_.heap_data : storage_.inline_storage.data;
   }
 
   T& front() noexcept { return data()[0]; }
@@ -212,17 +292,31 @@ class SmallVector {
     assign(values.begin(), values.end());
   }
 
+  HeapAllocation ReleaseHeap() noexcept {
+    if (!IsHeap()) return {};
+
+    HeapAllocation allocation{storage_.heap_data, size_, capacity_};
+    ReconstructInline();
+    return allocation;
+  }
+
  private:
   using Allocator = std::allocator<T>;
 
   using AllocatorTraits = std::allocator_traits<Allocator>;
 
+  struct InlineStorage {
+    T data[InlineCapacity];
+
+    InlineStorage() noexcept {}
+  };
+
   union Storage {
-    T inline_data[InlineCapacity];
+    InlineStorage inline_storage;
 
     T* heap_data;
 
-    constexpr Storage() : inline_data{} {}
+    Storage() noexcept : inline_storage() {}
   };
 
   bool IsHeap() const noexcept { return capacity_ > InlineCapacity; }
@@ -241,31 +335,87 @@ class SmallVector {
   }
 
   void InitializeCount(size_type count) {
-    if (count > capacity_) Reallocate(count);
+    if (count <= InlineCapacity) {
+      std::fill_n(storage_.inline_storage.data, count, T{});
+      size_ = count;
 
-    while (size_ < count) {
-      ConstructValue(data() + size_);
-      ++size_;
+      return;
     }
+
+    Allocator allocator;
+    HeapAllocation allocation{
+        AllocatorTraits::allocate(allocator, count), count, count};
+    ::new (static_cast<void*>(allocation.data())) T[count]{};
+    ReplaceWithHeap(allocation.release(), count, count);
+  }
+
+  template <typename ForwardIt>
+  void InitializeForwardRange(ForwardIt first, ForwardIt last) {
+    if (first == last) return;
+
+    const size_type count =
+        static_cast<size_type>(std::distance(first, last));
+
+    if (count <= InlineCapacity) {
+      CopyToInline(first, last, storage_.inline_storage.data);
+      size_ = count;
+
+      return;
+    }
+
+    Allocator allocator;
+
+    if constexpr (IsSamePointerRange<ForwardIt>()) {
+      HeapAllocation allocation{
+          AllocatorTraits::allocate(allocator, count), count, count};
+      ::new (static_cast<void*>(allocation.data())) T[count];
+      std::copy(first, last, allocation.data());
+      ReplaceWithHeap(allocation.release(), count, count);
+
+      return;
+    }
+
+    HeapAllocation allocation{
+        AllocatorTraits::allocate(allocator, count), count, count};
+    UninitializedCopy(first, last, allocation.data());
+    ReplaceWithHeap(allocation.release(), count, count);
   }
 
   template <typename InputIt>
-  void InitializeRange(InputIt first, InputIt last) {
-    using IteratorCategory =
-        typename std::iterator_traits<InputIt>::iterator_category;
+  void InitializeInputRange(InputIt first, InputIt last) {
+    for (; first != last; ++first) push_back(static_cast<T>(*first));
+  }
 
-    if constexpr (
-        std::is_base_of_v<std::forward_iterator_tag, IteratorCategory>) {
-      const auto distance = std::distance(first, last);
-      const size_type count = static_cast<size_type>(distance);
-      if (count > capacity_) Reallocate(count);
+  template <typename ForwardIt>
+  static constexpr bool IsSamePointerRange() {
+    return std::is_pointer_v<ForwardIt> &&
+           std::is_same_v<std::remove_cv_t<std::remove_pointer_t<ForwardIt>>,
+                          T>;
+  }
 
-      for (; first != last; ++first) {
-        Construct(data() + size_, static_cast<T>(*first));
-        ++size_;
-      }
+  template <typename ForwardIt>
+  static void CopyToInline(ForwardIt first, ForwardIt last, T* destination) {
+    if constexpr (IsSamePointerRange<ForwardIt>()) {
+      std::copy(first, last, destination);
     } else {
-      for (; first != last; ++first) push_back(static_cast<T>(*first));
+      for (; first != last; ++first, ++destination) {
+        *destination = static_cast<T>(*first);
+      }
+    }
+  }
+
+  template <typename ForwardIt>
+  static void UninitializedCopy(ForwardIt first, ForwardIt last,
+                                T* destination) {
+    using Source =
+        std::remove_cv_t<typename std::iterator_traits<ForwardIt>::value_type>;
+
+    if constexpr (std::is_same_v<Source, T>) {
+      std::uninitialized_copy(first, last, destination);
+    } else {
+      for (; first != last; ++first, ++destination) {
+        Construct(destination, static_cast<T>(*first));
+      }
     }
   }
 
@@ -313,7 +463,7 @@ class SmallVector {
     if (IsHeap()) SwitchToInline();
 
     for (size_type index = 0; index < count; ++index) {
-      Construct(storage_.inline_data + index, values[index]);
+      Construct(storage_.inline_storage.data + index, values[index]);
     }
     size_ = count;
   }

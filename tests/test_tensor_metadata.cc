@@ -26,10 +26,11 @@ static_assert(std::is_nothrow_move_constructible_v<TensorMetadata>);
 static_assert(!std::is_copy_assignable_v<TensorMetadata>);
 static_assert(!std::is_move_assignable_v<TensorMetadata>);
 
-template <typename T>
+template <typename T, typename Expected>
 void ExpectView(TestContext* context,
                 infini::rt::detail::MetadataView<T> actual,
-                std::initializer_list<T> expected, std::string_view message) {
+                std::initializer_list<Expected> expected,
+                std::string_view message) {
   context->ExpectEqual(actual,
                        std::vector<T>(expected.begin(), expected.end()),
                        message);
@@ -84,6 +85,14 @@ void TestEmptyMetadata(TestContext* context) {
   context->Expect(
       explicit_empty.strides().empty(),
       "Explicit rank-zero metadata should have empty strides.");
+
+  const std::array<std::size_t, 0> empty_shape{};
+  const std::array<std::ptrdiff_t, 0> empty_strides{};
+  const TensorMetadata empty_array_metadata{empty_shape, empty_strides};
+  context->Expect(
+      empty_array_metadata.shape().empty() &&
+          empty_array_metadata.strides().empty(),
+      "Empty standard arrays should construct rank-zero metadata.");
 }
 
 void TestInlineMetadata(TestContext* context) {

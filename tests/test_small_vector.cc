@@ -136,6 +136,12 @@ void TestConstruction(TestContext* context) {
   context->ExpectEqual(empty.capacity(), std::size_t{4},
                        "A default SmallVector should expose inline capacity.");
 
+  const std::size_t* null_range = nullptr;
+  Inline4 empty_pointer_range{null_range, null_range};
+  context->Expect(
+      empty_pointer_range.empty(),
+      "An empty null pointer range should construct an empty SmallVector.");
+
   Inline4 counted(3);
   ExpectValues(context, counted, {0, 0, 0},
                "The count constructor should value-initialize elements.");

@@ -261,14 +261,24 @@ void RunRank2Controls(float* data, const Device& device) {
 int main() {
   std::cerr << "sizeof(TensorView)=" << sizeof(TensorView)
             << " sizeof(Shape)=" << sizeof(TensorView::Shape)
-            << " sizeof(Strides)=" << sizeof(TensorView::Strides) << '\n';
+            << " sizeof(Strides)=" << sizeof(TensorView::Strides)
+            << " sizeof(ShapeView)=" << sizeof(TensorView::ShapeView)
+            << " sizeof(StridesView)=" << sizeof(TensorView::StridesView)
+            << '\n';
 
 #if INFINI_RT_HAS_SMALL_VECTOR
   std::cerr
       << "sizeof(SmallVector<Size, 4>)="
       << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 4>)
       << " sizeof(SmallVector<Size, 8>)="
-      << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 8>) << '\n';
+      << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 8>)
+      << " sizeof(TensorMetadata<4>)="
+      << sizeof(infini::rt::detail::TensorMetadata<
+                TensorView::Size, TensorView::Stride, 4>)
+      << " sizeof(TensorMetadata<8>)="
+      << sizeof(infini::rt::detail::TensorMetadata<
+                TensorView::Size, TensorView::Stride, 8>)
+      << '\n';
 #endif
 
   std::array<float, 512> data{};

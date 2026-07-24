@@ -2,15 +2,35 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace `TensorView`'s two heap-backed metadata vectors with a narrow in-tree inline container, then choose inline capacity 4 or 8 from allocation, latency, and object-size evidence.
+**Goal:** Replace `TensorView`'s two heap-backed metadata vectors with one
+TensorView-specific metadata owner, then choose inline capacity 4 or 8 from
+allocation, latency, and object-size evidence.
 
-**Architecture:** Add a header-only `infini::rt::detail::SmallVector<T, N>` restricted to trivial element types. Keep `TensorView`'s owned metadata and existing constructors, but construct generic ranges through iterators. Benchmark the post-#33 vector implementation, capacity 4, and capacity 8 from independent source trees before retaining exactly one source constant.
+**Architecture:** Retain the narrow
+`infini::rt::detail::SmallVector<T, N>` as an owning public input type, but
+store shape and strides in one three-state `TensorMetadata`: inline SoA,
+single-allocation combined overflow, or split overflow adopted from exact
+SmallVector rvalues. Return contiguous metadata views by value. Benchmark the
+post-#33 vector implementation, combined capacity 4, and combined capacity 8
+from independent source trees before retaining exactly one source constant.
 
 **Tech Stack:** C++17, CMake/CTest, the existing InfiniRT performance runner, clang-format 21, Linux allocation instrumentation, Docker, and the `accelerator-dev/nvidia:latest` image.
 
 ---
 
-The approved design at `docs/superpowers/specs/2026-07-23-tensor-view-small-vector-design.md` is the source of truth. Do not add a version or `SOVERSION` change, a public capacity option, a third-party container, borrowed metadata, or unrelated `TensorView` behavior changes.
+The revised design at
+`docs/superpowers/specs/2026-07-23-tensor-view-small-vector-design.md` is the
+source of truth. Do not add a version or `SOVERSION` change, a public capacity
+option, a third-party container, borrowed metadata storage, or unrelated
+`TensorView` behavior changes.
+
+Tasks 1 through 7 below record the completed two-SmallVector experiment and
+are retained for reproducibility. That representation is not the selected
+implementation: capacity 4 and 8 produced 120-byte and 184-byte `TensorView`
+objects, and 52 of 114 performance predicates failed despite substantial
+low-rank wins. Rank-9 paths regressed materially. Task 7A supersedes the
+selection step and is the next implementation work; no result is recorded for
+the combined candidate until its command actually completes.
 
 Because CMake writes generated public headers into the source tree, the vector baseline, capacity-4 candidate, capacity-8 candidate, CPU validation, and NVIDIA validation must use independent source copies. Reusing one source tree with multiple build directories is invalid for this work.
 
@@ -963,6 +983,159 @@ If capacity 8 fails but capacity 4 passes, change the constant and rank-dependen
 
 If capacity 4 fails a baseline gate, stop the integration and return to the combined-metadata fallback. Do not publish an allocation-only regression.
 
+## Task 7A: Implement and Measure the Combined-Metadata Fallback
+
+This task supersedes the retention decision in Task 7. Do not delete or
+overwrite the two-SmallVector refs or raw results until the fallback experiment
+has been reviewed. Use new snapshot, ref, build, and result names containing
+`combined`.
+
+**Files:**
+
+- Modify: `src/common/small_vector.h`
+- Modify: `src/tensor_view.h`
+- Modify if required by the chosen header boundary: `src/tensor_view.cc`
+- Modify: `tests/test_small_vector.cc`
+- Modify: `tests/test_core.cc`
+- Modify: `tests/test_tensor_view_allocations.cc`
+- Modify: `tests/install_consumer_smoke.cc`
+- Modify: `tests/performance/perf_tensor_view.cc`
+
+- [ ] **Step 1: Preserve and audit the rejected experiment evidence**
+
+Record the exact vector baseline, capacity-4, and capacity-8 SHAs; the fifteen
+58-key JSON files; the aggregate; and the gate report. Verify and report these
+observed facts without rewriting them as fallback results:
+
+```text
+two-SmallVector capacity 4 sizeof(TensorView): 120
+two-SmallVector capacity 8 sizeof(TensorView): 184
+decision predicates: 114
+failed predicates: 52
+```
+
+The report must state both sides of the result: common low-rank construction
+and copy paths improved substantially, while object growth and rank-9
+regressions made the representation ineligible for selection.
+
+- [ ] **Step 2: Add RED tests for views and the three ownership states**
+
+Before changing production code, add compile-time and runtime coverage for:
+
+- `shape()` and `strides()` returning lightweight contiguous views by value;
+- `data`, iteration, indexing, size, equality, and const-only element access;
+- no implicit view-to-`Shape` or view-to-`Strides` conversion;
+- independent inline, combined-overflow, and split-adopt lifetime behavior;
+- copy canonicalizing either overflow representation into one combined owner;
+- move construction transferring either overflow representation without a new
+  allocation;
+- moved-from exact inputs remaining destructible and assignable;
+- cleanup after allocation or validation failure, with no leak or double free.
+
+Run the focused build before implementation. Expected result: compilation or
+tests fail because the accessors still return owning containers and the
+three-state owner does not exist.
+
+- [ ] **Step 3: Specify release/adopt behavior in SmallVector tests**
+
+Add a move-only overflow ownership token. Releasing is permitted only for an
+active heap allocation. The token retains its live size and original capacity
+so an over-capacity allocation is released through the matching allocator call.
+An inline value or a non-rvalue input must remain in the source and fall back to
+copying. Test success, over-capacity transfer, inline refusal, token destruction,
+adoption, and exception cleanup before adding the implementation.
+
+Change inline storage construction so a real `T[N]` lifetime begins without
+zero-initializing all `N` elements. Preserve value initialization for the
+count constructor and newly grown `resize` elements. Run the focused tests RED
+before implementing both changes.
+
+- [ ] **Step 4: Implement capacity-4 TensorMetadata**
+
+Add one private metadata owner with these states:
+
+```text
+inline:         Size[4] and Stride[4] stored as SoA in the object
+combined heap:  one aligned allocation containing Size[] then Stride[]
+split adopt:    two existing allocations transferred from Shape and Strides
+```
+
+Use an explicit reviewed state encoding; rank alone cannot distinguish the two
+overflow states. Exact constructors use `const&` overloads for one-allocation
+copying and `&&` overloads for adoption. Generic ranges, initializer lists,
+ordinary default-stride construction, and copies build one combined block.
+Accessors create views from the active state without allocating.
+
+Validate all lengths and perform any potentially throwing allocation before
+releasing rvalue ownership. After release, transfer through move-only tokens
+so every exit path has exactly one owner.
+
+- [ ] **Step 5: Prove the C++17 array and allocation model on every compiler**
+
+The combined block must create actual `Size[]` and `Stride[]` array objects; do
+not placement-construct independent scalars and then expose array pointer
+arithmetic. Use the standard non-allocating placement array-new form and
+document the dependency on the accepted CWG 2382 defect resolution, which
+forbids placement-array overhead for this form.
+
+Compile and run the focused storage tests with the supported GCC, Clang, and
+MSVC C++17 toolchains. On Linux, also run an AddressSanitizer and
+UndefinedBehaviorSanitizer build. Record exact compiler versions and commands.
+Any alignment, lifetime, leak, or double-free report blocks benchmarking.
+
+- [ ] **Step 6: Verify capacity-4 allocation thresholds and functionality**
+
+For ranks 0 through 4, require zero allocations for all existing inline paths.
+At rank 5 and rank 9 require:
+
+| Path | Expected allocations |
+| --- | ---: |
+| lvalue explicit metadata | 1 |
+| initializer-list metadata | 1 |
+| vector-backed generic TensorLike | 1 |
+| ordinary default strides | 1 |
+| overflow copy | 1 |
+| exact-type shape and stride temporaries created inside the scope | 2, with no third allocation |
+| exact-type rvalue shape with generated strides | 2 |
+| exact-sized preconstructed shape and strides moved in | 0 |
+| exact-sized preconstructed shape moved while generating strides | 1 |
+
+Run `test_small_vector`, `test_core`, `test_tensor_view_allocations`, and the
+installed-consumer tests in a clean capacity-4 source. Record
+`sizeof(TensorView)`, both owning input types, and both view types.
+
+- [ ] **Step 7: Benchmark combined capacity 4 against the vector baseline**
+
+Build from an exact committed ref and reuse the unchanged 58-key harness,
+fixed CPU, image, compiler, and five-round paired order from Task 7. Store each
+process in its own JSON file and verify identical unique keys before comparing.
+Apply every baseline gate from the design, including all rank-9 and by-value
+paths. Do not continue to capacity 8 if capacity 4 exceeds a hard gate unless
+the failure is first demonstrated to be harness noise with a pre-declared
+rerun.
+
+- [ ] **Step 8: Drive capacity 8 through a second RED/GREEN cycle**
+
+First require ranks 5 and 8 to use inline storage and rank 9 to follow the
+overflow table above. Confirm RED with capacity 4. Then change only the source
+capacity constant and rank-dependent test expectations to 8, rebuild, and run
+the same compiler, sanitizer, functional, allocation, and installed-consumer
+checks. Record the capacity-8 object and view sizes.
+
+- [ ] **Step 9: Benchmark combined capacity 8 and select from evidence**
+
+Run the same five-round experiment for vector baseline, combined capacity 4,
+and combined capacity 8. Apply all 114 predicates to the corresponding paths,
+including the capacity-8 versus capacity-4 low-rank and rank-5/rank-8 gates.
+Select capacity 8 only if every gate passes. Otherwise select capacity 4 only
+if every capacity-4 baseline gate passes. If neither candidate passes, leave
+`refs/benchmarks/tensor-view/selected` unset and report the measured blocker.
+
+Before continuing, obtain an independent review of the ownership state
+machine, the C++17 object-lifetime argument, the allocation counts, all raw
+result hashes, and the gate aggregation. Do not insert placeholder or inferred
+numbers into the design, compatibility docs, commit message, or pull request.
+
 ## Task 8: Document the Compatibility Boundary
 
 **Files:**
@@ -972,7 +1145,11 @@ If capacity 4 fails a baseline gate, stop the integration and return to the comb
 
 - [ ] **Step 1: Keep public examples source-compatible**
 
-Retain the `std::vector` example in `docs/api/core-types.md`. State that shape and strides are owned, use inline storage through the selected low-rank capacity, and fall back to heap storage above it.
+Retain the `std::vector` construction example in `docs/api/core-types.md`.
+State that `TensorView` owns shape and strides, uses inline storage through the
+selected low-rank capacity, and falls back to owned heap storage above it.
+Document that `shape()` and `strides()` return lightweight contiguous views by
+value rather than owning containers.
 
 - [ ] **Step 2: State the rebuilding requirement**
 
@@ -1020,7 +1197,7 @@ fi
 git reset --soft "$TV_BASE_SHA"
 git commit \
   -m "perf!: inline TensorView metadata" \
-  -m "BREAKING CHANGE: TensorView::Shape and TensorView::Strides now use an inline metadata container. Rebuild consumers against matching InfiniRT headers and libraries."
+  -m "BREAKING CHANGE: TensorView now uses combined inline metadata and its shape/stride accessors return views by value. Rebuild consumers against matching InfiniRT headers and libraries."
 git rebase origin/master
 git update-ref refs/benchmarks/tensor-view/selected HEAD
 ```
