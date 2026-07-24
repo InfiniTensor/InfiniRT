@@ -26,6 +26,21 @@ static_assert(!std::is_move_assignable_v<TensorView>,
               "TensorView should not become move assignable.");
 static_assert(!std::is_constructible_v<TensorView, std::vector<TensorView>>,
               "TensorView should not treat tensor containers as tensor-like.");
+static_assert(
+    std::is_same_v<decltype(std::declval<const TensorView&>().shape()),
+                   TensorView::ShapeView>,
+    "TensorView lvalues should expose a borrowed shape view.");
+static_assert(
+    std::is_same_v<decltype(std::declval<const TensorView&>().strides()),
+                   TensorView::StridesView>,
+    "TensorView lvalues should expose a borrowed strides view.");
+static_assert(std::is_same_v<decltype(std::declval<TensorView&&>().shape()),
+                             TensorView::Shape>,
+              "TensorView rvalues should return an owning shape.");
+static_assert(
+    std::is_same_v<decltype(std::declval<TensorView&&>().strides()),
+                   TensorView::Strides>,
+    "TensorView rvalues should return owning strides.");
 
 struct VectorTensorLike {
   void* data_value;
@@ -255,6 +270,30 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
                        "Equivalent TensorViews should have equal hashes.");
   context->Expect(!strided.IsContiguous(),
                   "TensorView with row padding should not be contiguous.");
+
+  const auto first_shape_view = tensor.shape();
+  const auto second_shape_view = tensor.shape();
+  const auto first_strides_view = tensor.strides();
+  const auto second_strides_view = tensor.strides();
+  context->Expect(
+      first_shape_view.data() == second_shape_view.data(),
+      "Repeated shape access should reference the same owned metadata.");
+  context->Expect(
+      first_strides_view.data() == second_strides_view.data(),
+      "Repeated stride access should reference the same owned metadata.");
+
+  const TensorView copied{tensor};
+  context->Expect(copied.shape().data() != tensor.shape().data(),
+                  "A TensorView copy should own independent shape metadata.");
+  context->Expect(
+      copied.strides().data() != tensor.strides().data(),
+      "A TensorView copy should own independent stride metadata.");
+
+  TensorView::Shape owned_temporary_shape =
+      TensorView{data.data(), shape}.shape();
+  context->ExpectEqual(
+      owned_temporary_shape, shape,
+      "Shape access on a temporary TensorView should return owned metadata.");
 }
 
 }  // namespace

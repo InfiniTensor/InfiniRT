@@ -145,8 +145,9 @@ template <std::size_t Rank>
 void TestConstructionAllocationsForRank(
     infini::rt::test::TestContext* context, void* data,
     const Device& device) {
-  constexpr std::size_t kOwnedMetadataAllocationCount = Rank <= 8 ? 0 : 2;
-  constexpr std::size_t kGeneratedMetadataAllocationCount = Rank <= 8 ? 0 : 1;
+  constexpr std::size_t kCombinedMetadataAllocationCount = Rank <= 4 ? 0 : 1;
+  constexpr std::size_t kRvalueMetadataAllocationCount = Rank <= 4 ? 0 : 2;
+  constexpr std::size_t kGeneratedMetadataAllocationCount = Rank <= 4 ? 0 : 1;
 
   const auto shape_values = MakeShapeValues<Rank>();
   const auto stride_values = MakeStrideValues<Rank>();
@@ -167,7 +168,7 @@ void TestConstructionAllocationsForRank(
         TensorView tensor{data, shape, DataType::kFloat32, device, strides};
         (void)tensor;
       }),
-      kOwnedMetadataAllocationCount, Rank,
+      kCombinedMetadataAllocationCount, Rank,
       "lvalue shape and strides should have the expected allocation count.");
 
   ExpectRankAllocationCount(
@@ -180,7 +181,7 @@ void TestConstructionAllocationsForRank(
             TensorView::Strides{stride_values.begin(), stride_values.end()}};
         (void)tensor;
       }),
-      kOwnedMetadataAllocationCount, Rank,
+      kRvalueMetadataAllocationCount, Rank,
       "exact-type rvalue shape and strides should have the expected allocation "
       "count.");
 
@@ -189,7 +190,7 @@ void TestConstructionAllocationsForRank(
       CountInitializerListConstructionAllocations(
           data, shape_values, stride_values, device,
           std::make_index_sequence<Rank>{}),
-      kOwnedMetadataAllocationCount, Rank,
+      kCombinedMetadataAllocationCount, Rank,
       "initializer-list overload should have the expected allocation count.");
 
   ExpectRankAllocationCount(
@@ -198,7 +199,7 @@ void TestConstructionAllocationsForRank(
         TensorView tensor{tensor_like};
         (void)tensor;
       }),
-      kOwnedMetadataAllocationCount, Rank,
+      kCombinedMetadataAllocationCount, Rank,
       "vector-backed TensorLike should have the expected allocation count.");
 
   ExpectRankAllocationCount(
@@ -207,7 +208,7 @@ void TestConstructionAllocationsForRank(
         TensorView tensor{data, shape, DataType::kFloat32, device};
         (void)tensor;
       }),
-      kOwnedMetadataAllocationCount, Rank,
+      kCombinedMetadataAllocationCount, Rank,
       "ordinary default-stride construction should have the expected "
       "allocation count.");
 
@@ -274,14 +275,14 @@ void TestValueAndDerivedViewAllocations(
         TensorView copied{source8};
         (void)copied;
       }),
-      0, "Copying Rank-8 metadata should stay inline.");
+      1, "Copying Rank-8 metadata should use one combined allocation.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
         TensorView copied{source9};
         (void)copied;
       }),
-      2, "Copying Rank-9 metadata should allocate two independent arrays.");
+      1, "Copying Rank-9 metadata should use one combined allocation.");
 
   TensorView move_source8{data.data(), shape8, DataType::kFloat32, cpu,
                           strides8};
@@ -309,14 +310,14 @@ void TestValueAndDerivedViewAllocations(
         TensorView indexed = source8[0];
         (void)indexed;
       }),
-      0, "Indexing Rank-8 to Rank-7 should stay inline.");
+      1, "Indexing Rank-8 to Rank-7 should use one combined allocation.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
         TensorView indexed = source9[0];
         (void)indexed;
       }),
-      0, "Indexing Rank-9 to Rank-8 should stay inline.");
+      1, "Indexing Rank-9 to Rank-8 should use one combined allocation.");
 
   const TensorView transpose_source{data.data(), TensorView::Shape{2, 2},
                                     DataType::kFloat32, cpu,

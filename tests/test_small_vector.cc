@@ -2,8 +2,11 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdlib>
 #include <initializer_list>
 #include <iterator>
+#include <memory>
+#include <new>
 #include <sstream>
 #include <string_view>
 #include <type_traits>
@@ -14,14 +17,99 @@
 
 namespace {
 
+thread_local bool count_allocations = false;
+thread_local std::size_t allocation_count = 0;
+thread_local bool count_deallocations = false;
+thread_local std::size_t deallocation_count = 0;
+
+class AllocationScope {
+ public:
+  AllocationScope() {
+    allocation_count = 0;
+    count_allocations = true;
+  }
+
+  AllocationScope(const AllocationScope&) = delete;
+
+  AllocationScope& operator=(const AllocationScope&) = delete;
+
+  ~AllocationScope() { count_allocations = false; }
+
+  std::size_t count() const { return allocation_count; }
+};
+
+class DeallocationScope {
+ public:
+  DeallocationScope() {
+    deallocation_count = 0;
+    count_deallocations = true;
+  }
+
+  DeallocationScope(const DeallocationScope&) = delete;
+
+  DeallocationScope& operator=(const DeallocationScope&) = delete;
+
+  ~DeallocationScope() { count_deallocations = false; }
+
+  std::size_t count() const { return deallocation_count; }
+};
+
+template <typename Function>
+std::size_t CountAllocations(Function&& function) {
+  AllocationScope scope;
+  std::forward<Function>(function)();
+  return scope.count();
+}
+
+template <typename Function>
+std::size_t CountDeallocations(Function&& function) {
+  DeallocationScope scope;
+  std::forward<Function>(function)();
+  return scope.count();
+}
+
+}  // namespace
+
+void* operator new(std::size_t size) {
+  if (void* pointer = std::malloc(size == 0 ? 1 : size)) {
+    if (count_allocations) ++allocation_count;
+    return pointer;
+  }
+  throw std::bad_alloc{};
+}
+
+void* operator new[](std::size_t size) { return ::operator new(size); }
+
+void operator delete(void* pointer) noexcept {
+  if (pointer != nullptr && count_deallocations) ++deallocation_count;
+  std::free(pointer);
+}
+
+void operator delete[](void* pointer) noexcept { ::operator delete(pointer); }
+
+void operator delete(void* pointer, std::size_t) noexcept {
+  ::operator delete(pointer);
+}
+
+void operator delete[](void* pointer, std::size_t) noexcept {
+  ::operator delete[](pointer);
+}
+
+namespace {
+
 using Inline4 = infini::rt::detail::SmallVector<std::size_t, 4>;
 using Inline8 = infini::rt::detail::SmallVector<std::size_t, 8>;
+using HeapAllocation = Inline4::HeapAllocation;
 using infini::rt::test::TestContext;
 
 static_assert(std::is_copy_constructible_v<Inline4>);
 static_assert(std::is_move_constructible_v<Inline4>);
 static_assert(std::is_copy_assignable_v<Inline4>);
 static_assert(std::is_move_assignable_v<Inline4>);
+static_assert(!std::is_copy_constructible_v<HeapAllocation>);
+static_assert(!std::is_copy_assignable_v<HeapAllocation>);
+static_assert(std::is_nothrow_move_constructible_v<HeapAllocation>);
+static_assert(std::is_nothrow_move_assignable_v<HeapAllocation>);
 
 template <std::size_t InlineCapacity>
 void ExpectValues(
@@ -30,6 +118,14 @@ void ExpectValues(
     std::initializer_list<std::size_t> expected, std::string_view message) {
   context->ExpectEqual(std::vector<std::size_t>(actual.begin(), actual.end()),
                        std::vector<std::size_t>(expected), message);
+}
+
+void ExpectHeapValues(TestContext* context, const HeapAllocation& actual,
+                      std::initializer_list<std::size_t> expected,
+                      std::string_view message) {
+  context->ExpectEqual(
+      std::vector<std::size_t>(actual.data(), actual.data() + actual.size()),
+      std::vector<std::size_t>(expected), message);
 }
 
 void TestConstruction(TestContext* context) {
@@ -225,6 +321,89 @@ void TestMutation(TestContext* context) {
                   "Assigning an overflow range should use heap storage.");
 }
 
+void TestHeapRelease(TestContext* context) {
+  Inline4 inline_values{1, 2, 3};
+  std::size_t* const inline_data = inline_values.data();
+  HeapAllocation inline_allocation;
+  const std::size_t inline_release_allocations = CountAllocations(
+      [&] { inline_allocation = inline_values.ReleaseHeap(); });
+  context->ExpectEqual(
+      inline_release_allocations, std::size_t{0},
+      "Releasing inline storage should not allocate.");
+  context->Expect(inline_allocation.empty(),
+                  "Releasing inline storage should return an empty owner.");
+  context->Expect(inline_values.data() == inline_data,
+                  "Releasing inline storage should preserve its address.");
+  ExpectValues(context, inline_values, {1, 2, 3},
+               "Releasing inline storage should preserve its values.");
+
+  Inline4 overflow_values{1, 2, 3, 4, 5};
+  overflow_values.reserve(12);
+  std::size_t* const overflow_data = overflow_values.data();
+  const std::size_t overflow_size = overflow_values.size();
+  const std::size_t overflow_capacity = overflow_values.capacity();
+  context->Expect(overflow_capacity > overflow_size,
+                  "The release test should cover spare heap capacity.");
+
+  HeapAllocation allocation;
+  const std::size_t overflow_release_allocations = CountAllocations(
+      [&] { allocation = overflow_values.ReleaseHeap(); });
+  context->ExpectEqual(
+      overflow_release_allocations, std::size_t{0},
+      "Releasing heap storage should not allocate.");
+  context->Expect(allocation.data() == overflow_data,
+                  "Heap release should transfer the original allocation.");
+  context->ExpectEqual(allocation.size(), overflow_size,
+                       "Heap release should preserve the logical size.");
+  context->ExpectEqual(allocation.capacity(), overflow_capacity,
+                       "Heap release should preserve the allocation capacity.");
+  ExpectHeapValues(context, allocation, {1, 2, 3, 4, 5},
+                   "Heap release should preserve every value.");
+  context->Expect(overflow_values.empty(),
+                  "A heap release source should become empty.");
+  context->ExpectEqual(
+      overflow_values.capacity(), std::size_t{4},
+      "A heap release source should restore inline capacity.");
+
+  HeapAllocation second_allocation = overflow_values.ReleaseHeap();
+  context->Expect(second_allocation.empty(),
+                  "Releasing the same source twice should return no heap.");
+  context->Expect(overflow_values.empty(),
+                  "A second heap release should leave the source empty.");
+  overflow_values.assign({9, 8});
+  ExpectValues(context, overflow_values, {9, 8},
+               "A heap release source should remain reusable.");
+
+  HeapAllocation moved_allocation;
+  moved_allocation = std::move(allocation);
+  context->Expect(allocation.empty(),
+                  "Moving a heap owner should empty the source owner.");
+  context->Expect(moved_allocation.data() == overflow_data,
+                  "Moving a heap owner should preserve its allocation.");
+  const std::size_t owner_deallocations = CountDeallocations([&] {
+    HeapAllocation final_allocation{std::move(moved_allocation)};
+  });
+  context->ExpectEqual(
+      owner_deallocations, std::size_t{1},
+      "A moved heap owner should deallocate its allocation exactly once.");
+  context->Expect(moved_allocation.empty(),
+                  "Moving a heap owner should leave it non-owning.");
+
+  Inline4 released_values{4, 3, 2, 1, 0};
+  released_values.reserve(10);
+  HeapAllocation released_allocation = released_values.ReleaseHeap();
+  const std::size_t released_capacity = released_allocation.capacity();
+  std::size_t* const released_data = released_allocation.release();
+  context->Expect(released_allocation.empty(),
+                  "Explicit release should empty the heap owner.");
+  context->Expect(released_allocation.release() == nullptr,
+                  "Explicit release should return the allocation only once.");
+  context->ExpectEqual(released_data[0], std::size_t{4},
+                       "Explicit release should return the owned values.");
+  std::allocator<std::size_t> allocator;
+  allocator.deallocate(released_data, released_capacity);
+}
+
 void TestCopySemantics(TestContext* context) {
   Inline4 inline_source{1, 2, 3};
   Inline4 inline_copy{inline_source};
@@ -316,6 +495,7 @@ int main() {
   TestAccessorsAndIterators(&context);
   TestEquality(&context);
   TestMutation(&context);
+  TestHeapRelease(&context);
   TestCopySemantics(&context);
   TestMoveSemantics(&context);
 
