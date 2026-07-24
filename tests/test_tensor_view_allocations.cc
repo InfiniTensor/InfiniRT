@@ -145,9 +145,9 @@ template <std::size_t Rank>
 void TestConstructionAllocationsForRank(
     infini::rt::test::TestContext* context, void* data,
     const Device& device) {
-  constexpr std::size_t kCombinedMetadataAllocationCount = Rank <= 4 ? 0 : 1;
-  constexpr std::size_t kRvalueMetadataAllocationCount = Rank <= 4 ? 0 : 2;
-  constexpr std::size_t kGeneratedMetadataAllocationCount = Rank <= 4 ? 0 : 1;
+  constexpr std::size_t kCombinedMetadataAllocationCount = Rank <= 8 ? 0 : 1;
+  constexpr std::size_t kRvalueMetadataAllocationCount = Rank <= 8 ? 0 : 2;
+  constexpr std::size_t kGeneratedMetadataAllocationCount = Rank <= 8 ? 0 : 1;
 
   const auto shape_values = MakeShapeValues<Rank>();
   const auto stride_values = MakeStrideValues<Rank>();
@@ -275,7 +275,7 @@ void TestValueAndDerivedViewAllocations(
         TensorView copied{source8};
         (void)copied;
       }),
-      1, "Copying Rank-8 metadata should use one combined allocation.");
+      0, "Copying Rank-8 metadata should stay inline.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
@@ -310,14 +310,14 @@ void TestValueAndDerivedViewAllocations(
         TensorView indexed = source8[0];
         (void)indexed;
       }),
-      1, "Indexing Rank-8 to Rank-7 should use one combined allocation.");
+      0, "Indexing Rank-8 to Rank-7 should stay inline.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
         TensorView indexed = source9[0];
         (void)indexed;
       }),
-      1, "Indexing Rank-9 to Rank-8 should use one combined allocation.");
+      0, "Indexing Rank-9 to Rank-8 should stay inline.");
 
   const TensorView transpose_source{data.data(), TensorView::Shape{2, 2},
                                     DataType::kFloat32, cpu,
