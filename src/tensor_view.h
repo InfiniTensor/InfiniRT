@@ -16,7 +16,7 @@ namespace infini::rt {
 
 namespace tensor_view_detail {
 
-inline constexpr std::size_t kInlineMetadataCapacity = 4;
+inline constexpr std::size_t kInlineMetadataCapacity = 8;
 
 template <typename Metadata, typename Range>
 Metadata CopyMetadata(const Range& range) {
