@@ -18,7 +18,7 @@ namespace infini::rt {
 
 namespace tensor_view_detail {
 
-inline constexpr std::size_t kInlineMetadataCapacity = 4;
+inline constexpr std::size_t kInlineMetadataCapacity = 8;
 
 template <typename T, typename = void>
 struct IsTensorLike : std::false_type {};
