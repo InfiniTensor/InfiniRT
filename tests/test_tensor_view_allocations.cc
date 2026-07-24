@@ -100,213 +100,223 @@ struct VectorTensorLike {
 
 void TestConstructionAllocationMatrix(
     infini::rt::test::TestContext* context) {
-  std::array<float, 32> data{};
+  std::array<float, 512> data{};
   const Device cpu{Device::Type::kCpu};
-  const TensorView::Shape shape4{2, 2, 2, 2};
-  const TensorView::Strides strides4{8, 4, 2, 1};
-  const TensorView::Shape shape5{2, 2, 2, 2, 2};
-  const TensorView::Strides strides5{16, 8, 4, 2, 1};
-  const VectorTensorLike tensor_like4{data.data(),
-                                      {2, 2, 2, 2},
-                                      DataType::kFloat32,
-                                      cpu,
-                                      {8, 4, 2, 1}};
-  const VectorTensorLike tensor_like5{data.data(),
-                                      {2, 2, 2, 2, 2},
-                                      DataType::kFloat32,
-                                      cpu,
-                                      {16, 8, 4, 2, 1}};
+  const TensorView::Shape shape8{2, 2, 2, 2, 2, 2, 2, 2};
+  const TensorView::Strides strides8{128, 64, 32, 16, 8, 4, 2, 1};
+  const TensorView::Shape shape9{2, 2, 2, 2, 2, 2, 2, 2, 2};
+  const TensorView::Strides strides9{256, 128, 64, 32, 16, 8, 4, 2, 1};
+  const VectorTensorLike tensor_like8{
+      data.data(),
+      {2, 2, 2, 2, 2, 2, 2, 2},
+      DataType::kFloat32,
+      cpu,
+      {128, 64, 32, 16, 8, 4, 2, 1}};
+  const VectorTensorLike tensor_like9{
+      data.data(),
+      {2, 2, 2, 2, 2, 2, 2, 2, 2},
+      DataType::kFloat32,
+      cpu,
+      {256, 128, 64, 32, 16, 8, 4, 2, 1}};
 
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView tensor{data.data(), shape4, DataType::kFloat32, cpu,
-                          strides4};
+        TensorView tensor{data.data(), shape8, DataType::kFloat32, cpu,
+                          strides8};
         (void)tensor;
       }),
-      0, "Rank-4 lvalue metadata should stay inline.");
+      0, "Rank-8 lvalue metadata should stay inline.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView tensor{data.data(), shape5, DataType::kFloat32, cpu,
-                          strides5};
+        TensorView tensor{data.data(), shape9, DataType::kFloat32, cpu,
+                          strides9};
         (void)tensor;
       }),
-      2, "Rank-5 lvalue metadata should allocate two owned arrays.");
+      2, "Rank-9 lvalue metadata should allocate two owned arrays.");
 
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView tensor{data.data(), TensorView::Shape{2, 2, 2, 2},
+        TensorView tensor{
+            data.data(), TensorView::Shape{2, 2, 2, 2, 2, 2, 2, 2},
+            DataType::kFloat32, cpu,
+            TensorView::Strides{128, 64, 32, 16, 8, 4, 2, 1}};
+        (void)tensor;
+      }),
+      0, "Rank-8 exact metadata temporaries should stay inline.");
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{
+            data.data(), TensorView::Shape{2, 2, 2, 2, 2, 2, 2, 2, 2},
+            DataType::kFloat32, cpu,
+            TensorView::Strides{256, 128, 64, 32, 16, 8, 4, 2, 1}};
+        (void)tensor;
+      }),
+      2, "Rank-9 exact metadata temporaries should allocate twice.");
+
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{data.data(),
+                          {2, 2, 2, 2, 2, 2, 2, 2},
+                          DataType::kFloat32,
+                          cpu,
+                          {128, 64, 32, 16, 8, 4, 2, 1}};
+        (void)tensor;
+      }),
+      0, "Rank-8 initializer-list metadata should stay inline.");
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{data.data(),
+                          {2, 2, 2, 2, 2, 2, 2, 2, 2},
+                          DataType::kFloat32,
+                          cpu,
+                          {256, 128, 64, 32, 16, 8, 4, 2, 1}};
+        (void)tensor;
+      }),
+      2, "Rank-9 initializer-list metadata should allocate twice.");
+
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{tensor_like8};
+        (void)tensor;
+      }),
+      0, "Rank-8 vector-backed TensorLike metadata should stay inline.");
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{tensor_like9};
+        (void)tensor;
+      }),
+      2, "Rank-9 vector-backed TensorLike metadata should allocate twice.");
+
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{data.data(), shape8, DataType::kFloat32, cpu};
+        (void)tensor;
+      }),
+      0, "Rank-8 ordinary default-stride construction should stay inline.");
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{data.data(), shape9, DataType::kFloat32, cpu};
+        (void)tensor;
+      }),
+      2, "Rank-9 ordinary default-stride construction should allocate twice.");
+
+  TensorView::Shape explicit_move_shape8{2, 2, 2, 2, 2, 2, 2, 2};
+  TensorView::Strides explicit_move_strides8{128, 64, 32, 16, 8, 4, 2, 1};
+  TensorView::Shape explicit_move_shape9{2, 2, 2, 2, 2, 2, 2, 2, 2};
+  TensorView::Strides explicit_move_strides9{256, 128, 64, 32, 16, 8, 4, 2, 1};
+
+  ExpectAllocationCount(
+      context,
+      CountAllocations([&] {
+        TensorView tensor{data.data(), std::move(explicit_move_shape8),
                           DataType::kFloat32, cpu,
-                          TensorView::Strides{8, 4, 2, 1}};
+                          std::move(explicit_move_strides8)};
         (void)tensor;
       }),
-      0, "Rank-4 exact metadata temporaries should stay inline.");
+      0, "Moving Rank-8 explicit metadata should not allocate.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView tensor{data.data(), TensorView::Shape{2, 2, 2, 2, 2},
+        TensorView tensor{data.data(), std::move(explicit_move_shape9),
                           DataType::kFloat32, cpu,
-                          TensorView::Strides{16, 8, 4, 2, 1}};
+                          std::move(explicit_move_strides9)};
         (void)tensor;
       }),
-      2, "Rank-5 exact metadata temporaries should allocate twice.");
+      0, "Moving Rank-9 explicit metadata should not allocate.");
+
+  TensorView::Shape default_move_shape8{2, 2, 2, 2, 2, 2, 2, 2};
+  TensorView::Shape default_move_shape9{2, 2, 2, 2, 2, 2, 2, 2, 2};
 
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView tensor{data.data(), {2, 2, 2, 2}, DataType::kFloat32, cpu,
-                          {8, 4, 2, 1}};
-        (void)tensor;
-      }),
-      0, "Rank-4 initializer-list metadata should stay inline.");
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{data.data(), {2, 2, 2, 2, 2},
-                          DataType::kFloat32, cpu, {16, 8, 4, 2, 1}};
-        (void)tensor;
-      }),
-      2, "Rank-5 initializer-list metadata should allocate twice.");
-
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{tensor_like4};
-        (void)tensor;
-      }),
-      0, "Rank-4 vector-backed TensorLike metadata should stay inline.");
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{tensor_like5};
-        (void)tensor;
-      }),
-      2, "Rank-5 vector-backed TensorLike metadata should allocate twice.");
-
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{data.data(), shape4, DataType::kFloat32, cpu};
-        (void)tensor;
-      }),
-      0, "Rank-4 ordinary default-stride construction should stay inline.");
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{data.data(), shape5, DataType::kFloat32, cpu};
-        (void)tensor;
-      }),
-      2, "Rank-5 ordinary default-stride construction should allocate twice.");
-
-  TensorView::Shape explicit_move_shape4{2, 2, 2, 2};
-  TensorView::Strides explicit_move_strides4{8, 4, 2, 1};
-  TensorView::Shape explicit_move_shape5{2, 2, 2, 2, 2};
-  TensorView::Strides explicit_move_strides5{16, 8, 4, 2, 1};
-
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{data.data(), std::move(explicit_move_shape4),
-                          DataType::kFloat32, cpu,
-                          std::move(explicit_move_strides4)};
-        (void)tensor;
-      }),
-      0, "Moving rank-4 explicit metadata should not allocate.");
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{data.data(), std::move(explicit_move_shape5),
-                          DataType::kFloat32, cpu,
-                          std::move(explicit_move_strides5)};
-        (void)tensor;
-      }),
-      0, "Moving rank-5 explicit metadata should not allocate.");
-
-  TensorView::Shape default_move_shape4{2, 2, 2, 2};
-  TensorView::Shape default_move_shape5{2, 2, 2, 2, 2};
-
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView tensor{data.data(), std::move(default_move_shape4),
+        TensorView tensor{data.data(), std::move(default_move_shape8),
                           DataType::kFloat32, cpu};
         (void)tensor;
       }),
-      0, "Moving a rank-4 shape while generating strides should stay inline.");
+      0, "Moving a Rank-8 shape while generating strides should stay inline.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView tensor{data.data(), std::move(default_move_shape5),
+        TensorView tensor{data.data(), std::move(default_move_shape9),
                           DataType::kFloat32, cpu};
         (void)tensor;
       }),
-      1, "Moving a rank-5 shape should allocate only default strides.");
+      1, "Moving a Rank-9 shape should allocate only default strides.");
 }
 
 void TestValueAndDerivedViewAllocations(
     infini::rt::test::TestContext* context) {
-  std::array<float, 32> data{};
+  std::array<float, 512> data{};
   const Device cpu{Device::Type::kCpu};
-  const TensorView::Shape shape4{2, 2, 2, 2};
-  const TensorView::Strides strides4{8, 4, 2, 1};
-  const TensorView::Shape shape5{2, 2, 2, 2, 2};
-  const TensorView::Strides strides5{16, 8, 4, 2, 1};
-  const TensorView source4{data.data(), shape4, DataType::kFloat32, cpu,
-                           strides4};
-  const TensorView source5{data.data(), shape5, DataType::kFloat32, cpu,
-                           strides5};
+  const TensorView::Shape shape8{2, 2, 2, 2, 2, 2, 2, 2};
+  const TensorView::Strides strides8{128, 64, 32, 16, 8, 4, 2, 1};
+  const TensorView::Shape shape9{2, 2, 2, 2, 2, 2, 2, 2, 2};
+  const TensorView::Strides strides9{256, 128, 64, 32, 16, 8, 4, 2, 1};
+  const TensorView source8{data.data(), shape8, DataType::kFloat32, cpu,
+                           strides8};
+  const TensorView source9{data.data(), shape9, DataType::kFloat32, cpu,
+                           strides9};
 
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView copied{source4};
+        TensorView copied{source8};
         (void)copied;
       }),
-      0, "Copying rank-4 metadata should stay inline.");
+      0, "Copying Rank-8 metadata should stay inline.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView copied{source5};
+        TensorView copied{source9};
         (void)copied;
       }),
-      2, "Copying rank-5 metadata should allocate two independent arrays.");
+      2, "Copying Rank-9 metadata should allocate two independent arrays.");
 
-  TensorView move_source4{data.data(), shape4, DataType::kFloat32, cpu,
-                          strides4};
-  TensorView move_source5{data.data(), shape5, DataType::kFloat32, cpu,
-                          strides5};
+  TensorView move_source8{data.data(), shape8, DataType::kFloat32, cpu,
+                          strides8};
+  TensorView move_source9{data.data(), shape9, DataType::kFloat32, cpu,
+                          strides9};
 
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView moved{std::move(move_source4)};
+        TensorView moved{std::move(move_source8)};
         (void)moved;
       }),
-      0, "Moving rank-4 metadata should not allocate.");
+      0, "Moving Rank-8 metadata should not allocate.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView moved{std::move(move_source5)};
+        TensorView moved{std::move(move_source9)};
         (void)moved;
       }),
-      0, "Moving rank-5 metadata should transfer heap storage.");
+      0, "Moving Rank-9 metadata should transfer heap storage.");
 
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView indexed = source4[0];
+        TensorView indexed = source8[0];
         (void)indexed;
       }),
-      0, "Indexing rank 4 to rank 3 should stay inline.");
+      0, "Indexing Rank-8 to Rank-7 should stay inline.");
   ExpectAllocationCount(
       context,
       CountAllocations([&] {
-        TensorView indexed = source5[0];
+        TensorView indexed = source9[0];
         (void)indexed;
       }),
-      0, "Indexing rank 5 to rank 4 should stay inline.");
+      0, "Indexing Rank-9 to Rank-8 should stay inline.");
 
   const TensorView transpose_source{data.data(), TensorView::Shape{2, 2},
                                     DataType::kFloat32, cpu,
