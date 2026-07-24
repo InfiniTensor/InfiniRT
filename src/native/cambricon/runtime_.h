@@ -5,7 +5,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <type_traits>
 
 #include "native/cambricon/device_.h"
 #include "runtime.h"
@@ -67,12 +66,7 @@ struct Runtime<Device::Type::kCambricon>
   static constexpr auto MemcpyAsync = [](void* dst, const void* src,
                                          std::size_t size, auto kind,
                                          Stream stream) {
-    if constexpr (std::is_invocable_v<decltype(&cnrtMemcpyAsync), void*, void*,
-                                      std::size_t, decltype(kind), Stream>) {
-      return cnrtMemcpyAsync(dst, const_cast<void*>(src), size, kind, stream);
-    } else {
-      return cnrtMemcpyAsync(dst, const_cast<void*>(src), size, stream, kind);
-    }
+    return cnrtMemcpyAsync_V2(dst, const_cast<void*>(src), size, stream, kind);
   };
 
   static constexpr auto kMemcpyHostToHost = cnrtMemcpyHostToHost;
