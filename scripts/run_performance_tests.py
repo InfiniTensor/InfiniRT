@@ -6,7 +6,6 @@ import platform
 import subprocess
 import sys
 
-
 _BACKEND_OPTIONS = (
     ("WITH_NVIDIA", "nvidia"),
     ("WITH_ILUVATAR", "iluvatar"),
@@ -39,7 +38,7 @@ def _read_cmake_cache(build_dir):
         return values
 
     for line in cache_path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if line.startswith("//") or line.startswith("#") or "=" not in line:
+        if line.startswith(("//", "#")) or "=" not in line:
             continue
         key_type, value = line.split("=", 1)
         key = key_type.split(":", 1)[0]
@@ -105,8 +104,7 @@ def _run_executable(path):
         [str(path)],
         cwd=path.parent,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
     )
     if completed.stderr:

@@ -85,6 +85,16 @@ if(WITH_HYGON)
         HYGON infini::rt::Device::Type::kHygon 1)
 endif()
 
+if(WITH_THEAD)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        THEAD infini::rt::Device::Type::kThead
+        infini/rt/thead/runtime_.h
+        1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        THEAD infini::rt::Device::Type::kThead 1)
+endif()
+
 if(WITH_METAX)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
@@ -136,6 +146,10 @@ if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_HYGON=1)
     endif()
+    if(WITH_THEAD)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_THEAD=1)
+    endif()
     if(WITH_METAX)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_METAX=1)
@@ -177,6 +191,11 @@ elseif(WITH_HYGON)
     set(INFINI_RT_TEST_CONSUMER_BACKEND HYGON)
     if(NOT INFINI_RT_TEST_CUDATOOLKIT_ROOT)
         set(INFINI_RT_TEST_CUDATOOLKIT_ROOT "${HYGON_CUDA_ROOT}")
+    endif()
+elseif(WITH_THEAD)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND THEAD)
+    if(NOT INFINI_RT_TEST_CUDATOOLKIT_ROOT)
+        set(INFINI_RT_TEST_CUDATOOLKIT_ROOT "${THEAD_CUDA_ROOT}")
     endif()
 elseif(WITH_METAX)
     set(INFINI_RT_TEST_CONSUMER_BACKEND METAX)

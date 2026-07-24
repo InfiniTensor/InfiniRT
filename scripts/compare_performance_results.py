@@ -8,7 +8,7 @@ def _load_results(path):
     if isinstance(data, dict) and "results" in data:
         data = data["results"]
     if not isinstance(data, list):
-        raise ValueError(f"{path} must contain a JSON array or an object with results")
+        raise TypeError(f"{path} must contain a JSON array or an object with results")
     return data
 
 
