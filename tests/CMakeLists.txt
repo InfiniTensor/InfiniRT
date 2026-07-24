@@ -46,6 +46,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
                        test_tensor_view_allocations.cc)
 endif()
 
+add_test(
+    NAME test_ambiguous_metax_family_autodetect
+    COMMAND "${CMAKE_COMMAND}"
+            "-DINFINI_RT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+            "-DINFINI_RT_TEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/ambiguous_metax_family"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/test_ambiguous_metax_family_autodetect.cmake")
+
 set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND OFF)
 
 if(WITH_CPU)
@@ -91,6 +98,18 @@ if(WITH_METAX)
         METAX infini::rt::Device::Type::kMetax
         infini/rt/metax/runtime_.h
         1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        METAX infini::rt::Device::Type::kMetax 1)
+endif()
+
+if(WITH_MARS)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        MARS infini::rt::Device::Type::kMars
+        infini/rt/mars/runtime_.h
+        1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        MARS infini::rt::Device::Type::kMars 1)
 endif()
 
 if(WITH_MOORE)
@@ -140,6 +159,10 @@ if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_METAX=1)
     endif()
+    if(WITH_MARS)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_MARS=1)
+    endif()
     if(WITH_MOORE)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_MOORE=1)
@@ -182,6 +205,10 @@ elseif(WITH_METAX)
     set(INFINI_RT_TEST_CONSUMER_BACKEND METAX)
     set(INFINI_RT_TEST_BACKEND_ROOT_VARIABLE InfiniRT_METAX_ROOT)
     set(INFINI_RT_TEST_BACKEND_ROOT "${MACA_PATH}")
+elseif(WITH_MARS)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND MARS)
+    set(INFINI_RT_TEST_BACKEND_ROOT_VARIABLE InfiniRT_MARS_ROOT)
+    set(INFINI_RT_TEST_BACKEND_ROOT "${HPCC_PATH}")
 elseif(WITH_MOORE)
     set(INFINI_RT_TEST_CONSUMER_BACKEND MOORE)
     set(INFINI_RT_TEST_BACKEND_ROOT_VARIABLE InfiniRT_MOORE_ROOT)

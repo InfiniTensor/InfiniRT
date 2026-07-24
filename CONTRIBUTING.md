@@ -117,6 +117,7 @@ Common backend options are:
 -DWITH_ILUVATAR=ON
 -DWITH_HYGON=ON
 -DWITH_METAX=ON
+-DWITH_MARS=ON
 -DWITH_MOORE=ON
 -DWITH_CAMBRICON=ON
 -DWITH_ASCEND=ON
@@ -200,7 +201,8 @@ ruff check .
 
 1. **CMake cannot find a backend SDK**: Check the backend-specific environment
    variables documented in `docs/backends.md`, such as `DTK_ROOT`,
-   `MACA_PATH`, `MUSA_ROOT`, `NEUWARE_HOME`, or `ASCEND_HOME_PATH`.
+   `MACA_PATH`, `HPCC_PATH`, `MUSA_ROOT`, `NEUWARE_HOME`, or
+   `ASCEND_HOME_PATH`.
 2. **Switching between backends gives stale build errors**: Use a separate
    build directory per platform or delete the stale build directory.
 3. **Generated headers are stale**: Re-run CMake configure. Public headers are

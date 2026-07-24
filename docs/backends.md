@@ -12,6 +12,7 @@ backend.
 | NVIDIA | `WITH_NVIDIA` | Requires CUDA toolkit. |
 | Iluvatar | `WITH_ILUVATAR` | CUDA-compatible backend using clang with ivcore flags. |
 | MetaX | `WITH_METAX` | Requires `MACA_PATH`. |
+| Mars | `WITH_MARS` | Requires the HPCC SDK from `HPCC_PATH` or `/opt/hpcc`. |
 | Moore | `WITH_MOORE` | Requires `MUSA_ROOT`, `MUSA_HOME`, or `MUSA_PATH`. |
 | Hygon | `WITH_HYGON` | Requires DTK and a DTK CUDA toolkit. |
 | Cambricon | `WITH_CAMBRICON` | Requires `NEUWARE_HOME`. |
@@ -19,6 +20,9 @@ backend.
 
 Only one accelerator backend can be enabled at a time. CPU can be enabled
 together with the selected accelerator backend.
+
+When both HPCC and MACA SDKs are installed, select `WITH_MARS` or `WITH_METAX`
+explicitly. Automatic detection rejects an ambiguous MetaX-family environment.
 
 ## Runtime API Support
 
@@ -33,7 +37,8 @@ Current test expectations are:
 | CPU | No | Yes | No | Yes | No | Yes | No |
 | NVIDIA | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Iluvatar | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| MetaX | Yes | Yes | Yes | Yes | Yes | Yes | No |
+| MetaX | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Mars | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Moore | Yes | Yes | No | Yes | Yes | Yes | No |
 | Hygon | Yes | Yes | Yes | Yes | Yes | Yes | No |
 | Cambricon | Yes | No | No | No | No | No | No |

@@ -24,6 +24,7 @@ int main() {
     defined(INFINI_RT_CONSUMER_BACKEND_ILUVATAR) ||  \
     defined(INFINI_RT_CONSUMER_BACKEND_HYGON) ||     \
     defined(INFINI_RT_CONSUMER_BACKEND_METAX) ||     \
+    defined(INFINI_RT_CONSUMER_BACKEND_MARS) ||      \
     defined(INFINI_RT_CONSUMER_BACKEND_MOORE) ||     \
     defined(INFINI_RT_CONSUMER_BACKEND_CAMBRICON) || \
     defined(INFINI_RT_CONSUMER_BACKEND_ASCEND)
@@ -42,6 +43,9 @@ int main() {
   constexpr bool kExpectAsyncMemcpySuccess = true;
 #elif defined(INFINI_RT_CONSUMER_BACKEND_METAX)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kMetax;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_MARS)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kMars;
   constexpr bool kExpectAsyncMemcpySuccess = true;
 #elif defined(INFINI_RT_CONSUMER_BACKEND_MOORE)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kMoore;
