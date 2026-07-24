@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -169,9 +170,11 @@ class TensorMetadata {
                              shape_bytes);
       std::size_t stride_space = bytes - shape_bytes;
 
-      if (std::align(alignof(Stride), strides_bytes, stride_storage,
-                     stride_space) == nullptr) {
-        throw std::bad_alloc{};
+      const void* const aligned_stride_storage =
+          std::align(alignof(Stride), strides_bytes, stride_storage,
+                     stride_space);
+      if (aligned_stride_storage == nullptr) {
+        std::abort();
       }
 
       shape_ = shape_size == 0
@@ -208,8 +211,9 @@ class TensorMetadata {
 
     static std::size_t CheckedMultiply(std::size_t left,
                                        std::size_t right) {
-      if (left > std::numeric_limits<std::size_t>::max() / right) {
-        throw std::bad_array_new_length{};
+      if (right != 0 &&
+          left > std::numeric_limits<std::size_t>::max() / right) {
+        std::abort();
       }
 
       return left * right;
@@ -217,7 +221,7 @@ class TensorMetadata {
 
     static std::size_t CheckedAdd(std::size_t left, std::size_t right) {
       if (left > std::numeric_limits<std::size_t>::max() - right) {
-        throw std::bad_array_new_length{};
+        std::abort();
       }
 
       return left + right;
@@ -240,7 +244,7 @@ class TensorMetadata {
 
   static std::uint32_t NarrowSize(std::size_t size) {
     if (size > std::numeric_limits<std::uint32_t>::max()) {
-      throw std::bad_array_new_length{};
+      std::abort();
     }
 
     return static_cast<std::uint32_t>(size);

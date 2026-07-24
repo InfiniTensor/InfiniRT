@@ -1070,6 +1070,10 @@ Validate all lengths and perform any potentially throwing allocation before
 releasing rvalue ownership. After release, transfer through move-only tokens
 so every exit path has exactly one owner.
 
+Store metadata lengths as `std::uint32_t`. Treat a range longer than
+`UINT32_MAX` as a fatal constructor-precondition violation, and terminate
+before conversion, allocation-size arithmetic, or ownership transfer.
+
 - [ ] **Step 5: Prove the C++17 array and allocation model on every compiler**
 
 The combined block must create actual `Size[]` and `Stride[]` array objects; do

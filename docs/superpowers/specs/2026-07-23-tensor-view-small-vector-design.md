@@ -180,6 +180,10 @@ mode owns the two arrays released by exact rvalue inputs. A compact explicit
 state tag, or an equivalently reviewed encoding, distinguishes the two
 overflow modes; rank alone cannot distinguish them.
 
+Metadata lengths are encoded as `std::uint32_t`. A range longer than
+`UINT32_MAX` violates the constructor precondition and terminates before any
+length conversion, allocation-size calculation, or ownership transfer.
+
 The combined block must not rely on pointer arithmetic over individually
 placement-constructed scalar objects. It creates actual array objects with
 non-allocating placement array new. The C++17 implementation relies on the
