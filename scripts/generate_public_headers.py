@@ -36,6 +36,11 @@ _DEVICE_HEADERS = {
         ("metax", "device_.h", "native/cuda/metax/device_.h"),
         ("metax", "runtime_.h", "native/cuda/metax/runtime_.h"),
     ),
+    "mars": (
+        ("mars", "data_type_.h", "native/cuda/mars/data_type_.h"),
+        ("mars", "device_.h", "native/cuda/mars/device_.h"),
+        ("mars", "runtime_.h", "native/cuda/mars/runtime_.h"),
+    ),
     "moore": (
         ("moore", "data_type_.h", "native/cuda/moore/data_type_.h"),
         ("moore", "device_.h", "native/cuda/moore/device_.h"),
@@ -60,6 +65,7 @@ _DEVICE_TYPES = {
     "hygon": "Device::Type::kHygon",
     "thead": "Device::Type::kThead",
     "metax": "Device::Type::kMetax",
+    "mars": "Device::Type::kMars",
     "moore": "Device::Type::kMoore",
     "cambricon": "Device::Type::kCambricon",
     "ascend": "Device::Type::kAscend",
@@ -71,6 +77,7 @@ _DEFAULT_DEVICE_PRIORITY = (
     "hygon",
     "thead",
     "metax",
+    "mars",
     "moore",
     "cambricon",
     "ascend",
