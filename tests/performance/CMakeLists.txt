@@ -30,3 +30,5 @@ endfunction()
 add_infini_rt_performance_test(perf_runtime_dispatch perf_runtime_dispatch.cc)
 add_infini_rt_performance_test(perf_memory perf_memory.cc)
 add_infini_rt_performance_test(perf_tensor_view perf_tensor_view.cc)
+add_infini_rt_performance_test(perf_tensor_view_footprint
+                               perf_tensor_view_footprint.cc)

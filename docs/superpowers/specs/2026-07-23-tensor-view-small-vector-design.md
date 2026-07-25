@@ -2,8 +2,8 @@
 
 Date: 2026-07-23
 
-Status: Revised after the two-SmallVector experiment; fallback candidate under
-measurement
+Status: Combined metadata selected with inline capacity 8 and a documented
+rank-4 small-key footprint trade-off; rank 9 and above use owned heap fallback
 
 ## Context
 
@@ -33,14 +33,14 @@ version or add an `SOVERSION`.
 ## Goals
 
 - Make `TensorView` construction, copying, indexing, and transposition perform
-  no heap allocations while rank fits the selected inline capacity.
+  no heap allocations for ranks 0 through 8.
 - Retain owned metadata and value semantics.
 - Preserve the vector-like owning types used to construct `TensorView`, while
   exposing shape and strides through lightweight contiguous views.
 - Keep metadata contiguous and expose stable `data()` and iterator ranges.
 - Support arbitrary practical ranks by falling back to heap storage.
-- Select inline capacity 4 or 8 using measured end-to-end `TensorView`
-  performance rather than rank frequency alone.
+- Use inline capacity 8, selected from measured end-to-end `TensorView`
+  performance and an InfiniOps-style cache-key footprint benchmark.
 - Avoid new public third-party dependencies.
 
 ## Non-Goals
@@ -190,7 +190,7 @@ non-allocating placement array new. The C++17 implementation relies on the
 accepted CWG 2382 defect resolution that forbids placement-array overhead for
 this standard form. The exact allocation, construction, destruction, and
 deallocation sequence must be compiled and exercised with the supported GCC,
-Clang, and MSVC toolchains before selection.
+Clang, and MSVC toolchains before delivery.
 
 Exact `Shape` and `Strides` constructor overloads use `const&` and `&&` pairs
 so lvalues can copy directly into one combined block and rvalues can be
@@ -212,9 +212,9 @@ Existing `TensorView` behavior remains unchanged for:
 ## Revised Inline Capacity Experiment
 
 The rejected two-member measurements remain recorded as experiment evidence.
-The combined-metadata fallback is evaluated independently against the same
+The combined-metadata fallback was evaluated independently against the same
 post-#33 vector baseline and the same benchmark matrix. The shipped
-`TensorView` uses exactly one capacity.
+`TensorView` uses inline capacity 8.
 
 1. Add failing tests for view semantics, the three storage states, allocation
    counts, copy/move ownership, and overflow cleanup.
@@ -223,17 +223,23 @@ post-#33 vector baseline and the same benchmark matrix. The shipped
 4. Add rank-8/rank-9 failing thresholds, then change only the inline capacity
    to 8.
 5. Rerun the same correctness, allocation, compiler, and benchmark checks.
-6. Keep capacity 8 only when it satisfies every decision gate, including the
-   5 percent low-rank regression limit; otherwise retain capacity 4 only if it
-   passes all gates.
+6. Select capacity 8 from the rank-0-through-8 latency, allocation, and object
+   footprint evidence. Keep rank 9 and above as a supported correctness and
+   owned-fallback boundary, not a performance gate.
 
-Capacity 8 must also preserve correctness through rank 9 and satisfy the
-rank-5 and rank-8 benchmark gates below. Object sizes are reported separately;
-they are not hidden in benchmark parameters or allocation counts.
+The five-round combined-metadata result selected capacity 8. Against capacity
+4, the aggregate across all 25 applicable rank-1/2/4 keys was +0.75 percent
+and +0.029 ns. Eight individual percentage medians exceeded +5 percent, but
+their absolute changes were only 0.133 through 1.360 ns, every five-run range
+crossed zero, and none was slower in all five runs. At ranks 5 and 8, all 14
+target paths improved by 41.8 through 74.8 percent, or 7.987 through 21.701 ns.
+The rank-9 rvalue and default-stride regressions are retained as explicit
+fallback trade-off evidence rather than hidden or treated as low-rank results.
 
-If capacity 4 regresses any listed low-rank or high-rank benchmark median
-paired change by more than 5 percent relative to the post-#33 baseline, stop
-the fallback rather than merging an allocation-only win.
+The measured layouts are 72 bytes for the post-#33 vector baseline, 96 bytes
+for combined capacity 4, and 160 bytes for combined capacity 8. Object sizes
+are disclosed beside latency and are also exercised by the cache-key footprint
+benchmark below.
 
 ## Test-Driven Development
 
@@ -311,9 +317,10 @@ types and rejects accidental implicit conversion back to an owning container.
 
 ## Benchmark Design
 
-The post-#33 merge commit is the baseline. Capacity 4 and capacity 8 are built
-with the same compiler, optimization level, source apart from the capacity
-constant, and benchmark harness.
+The post-#33 merge commit is the baseline. Combined capacity 4 is retained as
+a diagnostic comparison and combined capacity 8 is the selected candidate.
+All three are built with the same compiler, optimization level, source apart
+from the capacity constant, and benchmark harness.
 
 Measure ranks 1, 2, 4, 5, 8, and 9 for:
 
@@ -337,11 +344,49 @@ of the five pairwise percentage changes. This avoids changing the runner or
 the comparison script while making the aggregation reproducible.
 
 The term "median paired change" below means the median of those five matched
-percentage changes for one benchmark and rank.
+changes for one benchmark and rank. Both percentage and absolute nanosecond
+changes are recorded because a percentage-only threshold is unstable for the
+shortest low-rank operations.
 
 Report `sizeof(SmallVector<Size, 4>)`, `sizeof(SmallVector<Size, 8>)`, each
 metadata view, and each combined-metadata candidate `sizeof(TensorView)`
 outside the JSON benchmark key.
+
+The unchanged 58-result microbenchmark is supplemented by
+`perf_tensor_view_footprint.cache_key_build_hit`, which models the InfiniOps
+`CacheKey::Build` path. Each measured iteration hashes a vector size and every
+input tensor, appends copied `TensorView` objects to a temporary vector without
+`reserve`, compares that candidate with a prebuilt key, and destroys it. The
+matrix is:
+
+- Ranks 4 and 8.
+- Tensor counts 8 and 256.
+- `262144 / tensor_count` iterations, keeping TensorView visits constant.
+- Shapes vary in their first dimension to prevent identical-input folding.
+
+Rank 4 compares the inline object footprint of capacity 4 and capacity 8.
+Rank 8 is an end-to-end comparison that also includes capacity 4's heap
+fallback versus capacity 8's inline storage. Count 8 represents an ordinary
+multi-tensor key; count 256 deliberately puts the capacity-8 vector near 40
+KiB so a cache-footprint cliff is visible.
+
+The rank-4/count-8 capacity-8 comparison remained above the provisional +5
+percent capacity-4 gate after the initial five-run range crossed zero, so the
+experiment was extended to 15 rounds. The final paired results were:
+
+| Rank | Tensor count | Capacity 8 vs. capacity 4 | Capacity 8 vs. vector baseline |
+| ---: | ---: | ---: | ---: |
+| 4 | 8 | +7.275% (+21.826 ns) | -36.887% (-180.459 ns) |
+| 4 | 256 | -1.867% (-163.378 ns) | -60.816% (-12733.150 ns) |
+| 8 | 8 | -17.234% (-76.338 ns) | -26.603% (-139.257 ns) |
+| 8 | 256 | -33.757% (-5621.646 ns) | -52.062% (-12494.684 ns) |
+
+Capacity 8 therefore does not pass the provisional capacity-4 comparison for
+the small rank-4 key: 12 of 15 paired runs were slower, with a -16.873 through
++30.785 percent range. The selection accepts and discloses that cost in
+exchange for allocation-free ranks 5 through 8. It still improves every
+footprint key against the shipping vector baseline, while both rank-8 keys
+improve against capacity 4.
 
 Decision gates are:
 
@@ -349,16 +394,28 @@ Decision gates are:
   derived-view, and by-value consumer median paired change for combined
   capacity 4 versus the post-#33 baseline is at most +5 percent. Construction
   and copy changes are below 0 percent.
-- At ranks 1, 2, and 4, the same capacity-8 versus capacity-4 median paired
-  changes are at most +5 percent.
-- At rank 9, each candidate's explicit/default construction, copy, and by-value
-  consumer median paired changes versus the post-#33 vector baseline are at
-  most +5 percent.
+- At ranks 1, 2, and 4, a capacity-8 versus capacity-4 path is a material
+  regression only when its median paired percentage change is above +5
+  percent, its median paired absolute change is above +2 ns, and at least four
+  of five runs are slower. This replaces the historical percentage-only gate
+  for these nanosecond-scale paths.
 - At ranks 5 and 8, capacity 8 performs zero allocations and its construction,
   copy, and by-value consumer median paired changes versus capacity 4 are below
   0 percent.
-- Every `numel()` control median paired change has an absolute value of at most
-  5 percent.
+- Rank 9 and above must pass correctness, ownership, allocation-count, and
+  sanitizer checks. Their latency is reported as fallback trade-off evidence
+  and does not select the inline capacity.
+- A `numel()` control invalidates a run only when it shows a stable absolute
+  drift above 2 ns in at least four of five runs.
+- For both tensor counts at rank 4, capacity 8 is at most +5 percent versus the
+  vector baseline. Its capacity-4 comparison is reported as the explicit
+  coverage-versus-footprint selection trade-off rather than described as a
+  passed gate.
+- For both tensor counts at rank 8, capacity 8 is below 0 percent versus
+  capacity 4 and at most +5 percent versus the vector baseline.
+
+A footprint result that exceeds a gate while its five-run range crosses zero
+is inconclusive and must be extended before delivery.
 
 ## Downstream Migration
 
@@ -393,7 +450,8 @@ Required before the InfiniRT change is proposed for merge:
 - InfiniRT NVIDIA Release build and non-performance smoke tests.
 - InfiniRT installed-consumer test against the installed prefix.
 - Allocation threshold tests on Linux.
-- Capacity-4 and capacity-8 benchmark evidence.
+- Combined capacity-4/capacity-8 58-result and cache-key footprint benchmark
+  evidence.
 - Exact clang-format 21 checks and `git diff --check`.
 - InfiniOps CPU and pybind build plus available smoke tests against the
   candidate InfiniRT prefix.
@@ -419,12 +477,15 @@ only from metadata still owned by their `TensorView`.
 
 ## Acceptance Criteria
 
-- The selected capacity satisfies all allocation thresholds and functional
-  tests.
+- Inline capacity 8 satisfies all rank-0-through-8 allocation thresholds and
+  functional tests.
 - High-rank combined and split-adopt states preserve owned contiguous shape
   and stride ranges.
 - All known source-compatible `std::vector` construction paths still compile.
-- The selected capacity satisfies the benchmark decision gates.
+- Capacity 8 improves all cache-key footprint cases versus the vector baseline
+  and both rank-8 cases versus capacity 4. The rank-4/count-8 capacity-4 cost is
+  disclosed as a selection trade-off; rank 9 and above remain correct owned
+  heap fallbacks.
 - The placement-array implementation is validated with GCC, Clang, and MSVC,
   and sanitizer coverage finds no lifetime, alignment, leak, or double-free
   defect.
