@@ -148,6 +148,8 @@ class SmallVector {
 
   explicit SmallVector(size_type count) { InitializeCount(count); }
 
+  SmallVector(size_type count, const T& value) { InitializeFill(count, value); }
+
   SmallVector(std::initializer_list<T> values)
       : SmallVector(values.begin(), values.end()) {}
 
@@ -346,6 +348,21 @@ class SmallVector {
     HeapAllocation allocation{
         AllocatorTraits::allocate(allocator, count), count, count};
     ::new (static_cast<void*>(allocation.data())) T[count]{};
+    ReplaceWithHeap(allocation.release(), count, count);
+  }
+
+  void InitializeFill(size_type count, const T& value) {
+    if (count <= InlineCapacity) {
+      std::fill_n(storage_.inline_storage.data, count, value);
+      size_ = count;
+
+      return;
+    }
+
+    Allocator allocator;
+    HeapAllocation allocation{AllocatorTraits::allocate(allocator, count),
+                              count, count};
+    std::uninitialized_fill_n(allocation.data(), count, value);
     ReplaceWithHeap(allocation.release(), count, count);
   }
 

@@ -135,8 +135,8 @@ required capacity directly.
 
 Required operations are:
 
-- Default, count, initializer-list, iterator-range, and compatible-container
-  construction.
+- Default, count, count-and-value, initializer-list, iterator-range, and
+  compatible-container construction.
 - Copy and move construction and assignment.
 - Destruction and self-assignment safety.
 - `size`, `capacity`, `empty`, `data`, `front`, `back`, and `operator[]`.

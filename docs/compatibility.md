@@ -53,5 +53,6 @@ Existing construction from `std::vector` remains supported, but code that
 requires the exact `std::vector` alias must adapt. On lvalues, `shape()` and
 `strides()` now return typed borrowed contiguous views by value; callers that
 need ownership should explicitly materialize `TensorView::Shape` or
-`TensorView::Strides`.
+`TensorView::Strides`. The owning aliases support the common
+`Strides(count, value)` construction used by downstream metadata code.
 

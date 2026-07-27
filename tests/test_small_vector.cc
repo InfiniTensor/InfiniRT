@@ -106,6 +106,8 @@ static_assert(std::is_copy_constructible_v<Inline4>);
 static_assert(std::is_move_constructible_v<Inline4>);
 static_assert(std::is_copy_assignable_v<Inline4>);
 static_assert(std::is_move_assignable_v<Inline4>);
+static_assert(
+    std::is_constructible_v<Inline4, std::size_t, const std::size_t&>);
 static_assert(!std::is_copy_constructible_v<HeapAllocation>);
 static_assert(!std::is_copy_assignable_v<HeapAllocation>);
 static_assert(std::is_nothrow_move_constructible_v<HeapAllocation>);
@@ -145,6 +147,32 @@ void TestConstruction(TestContext* context) {
   Inline4 counted(3);
   ExpectValues(context, counted, {0, 0, 0},
                "The count constructor should value-initialize elements.");
+
+  Inline4 empty_filled(0, 7);
+  context->Expect(empty_filled.empty(),
+                  "A zero-count fill constructor should be empty.");
+
+  Inline4 inline_filled;
+  const std::size_t inline_fill_allocations =
+      CountAllocations([&] { inline_filled = Inline4(4, 7); });
+  ExpectValues(context, inline_filled, {7, 7, 7, 7},
+               "The fill constructor should initialize inline elements.");
+  context->ExpectEqual(inline_fill_allocations, std::size_t{0},
+                       "The inline fill constructor should not allocate.");
+  context->ExpectEqual(
+      inline_filled.capacity(), std::size_t{4},
+      "The inline fill constructor should preserve inline storage.");
+
+  Inline4 overflow_filled;
+  const std::size_t overflow_fill_allocations =
+      CountAllocations([&] { overflow_filled = Inline4(5, 9); });
+  ExpectValues(context, overflow_filled, {9, 9, 9, 9, 9},
+               "The fill constructor should initialize overflow elements.");
+  context->ExpectEqual(overflow_fill_allocations, std::size_t{1},
+                       "The overflow fill constructor should allocate once.");
+  context->ExpectEqual(
+      overflow_filled.capacity(), std::size_t{5},
+      "The overflow fill constructor should allocate exact storage.");
 
   Inline4 inline_values{1, 2, 3, 4};
   context->ExpectEqual(inline_values.capacity(), std::size_t{4},

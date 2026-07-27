@@ -11,20 +11,26 @@ int main() {
   const std::vector<std::size_t> shape{2, 2};
   const std::vector<std::ptrdiff_t> default_strides{2, 1};
   const std::vector<std::ptrdiff_t> explicit_strides{1, 2};
+  const infini::rt::TensorView::Strides filled_strides(shape.size(), 0);
   const infini::rt::TensorView default_view{
       data.data(), shape, infini::rt::DataType::kFloat32, device};
-  const infini::rt::TensorView explicit_view{
-      data.data(), shape, infini::rt::DataType::kFloat32, device,
-      explicit_strides};
+  const infini::rt::TensorView explicit_view{data.data(), shape,
+                                             infini::rt::DataType::kFloat32,
+                                             device, explicit_strides};
 
   if (device.ToString() != "cpu:0") {
     return 1;
   }
 
+  if (filled_strides.size() != shape.size() || filled_strides[0] != 0 ||
+      filled_strides[1] != 0) {
+    return 1;
+  }
+
   if (default_view.numel() != 4 || !default_view.IsContiguous() ||
       default_view.shape() != shape ||
-      default_view.strides() != default_strides ||
-      default_view.size(-1) != 2 || default_view.stride(-1) != 1) {
+      default_view.strides() != default_strides || default_view.size(-1) != 2 ||
+      default_view.stride(-1) != 1) {
     return 1;
   }
 
