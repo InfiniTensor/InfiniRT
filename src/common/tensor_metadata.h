@@ -26,14 +26,11 @@ template <typename Range, typename = void>
 struct IsForwardRange : std::false_type {};
 
 template <typename Range>
-struct IsForwardRange<
-    Range,
-    std::void_t<typename std::iterator_traits<RangeIterator<Range>>::
-                    iterator_category>>
-    : std::is_base_of<
-          std::forward_iterator_tag,
-          typename std::iterator_traits<RangeIterator<Range>>::
-              iterator_category> {};
+struct IsForwardRange<Range, std::void_t<typename std::iterator_traits<
+                                 RangeIterator<Range>>::iterator_category>>
+    : std::is_base_of<std::forward_iterator_tag,
+                      typename std::iterator_traits<
+                          RangeIterator<Range>>::iterator_category> {};
 
 template <typename Size, typename Stride, std::size_t InlineCapacity>
 class TensorMetadata {
@@ -101,9 +98,7 @@ class TensorMetadata {
     InitializeRanges(other.shape(), other.strides());
   }
 
-  TensorMetadata(TensorMetadata&& other) noexcept {
-    MoveConstructFrom(other);
-  }
+  TensorMetadata(TensorMetadata&& other) noexcept { MoveConstructFrom(other); }
 
   TensorMetadata& operator=(const TensorMetadata&) = delete;
 
@@ -165,24 +160,21 @@ class TensorMetadata {
           CheckedAdd(CheckedAdd(shape_bytes, padding), strides_bytes);
 
       RawAllocation allocation{::operator new(bytes)};
-      void* stride_storage =
-          static_cast<void*>(static_cast<unsigned char*>(allocation.get()) +
-                             shape_bytes);
+      void* stride_storage = static_cast<void*>(
+          static_cast<unsigned char*>(allocation.get()) + shape_bytes);
       std::size_t stride_space = bytes - shape_bytes;
 
-      const void* const aligned_stride_storage =
-          std::align(alignof(Stride), strides_bytes, stride_storage,
-                     stride_space);
+      const void* const aligned_stride_storage = std::align(
+          alignof(Stride), strides_bytes, stride_storage, stride_space);
       if (aligned_stride_storage == nullptr) {
         std::abort();
       }
 
-      shape_ = shape_size == 0
-                   ? static_cast<Size*>(allocation.get())
-                   : ::new (allocation.get()) Size[shape_size];
-      strides_ = strides_size == 0
-                     ? static_cast<Stride*>(stride_storage)
-                     : ::new (stride_storage) Stride[strides_size];
+      shape_ = shape_size == 0 ? static_cast<Size*>(allocation.get())
+                               : ::new (allocation.get()) Size[shape_size];
+      strides_ = strides_size == 0 ? static_cast<Stride*>(stride_storage)
+                                   : ::new (stride_storage)
+                                         Stride[strides_size];
       allocation_ = allocation.release();
     }
 
@@ -209,8 +201,7 @@ class TensorMetadata {
 
     using RawAllocation = std::unique_ptr<void, RawDeleter>;
 
-    static std::size_t CheckedMultiply(std::size_t left,
-                                       std::size_t right) {
+    static std::size_t CheckedMultiply(std::size_t left, std::size_t right) {
       if (right != 0 &&
           left > std::numeric_limits<std::size_t>::max() / right) {
         std::abort();
@@ -270,17 +261,16 @@ class TensorMetadata {
   }
 
   template <typename ShapeRange, typename StridesRange>
-  void InitializeRanges(const ShapeRange& shape,
-                        const StridesRange& strides) {
+  void InitializeRanges(const ShapeRange& shape, const StridesRange& strides) {
     if constexpr (IsForwardRange<ShapeRange>::value &&
                   IsForwardRange<StridesRange>::value) {
       const std::size_t shape_size = RangeSize(shape);
       const std::size_t strides_size = RangeSize(strides);
-      Initialize(shape_size, strides_size, [&](Size* shape_destination,
-                                                Stride* strides_destination) {
-        CopyRange(shape, shape_destination);
-        CopyRange(strides, strides_destination);
-      });
+      Initialize(shape_size, strides_size,
+                 [&](Size* shape_destination, Stride* strides_destination) {
+                   CopyRange(shape, shape_destination);
+                   CopyRange(strides, strides_destination);
+                 });
     } else {
       Shape owned_shape{std::begin(shape), std::end(shape)};
       Strides owned_strides{std::begin(strides), std::end(strides)};
@@ -324,9 +314,8 @@ class TensorMetadata {
       const std::uint32_t narrowed_strides_size = NarrowSize(strides_size);
       ShapeAllocation shape_allocation = shape.ReleaseHeap();
       StridesAllocation strides_allocation = strides.ReleaseHeap();
-      ActivateSplit(std::move(shape_allocation),
-                    std::move(strides_allocation), narrowed_shape_size,
-                    narrowed_strides_size);
+      ActivateSplit(std::move(shape_allocation), std::move(strides_allocation),
+                    narrowed_shape_size, narrowed_strides_size);
 
       return;
     }
@@ -362,12 +351,12 @@ class TensorMetadata {
   void InitializeDefaultStrides(const ShapeRange& shape) {
     if constexpr (IsForwardRange<ShapeRange>::value) {
       const std::size_t shape_size = RangeSize(shape);
-      Initialize(shape_size, shape_size, [&](Size* shape_destination,
-                                             Stride* strides_destination) {
-        CopyRange(shape, shape_destination);
-        FillDefaultStrides(shape_destination, shape_size,
-                           strides_destination);
-      });
+      Initialize(shape_size, shape_size,
+                 [&](Size* shape_destination, Stride* strides_destination) {
+                   CopyRange(shape, shape_destination);
+                   FillDefaultStrides(shape_destination, shape_size,
+                                      strides_destination);
+                 });
     } else {
       Shape owned_shape{std::begin(shape), std::end(shape)};
       InitializeDefaultStrides(std::move(owned_shape));
@@ -375,8 +364,7 @@ class TensorMetadata {
   }
 
   void InitializeDefaultStrides(Shape&& shape) {
-    if (shape.size() <= InlineCapacity ||
-        shape.capacity() <= InlineCapacity) {
+    if (shape.size() <= InlineCapacity || shape.capacity() <= InlineCapacity) {
       InitializeDefaultStrides(static_cast<const Shape&>(shape));
 
       return;
@@ -394,8 +382,7 @@ class TensorMetadata {
     strides[shape_size - 1] = 1;
 
     for (std::size_t index = shape_size - 1; index > 0; --index) {
-      strides[index - 1] =
-          strides[index] * shape[index];
+      strides[index - 1] = strides[index] * shape[index];
     }
   }
 
@@ -403,16 +390,16 @@ class TensorMetadata {
                         std::uint32_t shape_size,
                         std::uint32_t strides_size) noexcept {
     storage_.inline_storage.~InlineStorage();
-    ::new (static_cast<void*>(&storage_.heap_storage)) HeapStorage{
-        allocation.allocation(), allocation.shape(), allocation.strides(), 0,
-        0};
+    ::new (static_cast<void*>(&storage_.heap_storage))
+        HeapStorage{allocation.allocation(), allocation.shape(),
+                    allocation.strides(), 0, 0};
     shape_size_ = shape_size;
     strides_size_ = strides_size;
     allocation.release();
   }
 
-  void ActivateSplit(ShapeAllocation&& shape,
-                     StridesAllocation&& strides, std::uint32_t shape_size,
+  void ActivateSplit(ShapeAllocation&& shape, StridesAllocation&& strides,
+                     std::uint32_t shape_size,
                      std::uint32_t strides_size) noexcept {
     const std::size_t shape_capacity = shape.capacity();
     const std::size_t strides_capacity = strides.capacity();
@@ -428,17 +415,16 @@ class TensorMetadata {
 
   void MoveConstructFrom(TensorMetadata& other) noexcept {
     if (other.IsInline()) {
-      Initialize(other.shape_size_, other.strides_size_,
-                 [&](Size* shape_destination, Stride* strides_destination) {
-                   for (std::size_t index = 0; index < other.shape_size_;
-                        ++index) {
-                     shape_destination[index] = other.ShapeData()[index];
-                   }
-                   for (std::size_t index = 0; index < other.strides_size_;
-                        ++index) {
-                     strides_destination[index] = other.StridesData()[index];
-                   }
-                 });
+      Initialize(
+          other.shape_size_, other.strides_size_,
+          [&](Size* shape_destination, Stride* strides_destination) {
+            for (std::size_t index = 0; index < other.shape_size_; ++index) {
+              shape_destination[index] = other.ShapeData()[index];
+            }
+            for (std::size_t index = 0; index < other.strides_size_; ++index) {
+              strides_destination[index] = other.StridesData()[index];
+            }
+          });
       other.shape_size_ = 0;
       other.strides_size_ = 0;
 

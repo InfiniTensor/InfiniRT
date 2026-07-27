@@ -38,10 +38,9 @@ static_assert(
 static_assert(std::is_same_v<decltype(std::declval<TensorView&&>().shape()),
                              TensorView::Shape>,
               "TensorView rvalues should return an owning shape.");
-static_assert(
-    std::is_same_v<decltype(std::declval<TensorView&&>().strides()),
-                   TensorView::Strides>,
-    "TensorView rvalues should return owning strides.");
+static_assert(std::is_same_v<decltype(std::declval<TensorView&&>().strides()),
+                             TensorView::Strides>,
+              "TensorView rvalues should return owning strides.");
 static_assert(
     std::is_same_v<decltype(std::declval<const TensorView&&>().shape()),
                    TensorView::Shape>,
@@ -156,11 +155,9 @@ void TestTensorViewRanks(infini::rt::test::TestContext* context) {
 
   for (const std::size_t rank : ranks) {
     const std::vector<std::size_t> shape = MakeShape(rank);
-    const std::vector<std::ptrdiff_t> strides =
-        MakeContiguousStrides(shape);
+    const std::vector<std::ptrdiff_t> strides = MakeContiguousStrides(shape);
     const TensorView tensor{data.data(), shape, DataType::kFloat32, cpu};
-    const std::string rank_prefix =
-        "Rank " + std::to_string(rank) + ": ";
+    const std::string rank_prefix = "Rank " + std::to_string(rank) + ": ";
     std::size_t expected_numel = 1;
 
     for (const std::size_t size : shape) {
@@ -186,8 +183,7 @@ void TestTensorViewRanks(infini::rt::test::TestContext* context) {
   }
 }
 
-void TestTensorLikeValueAccessors(
-    infini::rt::test::TestContext* context) {
+void TestTensorLikeValueAccessors(infini::rt::test::TestContext* context) {
   std::array<double, 6> data{};
   const VectorTensorLike tensor_like{data.data(),
                                      {2, 3},
@@ -299,9 +295,8 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
   const TensorView copied{tensor};
   context->Expect(copied.shape().data() != tensor.shape().data(),
                   "A TensorView copy should own independent shape metadata.");
-  context->Expect(
-      copied.strides().data() != tensor.strides().data(),
-      "A TensorView copy should own independent stride metadata.");
+  context->Expect(copied.strides().data() != tensor.strides().data(),
+                  "A TensorView copy should own independent stride metadata.");
 
   TensorView::Shape owned_temporary_shape =
       TensorView{data.data(), shape}.shape();
@@ -310,18 +305,17 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
       "Shape access on a temporary TensorView should return owned metadata.");
 }
 
-void TestTensorViewHeapRepresentations(
-    infini::rt::test::TestContext* context) {
+void TestTensorViewHeapRepresentations(infini::rt::test::TestContext* context) {
   std::array<float, 512> data{};
   const Device cpu{Device::Type::kCpu};
   const TensorView::Shape shape{2, 2, 2, 2, 2, 2, 2, 2, 2};
   const TensorView::Strides strides{256, 128, 64, 32, 16, 8, 4, 2, 1};
   const TensorView combined{data.data(), shape, DataType::kFloat32, cpu,
                             strides};
-  const TensorView split{
-      data.data(), TensorView::Shape{shape.begin(), shape.end()},
-      DataType::kFloat32, cpu,
-      TensorView::Strides{strides.begin(), strides.end()}};
+  const TensorView split{data.data(),
+                         TensorView::Shape{shape.begin(), shape.end()},
+                         DataType::kFloat32, cpu,
+                         TensorView::Strides{strides.begin(), strides.end()}};
 
   context->Expect(std::equal_to<TensorView>{}(combined, split),
                   "Combined and split metadata should compare equal.");
@@ -335,12 +329,11 @@ void TestTensorViewHeapRepresentations(
                                                     8,   4,  2,  1};
   context->ExpectEqual(indexed.shape(), indexed_shape,
                        "High-rank indexing should preserve the shape suffix.");
-  context->ExpectEqual(
-      indexed.strides(), indexed_strides,
-      "High-rank indexing should preserve the stride suffix.");
-  context->ExpectEqual(
-      indexed.data(), static_cast<const void*>(data.data() + 256),
-      "High-rank indexing should preserve the data offset.");
+  context->ExpectEqual(indexed.strides(), indexed_strides,
+                       "High-rank indexing should preserve the stride suffix.");
+  context->ExpectEqual(indexed.data(),
+                       static_cast<const void*>(data.data() + 256),
+                       "High-rank indexing should preserve the data offset.");
 
   const TensorView copied{split};
   context->ExpectEqual(copied.shape(), shape,

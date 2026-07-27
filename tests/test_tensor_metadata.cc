@@ -1,5 +1,3 @@
-#include "common/tensor_metadata.h"
-
 #include <array>
 #include <cstddef>
 #include <initializer_list>
@@ -10,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/tensor_metadata.h"
 #include "test_helper.h"
 
 namespace {
@@ -31,8 +30,7 @@ void ExpectView(TestContext* context,
                 infini::rt::detail::MetadataView<T> actual,
                 std::initializer_list<Expected> expected,
                 std::string_view message) {
-  context->ExpectEqual(actual,
-                       std::vector<T>(expected.begin(), expected.end()),
+  context->ExpectEqual(actual, std::vector<T>(expected.begin(), expected.end()),
                        message);
 }
 
@@ -57,9 +55,7 @@ class InputRange {
     return std::istream_iterator<T>{*stream_};
   }
 
-  std::istream_iterator<T> end() const {
-    return std::istream_iterator<T>{};
-  }
+  std::istream_iterator<T> end() const { return std::istream_iterator<T>{}; }
 
  private:
   std::istream* stream_;
@@ -82,17 +78,15 @@ void TestEmptyMetadata(TestContext* context) {
   const TensorMetadata explicit_empty{shape, strides};
   context->Expect(explicit_empty.shape().empty(),
                   "Explicit rank-zero metadata should have an empty shape.");
-  context->Expect(
-      explicit_empty.strides().empty(),
-      "Explicit rank-zero metadata should have empty strides.");
+  context->Expect(explicit_empty.strides().empty(),
+                  "Explicit rank-zero metadata should have empty strides.");
 
   const std::array<std::size_t, 0> empty_shape{};
   const std::array<std::ptrdiff_t, 0> empty_strides{};
   const TensorMetadata empty_array_metadata{empty_shape, empty_strides};
-  context->Expect(
-      empty_array_metadata.shape().empty() &&
-          empty_array_metadata.strides().empty(),
-      "Empty standard arrays should construct rank-zero metadata.");
+  context->Expect(empty_array_metadata.shape().empty() &&
+                      empty_array_metadata.strides().empty(),
+                  "Empty standard arrays should construct rank-zero metadata.");
 }
 
 void TestInlineMetadata(TestContext* context) {
@@ -134,8 +128,8 @@ void TestCombinedMetadata(TestContext* context) {
 }
 
 void TestSplitRvalueMetadata(TestContext* context) {
-  const TensorMetadata temporary_values{
-      Shape{2, 3, 4, 5, 6}, Strides{360, 120, 30, 6, 1}};
+  const TensorMetadata temporary_values{Shape{2, 3, 4, 5, 6},
+                                        Strides{360, 120, 30, 6, 1}};
   ExpectView(context, temporary_values.shape(), {2, 3, 4, 5, 6},
              "Exact rvalue metadata should preserve shape values.");
   ExpectView(context, temporary_values.strides(), {360, 120, 30, 6, 1},
@@ -168,8 +162,7 @@ TensorMetadata CopyPastSourceLifetime(TestContext* context) {
 }
 
 TensorMetadata MovePastSourceLifetime() {
-  TensorMetadata source{Shape{3, 4, 5, 6, 7},
-                        Strides{840, 210, 42, 7, 1}};
+  TensorMetadata source{Shape{3, 4, 5, 6, 7}, Strides{840, 210, 42, 7, 1}};
   TensorMetadata moved{std::move(source)};
 
   return moved;
@@ -200,8 +193,7 @@ void TestMixedOwnership(TestContext* context) {
 
   const Shape borrowed_shape{3, 4, 5, 6, 7};
   Strides moved_strides{840, 210, 42, 7, 1};
-  const TensorMetadata strides_rvalue{borrowed_shape,
-                                      std::move(moved_strides)};
+  const TensorMetadata strides_rvalue{borrowed_shape, std::move(moved_strides)};
   ExpectView(context, strides_rvalue.shape(), {3, 4, 5, 6, 7},
              "An lvalue shape with moved strides should preserve shape.");
   ExpectView(context, strides_rvalue.strides(), {840, 210, 42, 7, 1},
@@ -209,8 +201,7 @@ void TestMixedOwnership(TestContext* context) {
 }
 
 void TestDefaultStrides(TestContext* context) {
-  const TensorMetadata inline_metadata{Shape{2, 3, 4, 5},
-                                       DefaultStridesTag{}};
+  const TensorMetadata inline_metadata{Shape{2, 3, 4, 5}, DefaultStridesTag{}};
   ExpectView(context, inline_metadata.strides(), {60, 20, 5, 1},
              "Default inline strides should be row-major.");
 

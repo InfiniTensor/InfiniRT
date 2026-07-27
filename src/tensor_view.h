@@ -194,17 +194,17 @@ class TensorView {
 
   const Device& device() const;
 
-  ShapeView shape() const & noexcept;
+  ShapeView shape() const& noexcept;
 
   Shape shape() &&;
 
-  Shape shape() const &&;
+  Shape shape() const&&;
 
-  StridesView strides() const & noexcept;
+  StridesView strides() const& noexcept;
 
   Strides strides() &&;
 
-  Strides strides() const &&;
+  Strides strides() const&&;
 
   Size size(const Index& index) const;
 

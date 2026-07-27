@@ -29,9 +29,8 @@ struct IsCompatibleContainer<
     Range, T,
     std::void_t<decltype(std::begin(std::declval<const Range&>())),
                 decltype(std::end(std::declval<const Range&>())),
-                decltype(static_cast<T>(
-                    *std::begin(std::declval<const Range&>())))>>
-    : std::true_type {};
+                decltype(static_cast<T>(*std::begin(
+                    std::declval<const Range&>())))>> : std::true_type {};
 
 template <typename Range, typename T, typename = void>
 struct IsEqualityComparableRange : std::false_type {};
@@ -85,9 +84,7 @@ class SmallVector {
     HeapAllocation& operator=(const HeapAllocation&) = delete;
 
     HeapAllocation(HeapAllocation&& other) noexcept
-        : data_(other.data_),
-          size_(other.size_),
-          capacity_(other.capacity_) {
+        : data_(other.data_), size_(other.size_), capacity_(other.capacity_) {
       other.Clear();
     }
 
@@ -159,8 +156,8 @@ class SmallVector {
     using IteratorCategory =
         typename std::iterator_traits<InputIt>::iterator_category;
 
-    if constexpr (
-        std::is_base_of_v<std::forward_iterator_tag, IteratorCategory>) {
+    if constexpr (std::is_base_of_v<std::forward_iterator_tag,
+                                    IteratorCategory>) {
       InitializeForwardRange(first, last);
     } else {
       SmallVector replacement;
@@ -171,10 +168,9 @@ class SmallVector {
 
   template <
       typename Container,
-      std::enable_if_t<
-          !std::is_same_v<std::decay_t<Container>, SmallVector> &&
-              IsCompatibleContainer<Container, T>::value,
-          int> = 0>
+      std::enable_if_t<!std::is_same_v<std::decay_t<Container>, SmallVector> &&
+                           IsCompatibleContainer<Container, T>::value,
+                       int> = 0>
   explicit SmallVector(const Container& container)
       : SmallVector(std::begin(container), std::end(container)) {}
 
@@ -345,8 +341,8 @@ class SmallVector {
     }
 
     Allocator allocator;
-    HeapAllocation allocation{
-        AllocatorTraits::allocate(allocator, count), count, count};
+    HeapAllocation allocation{AllocatorTraits::allocate(allocator, count),
+                              count, count};
     ::new (static_cast<void*>(allocation.data())) T[count]{};
     ReplaceWithHeap(allocation.release(), count, count);
   }
@@ -370,8 +366,7 @@ class SmallVector {
   void InitializeForwardRange(ForwardIt first, ForwardIt last) {
     if (first == last) return;
 
-    const size_type count =
-        static_cast<size_type>(std::distance(first, last));
+    const size_type count = static_cast<size_type>(std::distance(first, last));
 
     if (count <= InlineCapacity) {
       CopyToInline(first, last, storage_.inline_storage.data);
@@ -383,8 +378,8 @@ class SmallVector {
     Allocator allocator;
 
     if constexpr (IsSamePointerRange<ForwardIt>()) {
-      HeapAllocation allocation{
-          AllocatorTraits::allocate(allocator, count), count, count};
+      HeapAllocation allocation{AllocatorTraits::allocate(allocator, count),
+                                count, count};
       ::new (static_cast<void*>(allocation.data())) T[count];
       std::copy(first, last, allocation.data());
       ReplaceWithHeap(allocation.release(), count, count);
@@ -392,8 +387,8 @@ class SmallVector {
       return;
     }
 
-    HeapAllocation allocation{
-        AllocatorTraits::allocate(allocator, count), count, count};
+    HeapAllocation allocation{AllocatorTraits::allocate(allocator, count),
+                              count, count};
     UninitializedCopy(first, last, allocation.data());
     ReplaceWithHeap(allocation.release(), count, count);
   }
@@ -546,11 +541,10 @@ class SmallVector {
   size_type capacity_{InlineCapacity};
 };
 
-template <
-    typename T, std::size_t LeftCapacity, std::size_t RightCapacity,
-    std::enable_if_t<IsEqualityComparableRange<
-                         SmallVector<T, RightCapacity>, T>::value,
-                     int> = 0>
+template <typename T, std::size_t LeftCapacity, std::size_t RightCapacity,
+          std::enable_if_t<IsEqualityComparableRange<
+                               SmallVector<T, RightCapacity>, T>::value,
+                           int> = 0>
 bool operator==(const SmallVector<T, LeftCapacity>& left,
                 const SmallVector<T, RightCapacity>& right) {
   if (left.size() != right.size()) return false;
@@ -562,63 +556,53 @@ bool operator==(const SmallVector<T, LeftCapacity>& left,
   return true;
 }
 
-template <
-    typename T, std::size_t LeftCapacity, std::size_t RightCapacity,
-    std::enable_if_t<IsEqualityComparableRange<
-                         SmallVector<T, RightCapacity>, T>::value,
-                     int> = 0>
+template <typename T, std::size_t LeftCapacity, std::size_t RightCapacity,
+          std::enable_if_t<IsEqualityComparableRange<
+                               SmallVector<T, RightCapacity>, T>::value,
+                           int> = 0>
 bool operator!=(const SmallVector<T, LeftCapacity>& left,
                 const SmallVector<T, RightCapacity>& right) {
   return !(left == right);
 }
 
-template <
-    typename T, std::size_t InlineCapacity, typename Range,
-    std::enable_if_t<
-        !IsSmallVector<std::decay_t<Range>>::value &&
-            IsEqualityComparableRange<Range, T>::value,
-        int> = 0>
+template <typename T, std::size_t InlineCapacity, typename Range,
+          std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
+                               IsEqualityComparableRange<Range, T>::value,
+                           int> = 0>
 bool operator==(const SmallVector<T, InlineCapacity>& left,
                 const Range& right) {
   if (left.size() != static_cast<std::size_t>(std::size(right))) return false;
 
   auto right_iterator = std::begin(right);
-  for (std::size_t index = 0; index < left.size();
-       ++index, ++right_iterator) {
+  for (std::size_t index = 0; index < left.size(); ++index, ++right_iterator) {
     if (!(left[index] == *right_iterator)) return false;
   }
 
   return true;
 }
 
-template <
-    typename Range, typename T, std::size_t InlineCapacity,
-    std::enable_if_t<
-        !IsSmallVector<std::decay_t<Range>>::value &&
-            IsEqualityComparableRange<Range, T>::value,
-        int> = 0>
+template <typename Range, typename T, std::size_t InlineCapacity,
+          std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
+                               IsEqualityComparableRange<Range, T>::value,
+                           int> = 0>
 bool operator==(const Range& left,
                 const SmallVector<T, InlineCapacity>& right) {
   return right == left;
 }
 
-template <
-    typename T, std::size_t InlineCapacity, typename Range,
-    std::enable_if_t<
-        !IsSmallVector<std::decay_t<Range>>::value &&
-            IsEqualityComparableRange<Range, T>::value,
-        int> = 0>
+template <typename T, std::size_t InlineCapacity, typename Range,
+          std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
+                               IsEqualityComparableRange<Range, T>::value,
+                           int> = 0>
 bool operator!=(const SmallVector<T, InlineCapacity>& left,
                 const Range& right) {
   return !(left == right);
 }
 
-template <
-    typename Range, typename T, std::size_t InlineCapacity,
-    std::enable_if_t<
-        !IsSmallVector<std::decay_t<Range>>::value &&
-            IsEqualityComparableRange<Range, T>::value,
-        int> = 0>
+template <typename Range, typename T, std::size_t InlineCapacity,
+          std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
+                               IsEqualityComparableRange<Range, T>::value,
+                           int> = 0>
 bool operator!=(const Range& left,
                 const SmallVector<T, InlineCapacity>& right) {
   return !(right == left);

@@ -1,5 +1,3 @@
-#include "common/small_vector.h"
-
 #include <array>
 #include <cstddef>
 #include <cstdlib>
@@ -13,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/small_vector.h"
 #include "test_helper.h"
 
 namespace {
@@ -333,9 +332,8 @@ void TestMutation(TestContext* context) {
 
   std::istringstream assign_input_stream{"9 7 5"};
   Inline4 input_assigned;
-  input_assigned.assign(
-      std::istream_iterator<std::size_t>{assign_input_stream},
-      std::istream_iterator<std::size_t>{});
+  input_assigned.assign(std::istream_iterator<std::size_t>{assign_input_stream},
+                        std::istream_iterator<std::size_t>{});
   ExpectValues(context, input_assigned, {9, 7, 5},
                "Input-iterator assign should consume the range once.");
 
@@ -361,9 +359,8 @@ void TestHeapRelease(TestContext* context) {
   HeapAllocation inline_allocation;
   const std::size_t inline_release_allocations = CountAllocations(
       [&] { inline_allocation = inline_values.ReleaseHeap(); });
-  context->ExpectEqual(
-      inline_release_allocations, std::size_t{0},
-      "Releasing inline storage should not allocate.");
+  context->ExpectEqual(inline_release_allocations, std::size_t{0},
+                       "Releasing inline storage should not allocate.");
   context->Expect(inline_allocation.empty(),
                   "Releasing inline storage should return an empty owner.");
   context->Expect(inline_values.data() == inline_data,
@@ -380,11 +377,10 @@ void TestHeapRelease(TestContext* context) {
                   "The release test should cover spare heap capacity.");
 
   HeapAllocation allocation;
-  const std::size_t overflow_release_allocations = CountAllocations(
-      [&] { allocation = overflow_values.ReleaseHeap(); });
-  context->ExpectEqual(
-      overflow_release_allocations, std::size_t{0},
-      "Releasing heap storage should not allocate.");
+  const std::size_t overflow_release_allocations =
+      CountAllocations([&] { allocation = overflow_values.ReleaseHeap(); });
+  context->ExpectEqual(overflow_release_allocations, std::size_t{0},
+                       "Releasing heap storage should not allocate.");
   context->Expect(allocation.data() == overflow_data,
                   "Heap release should transfer the original allocation.");
   context->ExpectEqual(allocation.size(), overflow_size,
@@ -395,9 +391,8 @@ void TestHeapRelease(TestContext* context) {
                    "Heap release should preserve every value.");
   context->Expect(overflow_values.empty(),
                   "A heap release source should become empty.");
-  context->ExpectEqual(
-      overflow_values.capacity(), std::size_t{4},
-      "A heap release source should restore inline capacity.");
+  context->ExpectEqual(overflow_values.capacity(), std::size_t{4},
+                       "A heap release source should restore inline capacity.");
 
   HeapAllocation second_allocation = overflow_values.ReleaseHeap();
   context->Expect(second_allocation.empty(),
@@ -414,9 +409,8 @@ void TestHeapRelease(TestContext* context) {
                   "Moving a heap owner should empty the source owner.");
   context->Expect(moved_allocation.data() == overflow_data,
                   "Moving a heap owner should preserve its allocation.");
-  const std::size_t owner_deallocations = CountDeallocations([&] {
-    HeapAllocation final_allocation{std::move(moved_allocation)};
-  });
+  const std::size_t owner_deallocations = CountDeallocations(
+      [&] { HeapAllocation final_allocation{std::move(moved_allocation)}; });
   context->ExpectEqual(
       owner_deallocations, std::size_t{1},
       "A moved heap owner should deallocate its allocation exactly once.");

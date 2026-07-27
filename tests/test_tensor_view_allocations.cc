@@ -95,9 +95,7 @@ struct VectorTensorLike {
 
   Device device() const { return device_value; }
 
-  const std::vector<std::ptrdiff_t>& strides() const {
-    return strides_value;
-  }
+  const std::vector<std::ptrdiff_t>& strides() const { return strides_value; }
 };
 
 void ExpectRankAllocationCount(infini::rt::test::TestContext* context,
@@ -129,12 +127,11 @@ std::array<TensorView::Stride, Rank> MakeStrideValues() {
 template <std::size_t Rank, std::size_t... Indices>
 std::size_t CountInitializerListConstructionAllocations(
     void* data, const std::array<TensorView::Size, Rank>& shape,
-    const std::array<TensorView::Stride, Rank>& strides,
-    const Device& device, std::index_sequence<Indices...>) {
+    const std::array<TensorView::Stride, Rank>& strides, const Device& device,
+    std::index_sequence<Indices...>) {
   return CountAllocations([&] {
     TensorView tensor{
-        data,
-        std::initializer_list<TensorView::Size>{shape[Indices]...},
+        data, std::initializer_list<TensorView::Size>{shape[Indices]...},
         DataType::kFloat32, device,
         std::initializer_list<TensorView::Stride>{strides[Indices]...}};
     (void)tensor;
@@ -142,9 +139,8 @@ std::size_t CountInitializerListConstructionAllocations(
 }
 
 template <std::size_t Rank>
-void TestConstructionAllocationsForRank(
-    infini::rt::test::TestContext* context, void* data,
-    const Device& device) {
+void TestConstructionAllocationsForRank(infini::rt::test::TestContext* context,
+                                        void* data, const Device& device) {
   constexpr std::size_t kCombinedMetadataAllocationCount = Rank <= 8 ? 0 : 1;
   constexpr std::size_t kRvalueMetadataAllocationCount = Rank <= 8 ? 0 : 2;
   constexpr std::size_t kGeneratedMetadataAllocationCount = Rank <= 8 ? 0 : 1;
@@ -152,19 +148,14 @@ void TestConstructionAllocationsForRank(
   const auto shape_values = MakeShapeValues<Rank>();
   const auto stride_values = MakeStrideValues<Rank>();
   const TensorView::Shape shape{shape_values.begin(), shape_values.end()};
-  const TensorView::Strides strides{stride_values.begin(),
-                                    stride_values.end()};
+  const TensorView::Strides strides{stride_values.begin(), stride_values.end()};
   const VectorTensorLike tensor_like{
-      data,
-      std::vector<std::size_t>{shape_values.begin(), shape_values.end()},
-      DataType::kFloat32,
-      device,
-      std::vector<std::ptrdiff_t>{stride_values.begin(),
-                                  stride_values.end()}};
+      data, std::vector<std::size_t>{shape_values.begin(), shape_values.end()},
+      DataType::kFloat32, device,
+      std::vector<std::ptrdiff_t>{stride_values.begin(), stride_values.end()}};
 
   ExpectRankAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{data, shape, DataType::kFloat32, device, strides};
         (void)tensor;
       }),
@@ -172,11 +163,9 @@ void TestConstructionAllocationsForRank(
       "lvalue shape and strides should have the expected allocation count.");
 
   ExpectRankAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{
-            data,
-            TensorView::Shape{shape_values.begin(), shape_values.end()},
+            data, TensorView::Shape{shape_values.begin(), shape_values.end()},
             DataType::kFloat32, device,
             TensorView::Strides{stride_values.begin(), stride_values.end()}};
         (void)tensor;
@@ -194,8 +183,7 @@ void TestConstructionAllocationsForRank(
       "initializer-list overload should have the expected allocation count.");
 
   ExpectRankAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{tensor_like};
         (void)tensor;
       }),
@@ -203,8 +191,7 @@ void TestConstructionAllocationsForRank(
       "vector-backed TensorLike should have the expected allocation count.");
 
   ExpectRankAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{data, shape, DataType::kFloat32, device};
         (void)tensor;
       }),
@@ -217,8 +204,7 @@ void TestConstructionAllocationsForRank(
   TensorView::Strides explicit_move_strides{stride_values.begin(),
                                             stride_values.end()};
   ExpectRankAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{data, std::move(explicit_move_shape),
                           DataType::kFloat32, device,
                           std::move(explicit_move_strides)};
@@ -229,8 +215,7 @@ void TestConstructionAllocationsForRank(
   TensorView::Shape default_move_shape{shape_values.begin(),
                                        shape_values.end()};
   ExpectRankAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{data, std::move(default_move_shape),
                           DataType::kFloat32, device};
         (void)tensor;
@@ -241,14 +226,13 @@ void TestConstructionAllocationsForRank(
 }
 
 template <std::size_t... Ranks>
-void TestConstructionAllocationsForRanks(
-    infini::rt::test::TestContext* context, void* data,
-    const Device& device, std::index_sequence<Ranks...>) {
+void TestConstructionAllocationsForRanks(infini::rt::test::TestContext* context,
+                                         void* data, const Device& device,
+                                         std::index_sequence<Ranks...>) {
   (TestConstructionAllocationsForRank<Ranks>(context, data, device), ...);
 }
 
-void TestConstructionAllocationMatrix(
-    infini::rt::test::TestContext* context) {
+void TestConstructionAllocationMatrix(infini::rt::test::TestContext* context) {
   std::array<float, 512> data{};
   const Device cpu{Device::Type::kCpu};
 
@@ -269,16 +253,13 @@ void TestValueAndDerivedViewAllocations(
   const TensorView source9{data.data(), shape9, DataType::kFloat32, cpu,
                            strides9};
 
+  ExpectAllocationCount(context, CountAllocations([&] {
+                          TensorView copied{source8};
+                          (void)copied;
+                        }),
+                        0, "Copying Rank-8 metadata should stay inline.");
   ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView copied{source8};
-        (void)copied;
-      }),
-      0, "Copying Rank-8 metadata should stay inline.");
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView copied{source9};
         (void)copied;
       }),
@@ -289,50 +270,40 @@ void TestValueAndDerivedViewAllocations(
   TensorView move_source9{data.data(), shape9, DataType::kFloat32, cpu,
                           strides9};
 
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView moved{std::move(move_source8)};
-        (void)moved;
-      }),
-      0, "Moving Rank-8 metadata should not allocate.");
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView moved{std::move(move_source9)};
-        (void)moved;
-      }),
-      0, "Moving Rank-9 metadata should transfer heap storage.");
+  ExpectAllocationCount(context, CountAllocations([&] {
+                          TensorView moved{std::move(move_source8)};
+                          (void)moved;
+                        }),
+                        0, "Moving Rank-8 metadata should not allocate.");
+  ExpectAllocationCount(context, CountAllocations([&] {
+                          TensorView moved{std::move(move_source9)};
+                          (void)moved;
+                        }),
+                        0,
+                        "Moving Rank-9 metadata should transfer heap storage.");
 
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView indexed = source8[0];
-        (void)indexed;
-      }),
-      0, "Indexing Rank-8 to Rank-7 should stay inline.");
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView indexed = source9[0];
-        (void)indexed;
-      }),
-      0, "Indexing Rank-9 to Rank-8 should stay inline.");
+  ExpectAllocationCount(context, CountAllocations([&] {
+                          TensorView indexed = source8[0];
+                          (void)indexed;
+                        }),
+                        0, "Indexing Rank-8 to Rank-7 should stay inline.");
+  ExpectAllocationCount(context, CountAllocations([&] {
+                          TensorView indexed = source9[0];
+                          (void)indexed;
+                        }),
+                        0, "Indexing Rank-9 to Rank-8 should stay inline.");
 
   const TensorView transpose_source{data.data(), TensorView::Shape{2, 2},
                                     DataType::kFloat32, cpu,
                                     TensorView::Strides{2, 1}};
-  ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
-        TensorView transposed = transpose_source.T();
-        (void)transposed;
-      }),
-      0, "Transposing rank-2 metadata should stay inline.");
+  ExpectAllocationCount(context, CountAllocations([&] {
+                          TensorView transposed = transpose_source.T();
+                          (void)transposed;
+                        }),
+                        0, "Transposing rank-2 metadata should stay inline.");
 }
 
-void TestDefaultMetadataAllocations(
-    infini::rt::test::TestContext* context) {
+void TestDefaultMetadataAllocations(infini::rt::test::TestContext* context) {
   std::array<float, 32> data{};
   const Device cpu{Device::Type::kCpu};
   const Device indexed_cpu{Device::Type::kCpu, 1};
@@ -341,13 +312,12 @@ void TestDefaultMetadataAllocations(
 
   bool shape_only_metadata_is_default = false;
   ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{data.data(), TensorView::Shape{2, 3}};
-        shape_only_metadata_is_default =
-            tensor.shape() == expected_shape &&
-            tensor.dtype() == DataType::kFloat32 && tensor.device() == cpu &&
-            tensor.strides() == expected_strides;
+        shape_only_metadata_is_default = tensor.shape() == expected_shape &&
+                                         tensor.dtype() == DataType::kFloat32 &&
+                                         tensor.device() == cpu &&
+                                         tensor.strides() == expected_strides;
       }),
       0, "Rank-2 shape-only construction should stay inline.");
   context->Expect(shape_only_metadata_is_default,
@@ -355,14 +325,13 @@ void TestDefaultMetadataAllocations(
 
   bool dtype_only_metadata_is_default = false;
   ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{data.data(), TensorView::Shape{2, 3},
                           DataType::kFloat64};
-        dtype_only_metadata_is_default =
-            tensor.shape() == expected_shape &&
-            tensor.dtype() == DataType::kFloat64 && tensor.device() == cpu &&
-            tensor.strides() == expected_strides;
+        dtype_only_metadata_is_default = tensor.shape() == expected_shape &&
+                                         tensor.dtype() == DataType::kFloat64 &&
+                                         tensor.device() == cpu &&
+                                         tensor.strides() == expected_strides;
       }),
       0, "Rank-2 shape and dtype construction should stay inline.");
   context->Expect(
@@ -371,8 +340,7 @@ void TestDefaultMetadataAllocations(
 
   bool device_only_metadata_is_default = false;
   ExpectAllocationCount(
-      context,
-      CountAllocations([&] {
+      context, CountAllocations([&] {
         TensorView tensor{data.data(), TensorView::Shape{2, 3}, indexed_cpu};
         device_only_metadata_is_default =
             tensor.shape() == expected_shape &&

@@ -56,9 +56,7 @@ struct VectorTensorLike {
 
   Device device() const { return device_value; }
 
-  const std::vector<std::ptrdiff_t>& strides() const {
-    return strides_value;
-  }
+  const std::vector<std::ptrdiff_t>& strides() const { return strides_value; }
 };
 
 INFINI_RT_NOINLINE std::size_t ConsumeTensorView(TensorView tensor) {
@@ -103,20 +101,14 @@ TensorView MakeInitializerListTensor<2>(float* data, const Device& device) {
 
 template <>
 TensorView MakeInitializerListTensor<4>(float* data, const Device& device) {
-  return TensorView{data,
-                    {2, 2, 2, 2},
-                    DataType::kFloat32,
-                    device,
-                    {8, 4, 2, 1}};
+  return TensorView{
+      data, {2, 2, 2, 2}, DataType::kFloat32, device, {8, 4, 2, 1}};
 }
 
 template <>
 TensorView MakeInitializerListTensor<5>(float* data, const Device& device) {
-  return TensorView{data,
-                    {2, 2, 2, 2, 2},
-                    DataType::kFloat32,
-                    device,
-                    {16, 8, 4, 2, 1}};
+  return TensorView{
+      data, {2, 2, 2, 2, 2}, DataType::kFloat32, device, {16, 8, 4, 2, 1}};
 }
 
 template <>
@@ -142,8 +134,7 @@ void RunRankBenchmarks(float* data, const Device& device) {
   const auto shape_values = MakeShape<Rank>();
   const auto stride_values = MakeStrides(shape_values);
   const TensorView::Shape shape{shape_values.begin(), shape_values.end()};
-  const TensorView::Strides strides{stride_values.begin(),
-                                    stride_values.end()};
+  const TensorView::Strides strides{stride_values.begin(), stride_values.end()};
   const VectorTensorLike tensor_like{
       data,
       {shape_values.begin(), shape_values.end()},
@@ -151,24 +142,21 @@ void RunRankBenchmarks(float* data, const Device& device) {
       device,
       {stride_values.begin(), stride_values.end()}};
   const TensorView source{data, shape, DataType::kFloat32, device, strides};
-  const auto params =
-      std::vector<perf::Param>{perf::NumberParam("ndim", Rank)};
+  const auto params = std::vector<perf::Param>{perf::NumberParam("ndim", Rank)};
 
-  perf::RunBenchmark(
-      "perf_tensor_view.construct_lvalue_explicit", params, kIterations, "ns",
-      [&] {
-        TensorView tensor{data, shape, DataType::kFloat32, device, strides};
-        perf::DoNotOptimize(tensor);
-      });
+  perf::RunBenchmark("perf_tensor_view.construct_lvalue_explicit", params,
+                     kIterations, "ns", [&] {
+                       TensorView tensor{data, shape, DataType::kFloat32,
+                                         device, strides};
+                       perf::DoNotOptimize(tensor);
+                     });
 
   perf::RunBenchmark(
       "perf_tensor_view.construct_rvalue_explicit", params, kIterations, "ns",
       [&] {
         TensorView tensor{
-            data,
-            TensorView::Shape{shape_values.begin(), shape_values.end()},
-            DataType::kFloat32,
-            device,
+            data, TensorView::Shape{shape_values.begin(), shape_values.end()},
+            DataType::kFloat32, device,
             TensorView::Strides{stride_values.begin(), stride_values.end()}};
         perf::DoNotOptimize(tensor);
       });
@@ -177,43 +165,40 @@ void RunRankBenchmarks(float* data, const Device& device) {
       "perf_tensor_view.construct_default_strides", params, kIterations, "ns",
       [&] {
         TensorView tensor{
-            data,
-            TensorView::Shape{shape_values.begin(), shape_values.end()},
-            DataType::kFloat32,
-            device};
+            data, TensorView::Shape{shape_values.begin(), shape_values.end()},
+            DataType::kFloat32, device};
         perf::DoNotOptimize(tensor);
       });
 
-  perf::RunBenchmark(
-      "perf_tensor_view.construct_initializer_list", params, kIterations, "ns",
-      [&] {
-        const auto tensor = MakeInitializerListTensor<Rank>(data, device);
-        perf::DoNotOptimize(tensor);
-      });
+  perf::RunBenchmark("perf_tensor_view.construct_initializer_list", params,
+                     kIterations, "ns", [&] {
+                       const auto tensor =
+                           MakeInitializerListTensor<Rank>(data, device);
+                       perf::DoNotOptimize(tensor);
+                     });
 
-  perf::RunBenchmark(
-      "perf_tensor_view.construct_tensor_like", params, kIterations, "ns",
-      [&] {
-        TensorView tensor{tensor_like};
-        perf::DoNotOptimize(tensor);
-      });
+  perf::RunBenchmark("perf_tensor_view.construct_tensor_like", params,
+                     kIterations, "ns", [&] {
+                       TensorView tensor{tensor_like};
+                       perf::DoNotOptimize(tensor);
+                     });
 
   perf::RunBenchmark("perf_tensor_view.copy", params, kIterations, "ns", [&] {
     TensorView tensor{source};
     perf::DoNotOptimize(tensor);
   });
 
-  perf::RunBenchmark(
-      "perf_tensor_view.operator_index", params, kIterations, "ns", [&] {
-        const auto tensor = source[0];
-        perf::DoNotOptimize(tensor);
-      });
+  perf::RunBenchmark("perf_tensor_view.operator_index", params, kIterations,
+                     "ns", [&] {
+                       const auto tensor = source[0];
+                       perf::DoNotOptimize(tensor);
+                     });
 
-  perf::RunBenchmark(
-      "perf_tensor_view.pass_by_value", params, kIterations, "ns", [&] {
-        const auto value = ConsumeTensorView(source);
-        perf::DoNotOptimize(value);
-      });
+  perf::RunBenchmark("perf_tensor_view.pass_by_value", params, kIterations,
+                     "ns", [&] {
+                       const auto value = ConsumeTensorView(source);
+                       perf::DoNotOptimize(value);
+                     });
 
   perf::RunBenchmark("perf_tensor_view.numel", params, kIterations, "ns", [&] {
     const auto value = source.numel();
@@ -229,8 +214,7 @@ void RunRank2Controls(float* data, const Device& device) {
                               contiguous_strides};
   const TensorView transposed{data, shape, DataType::kFloat32, device,
                               transposed_strides};
-  const auto params =
-      std::vector<perf::Param>{perf::NumberParam("ndim", 2)};
+  const auto params = std::vector<perf::Param>{perf::NumberParam("ndim", 2)};
 
   perf::RunBenchmark("perf_tensor_view.transpose", params, kIterations, "ns",
                      [&] {
@@ -267,18 +251,17 @@ int main() {
             << '\n';
 
 #if INFINI_RT_HAS_SMALL_VECTOR
-  std::cerr
-      << "sizeof(SmallVector<Size, 4>)="
-      << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 4>)
-      << " sizeof(SmallVector<Size, 8>)="
-      << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 8>)
-      << " sizeof(TensorMetadata<4>)="
-      << sizeof(infini::rt::detail::TensorMetadata<
-                TensorView::Size, TensorView::Stride, 4>)
-      << " sizeof(TensorMetadata<8>)="
-      << sizeof(infini::rt::detail::TensorMetadata<
-                TensorView::Size, TensorView::Stride, 8>)
-      << '\n';
+  std::cerr << "sizeof(SmallVector<Size, 4>)="
+            << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 4>)
+            << " sizeof(SmallVector<Size, 8>)="
+            << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 8>)
+            << " sizeof(TensorMetadata<4>)="
+            << sizeof(infini::rt::detail::TensorMetadata<TensorView::Size,
+                                                         TensorView::Stride, 4>)
+            << " sizeof(TensorMetadata<8>)="
+            << sizeof(infini::rt::detail::TensorMetadata<TensorView::Size,
+                                                         TensorView::Stride, 8>)
+            << '\n';
 #endif
 
   std::array<float, 512> data{};

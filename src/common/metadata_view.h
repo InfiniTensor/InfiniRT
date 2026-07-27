@@ -95,13 +95,11 @@ class MetadataView {
   size_type size_{0};
 };
 
-template <
-    typename Left, typename Right,
-    std::enable_if_t<
-        IsMetadataViewComparableRange<MetadataView<Right>, Left>::value,
-        int> = 0>
-constexpr bool operator==(MetadataView<Left> left,
-                          MetadataView<Right> right) {
+template <typename Left, typename Right,
+          std::enable_if_t<
+              IsMetadataViewComparableRange<MetadataView<Right>, Left>::value,
+              int> = 0>
+constexpr bool operator==(MetadataView<Left> left, MetadataView<Right> right) {
   if (left.size() != right.size()) return false;
 
   for (std::size_t index = 0; index < left.size(); ++index) {
@@ -111,64 +109,57 @@ constexpr bool operator==(MetadataView<Left> left,
   return true;
 }
 
-template <
-    typename Left, typename Right,
-    std::enable_if_t<
-        IsMetadataViewComparableRange<MetadataView<Right>, Left>::value,
-        int> = 0>
-constexpr bool operator!=(MetadataView<Left> left,
-                          MetadataView<Right> right) {
+template <typename Left, typename Right,
+          std::enable_if_t<
+              IsMetadataViewComparableRange<MetadataView<Right>, Left>::value,
+              int> = 0>
+constexpr bool operator!=(MetadataView<Left> left, MetadataView<Right> right) {
   return !(left == right);
 }
 
-template <
-    typename T, typename Range,
-    std::enable_if_t<
-        !IsMetadataView<std::decay_t<Range>>::value &&
-            !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
-            IsMetadataViewComparableRange<Range, T>::value,
-        int> = 0>
+template <typename T, typename Range,
+          std::enable_if_t<
+              !IsMetadataView<std::decay_t<Range>>::value &&
+                  !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
+                  IsMetadataViewComparableRange<Range, T>::value,
+              int> = 0>
 constexpr bool operator==(MetadataView<T> left, const Range& right) {
   if (left.size() != static_cast<std::size_t>(std::size(right))) return false;
 
   auto right_iterator = std::begin(right);
-  for (std::size_t index = 0; index < left.size();
-       ++index, ++right_iterator) {
+  for (std::size_t index = 0; index < left.size(); ++index, ++right_iterator) {
     if (!(left[index] == *right_iterator)) return false;
   }
 
   return true;
 }
 
-template <
-    typename Range, typename T,
-    std::enable_if_t<
-        !IsMetadataView<std::decay_t<Range>>::value &&
-            !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
-            IsMetadataViewComparableRange<Range, T>::value,
-        int> = 0>
+template <typename Range, typename T,
+          std::enable_if_t<
+              !IsMetadataView<std::decay_t<Range>>::value &&
+                  !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
+                  IsMetadataViewComparableRange<Range, T>::value,
+              int> = 0>
 constexpr bool operator==(const Range& left, MetadataView<T> right) {
   return right == left;
 }
 
-template <
-    typename T, typename Range,
-    std::enable_if_t<
-        !IsMetadataView<std::decay_t<Range>>::value &&
-            !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
-            IsMetadataViewComparableRange<Range, T>::value,
-        int> = 0>
+template <typename T, typename Range,
+          std::enable_if_t<
+              !IsMetadataView<std::decay_t<Range>>::value &&
+                  !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
+                  IsMetadataViewComparableRange<Range, T>::value,
+              int> = 0>
 constexpr bool operator!=(MetadataView<T> left, const Range& right) {
   return !(left == right);
 }
 
-template <
-    typename Range, typename T,
-    std::enable_if_t<
-        !IsMetadataView<std::decay_t<Range>>::value &&
-            !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
-            IsMetadataViewComparableRange<Range, T>::value,
-        int> = 0>
+template <typename Range, typename T,
+          std::enable_if_t<
+              !IsMetadataView<std::decay_t<Range>>::value &&
+                  !IsMetadataViewSmallVector<std::decay_t<Range>>::value &&
+                  IsMetadataViewComparableRange<Range, T>::value,
+              int> = 0>
 constexpr bool operator!=(const Range& left, MetadataView<T> right) {
   return !(right == left);
 }

@@ -1,11 +1,10 @@
-#include "common/metadata_view.h"
-
 #include <array>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "common/metadata_view.h"
 #include "common/small_vector.h"
 #include "test_helper.h"
 
@@ -21,21 +20,16 @@ static_assert(std::is_nothrow_copy_assignable_v<MetadataView>);
 static_assert(std::is_same_v<MetadataView::reference, const std::size_t&>);
 static_assert(std::is_same_v<MetadataView::pointer, const std::size_t*>);
 static_assert(std::is_same_v<MetadataView::iterator, const std::size_t*>);
-static_assert(
-    std::is_same_v<decltype(std::declval<MetadataView&>().data()),
-                   const std::size_t*>);
-static_assert(
-    std::is_same_v<decltype(std::declval<MetadataView&>().front()),
-                   const std::size_t&>);
-static_assert(
-    std::is_same_v<decltype(std::declval<MetadataView&>().back()),
-                   const std::size_t&>);
-static_assert(
-    std::is_same_v<decltype(std::declval<MetadataView&>()[0]),
-                   const std::size_t&>);
-static_assert(
-    std::is_same_v<decltype(std::declval<MetadataView&>().begin()),
-                   const std::size_t*>);
+static_assert(std::is_same_v<decltype(std::declval<MetadataView&>().data()),
+                             const std::size_t*>);
+static_assert(std::is_same_v<decltype(std::declval<MetadataView&>().front()),
+                             const std::size_t&>);
+static_assert(std::is_same_v<decltype(std::declval<MetadataView&>().back()),
+                             const std::size_t&>);
+static_assert(std::is_same_v<decltype(std::declval<MetadataView&>()[0]),
+                             const std::size_t&>);
+static_assert(std::is_same_v<decltype(std::declval<MetadataView&>().begin()),
+                             const std::size_t*>);
 
 void TestEmptyView(TestContext* context) {
   const MetadataView empty;
@@ -79,8 +73,7 @@ void TestAccessors(TestContext* context) {
                        "Back should expose the final value.");
   context->Expect(view.begin() == view.cbegin(),
                   "Begin and cbegin should agree.");
-  context->Expect(view.end() == view.cend(),
-                  "End and cend should agree.");
+  context->Expect(view.end() == view.cend(), "End and cend should agree.");
   context->Expect(view.end() == storage.data() + storage.size(),
                   "End should follow the final value.");
 
@@ -125,9 +118,8 @@ void TestRangeEquality(TestContext* context) {
 
   const SmallVector equal_small_vector{1, 2, 3};
   const SmallVector different_small_vector{1, 2, 4};
-  context->Expect(
-      view == equal_small_vector && equal_small_vector == view,
-      "MetadataView and SmallVector should compare by value.");
+  context->Expect(view == equal_small_vector && equal_small_vector == view,
+                  "MetadataView and SmallVector should compare by value.");
   context->Expect(
       view != different_small_vector && different_small_vector != view,
       "MetadataView and SmallVector should detect unequal values.");
