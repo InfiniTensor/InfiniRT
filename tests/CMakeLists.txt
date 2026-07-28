@@ -128,7 +128,9 @@ if(WITH_CAMBRICON)
     add_infini_rt_backend_runtime_test(
         CAMBRICON infini::rt::Device::Type::kCambricon
         infini/rt/cambricon/runtime_.h
-        1 0 0 0 0 0 0 0)
+        1 0 0 0 1 0 0 0)
+    add_infini_rt_backend_graph_test(
+        CAMBRICON infini::rt::Device::Type::kCambricon 1)
 endif()
 
 if(WITH_ASCEND)
