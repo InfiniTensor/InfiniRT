@@ -33,7 +33,7 @@ Current test expectations are:
 | CPU | No | Yes | No | Yes | No | Yes | No |
 | NVIDIA | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Iluvatar | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| MetaX | Yes | Yes | Yes | Yes | Yes | Yes | No |
+| MetaX | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Moore | Yes | Yes | No | Yes | Yes | Yes | No |
 | Hygon | Yes | Yes | Yes | Yes | Yes | Yes | No |
 | Cambricon | Yes | No | No | No | No | No | No |
