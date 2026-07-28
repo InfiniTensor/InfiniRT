@@ -8,22 +8,22 @@
 #include <utility>
 #include <vector>
 
-#include "common/tensor_metadata.h"
+#include "common/shape_strides_storage.h"
 #include "test_helper.h"
 
 namespace {
 
-using TensorMetadata =
-    infini::rt::detail::TensorMetadata<std::size_t, std::ptrdiff_t, 4>;
+using ShapeStridesStorage =
+    infini::rt::detail::ShapeStridesStorage<std::size_t, std::ptrdiff_t, 4>;
 using DefaultStridesTag = infini::rt::detail::DefaultStridesTag;
-using Shape = TensorMetadata::Shape;
-using Strides = TensorMetadata::Strides;
+using Shape = ShapeStridesStorage::Shape;
+using Strides = ShapeStridesStorage::Strides;
 using infini::rt::test::TestContext;
 
-static_assert(std::is_copy_constructible_v<TensorMetadata>);
-static_assert(std::is_nothrow_move_constructible_v<TensorMetadata>);
-static_assert(!std::is_copy_assignable_v<TensorMetadata>);
-static_assert(!std::is_move_assignable_v<TensorMetadata>);
+static_assert(std::is_copy_constructible_v<ShapeStridesStorage>);
+static_assert(std::is_nothrow_move_constructible_v<ShapeStridesStorage>);
+static_assert(!std::is_copy_assignable_v<ShapeStridesStorage>);
+static_assert(!std::is_move_assignable_v<ShapeStridesStorage>);
 
 template <typename T, typename Expected>
 void ExpectView(TestContext* context,
@@ -62,7 +62,7 @@ class InputRange {
 };
 
 void TestEmptyMetadata(TestContext* context) {
-  const TensorMetadata metadata;
+  const ShapeStridesStorage metadata;
 
   context->Expect(metadata.shape().empty(),
                   "Default tensor metadata should have an empty shape.");
@@ -75,7 +75,7 @@ void TestEmptyMetadata(TestContext* context) {
 
   const Shape shape;
   const Strides strides;
-  const TensorMetadata explicit_empty{shape, strides};
+  const ShapeStridesStorage explicit_empty{shape, strides};
   context->Expect(explicit_empty.shape().empty(),
                   "Explicit rank-zero metadata should have an empty shape.");
   context->Expect(explicit_empty.strides().empty(),
@@ -83,7 +83,7 @@ void TestEmptyMetadata(TestContext* context) {
 
   const std::array<std::size_t, 0> empty_shape{};
   const std::array<std::ptrdiff_t, 0> empty_strides{};
-  const TensorMetadata empty_array_metadata{empty_shape, empty_strides};
+  const ShapeStridesStorage empty_array_metadata{empty_shape, empty_strides};
   context->Expect(empty_array_metadata.shape().empty() &&
                       empty_array_metadata.strides().empty(),
                   "Empty standard arrays should construct rank-zero metadata.");
@@ -92,7 +92,7 @@ void TestEmptyMetadata(TestContext* context) {
 void TestInlineMetadata(TestContext* context) {
   const Shape shape{2, 3, 4, 5};
   const Strides strides{60, 20, 5, 1};
-  const TensorMetadata metadata{shape, strides};
+  const ShapeStridesStorage metadata{shape, strides};
 
   ExpectView(context, metadata.shape(), {2, 3, 4, 5},
              "Rank-four inline metadata should preserve shape values.");
@@ -107,7 +107,7 @@ void TestInlineMetadata(TestContext* context) {
 void TestCombinedMetadata(TestContext* context) {
   const Shape shape{2, 3, 4, 5, 6};
   const Strides strides{360, 120, 30, 6, 1};
-  const TensorMetadata exact_lvalue{shape, strides};
+  const ShapeStridesStorage exact_lvalue{shape, strides};
 
   ExpectView(context, exact_lvalue.shape(), {2, 3, 4, 5, 6},
              "Rank-five lvalue metadata should preserve shape values.");
@@ -120,7 +120,7 @@ void TestCombinedMetadata(TestContext* context) {
 
   const std::array<unsigned int, 5> generic_shape{7, 8, 9, 10, 11};
   const std::array<int, 5> generic_strides{7920, 990, 110, 11, 1};
-  const TensorMetadata generic{generic_shape, generic_strides};
+  const ShapeStridesStorage generic{generic_shape, generic_strides};
   ExpectView(context, generic.shape(), {7, 8, 9, 10, 11},
              "Generic rank-five metadata should convert shape values.");
   ExpectView(context, generic.strides(), {7920, 990, 110, 11, 1},
@@ -128,8 +128,8 @@ void TestCombinedMetadata(TestContext* context) {
 }
 
 void TestSplitRvalueMetadata(TestContext* context) {
-  const TensorMetadata temporary_values{Shape{2, 3, 4, 5, 6},
-                                        Strides{360, 120, 30, 6, 1}};
+  const ShapeStridesStorage temporary_values{Shape{2, 3, 4, 5, 6},
+                                             Strides{360, 120, 30, 6, 1}};
   ExpectView(context, temporary_values.shape(), {2, 3, 4, 5, 6},
              "Exact rvalue metadata should preserve shape values.");
   ExpectView(context, temporary_values.strides(), {360, 120, 30, 6, 1},
@@ -137,7 +137,7 @@ void TestSplitRvalueMetadata(TestContext* context) {
 
   Shape shape{3, 4, 5, 6, 7};
   Strides strides{840, 210, 42, 7, 1};
-  const TensorMetadata pre_moved{std::move(shape), std::move(strides)};
+  const ShapeStridesStorage pre_moved{std::move(shape), std::move(strides)};
   ExpectView(context, pre_moved.shape(), {3, 4, 5, 6, 7},
              "Pre-moved metadata should preserve shape values.");
   ExpectView(context, pre_moved.strides(), {840, 210, 42, 7, 1},
@@ -148,10 +148,10 @@ void TestSplitRvalueMetadata(TestContext* context) {
                    "Split stride values should be contiguous.");
 }
 
-TensorMetadata CopyPastSourceLifetime(TestContext* context) {
-  const TensorMetadata source{Shape{2, 3, 4, 5, 6},
-                              Strides{360, 120, 30, 6, 1}};
-  TensorMetadata copy{source};
+ShapeStridesStorage CopyPastSourceLifetime(TestContext* context) {
+  const ShapeStridesStorage source{Shape{2, 3, 4, 5, 6},
+                                   Strides{360, 120, 30, 6, 1}};
+  ShapeStridesStorage copy{source};
 
   context->Expect(copy.shape().data() != source.shape().data(),
                   "A metadata copy should own separate shape storage.");
@@ -161,21 +161,21 @@ TensorMetadata CopyPastSourceLifetime(TestContext* context) {
   return copy;
 }
 
-TensorMetadata MovePastSourceLifetime() {
-  TensorMetadata source{Shape{3, 4, 5, 6, 7}, Strides{840, 210, 42, 7, 1}};
-  TensorMetadata moved{std::move(source)};
+ShapeStridesStorage MovePastSourceLifetime() {
+  ShapeStridesStorage source{Shape{3, 4, 5, 6, 7}, Strides{840, 210, 42, 7, 1}};
+  ShapeStridesStorage moved{std::move(source)};
 
   return moved;
 }
 
 void TestCopyAndMoveOwnership(TestContext* context) {
-  const TensorMetadata copy = CopyPastSourceLifetime(context);
+  const ShapeStridesStorage copy = CopyPastSourceLifetime(context);
   ExpectView(context, copy.shape(), {2, 3, 4, 5, 6},
              "A copy should remain valid after its source is destroyed.");
   ExpectView(context, copy.strides(), {360, 120, 30, 6, 1},
              "Copied strides should survive source destruction.");
 
-  const TensorMetadata moved = MovePastSourceLifetime();
+  const ShapeStridesStorage moved = MovePastSourceLifetime();
   ExpectView(context, moved.shape(), {3, 4, 5, 6, 7},
              "Moved metadata should survive source destruction.");
   ExpectView(context, moved.strides(), {840, 210, 42, 7, 1},
@@ -185,7 +185,8 @@ void TestCopyAndMoveOwnership(TestContext* context) {
 void TestMixedOwnership(TestContext* context) {
   Shape moved_shape{2, 3, 4, 5, 6};
   const Strides borrowed_strides{360, 120, 30, 6, 1};
-  const TensorMetadata shape_rvalue{std::move(moved_shape), borrowed_strides};
+  const ShapeStridesStorage shape_rvalue{std::move(moved_shape),
+                                         borrowed_strides};
   ExpectView(context, shape_rvalue.shape(), {2, 3, 4, 5, 6},
              "A moved shape with lvalue strides should preserve shape.");
   ExpectView(context, shape_rvalue.strides(), {360, 120, 30, 6, 1},
@@ -193,7 +194,8 @@ void TestMixedOwnership(TestContext* context) {
 
   const Shape borrowed_shape{3, 4, 5, 6, 7};
   Strides moved_strides{840, 210, 42, 7, 1};
-  const TensorMetadata strides_rvalue{borrowed_shape, std::move(moved_strides)};
+  const ShapeStridesStorage strides_rvalue{borrowed_shape,
+                                           std::move(moved_strides)};
   ExpectView(context, strides_rvalue.shape(), {3, 4, 5, 6, 7},
              "An lvalue shape with moved strides should preserve shape.");
   ExpectView(context, strides_rvalue.strides(), {840, 210, 42, 7, 1},
@@ -201,12 +203,14 @@ void TestMixedOwnership(TestContext* context) {
 }
 
 void TestDefaultStrides(TestContext* context) {
-  const TensorMetadata inline_metadata{Shape{2, 3, 4, 5}, DefaultStridesTag{}};
+  const ShapeStridesStorage inline_metadata{Shape{2, 3, 4, 5},
+                                            DefaultStridesTag{}};
   ExpectView(context, inline_metadata.strides(), {60, 20, 5, 1},
              "Default inline strides should be row-major.");
 
   Shape shape{2, 3, 4, 5, 6};
-  const TensorMetadata heap_metadata{std::move(shape), DefaultStridesTag{}};
+  const ShapeStridesStorage heap_metadata{std::move(shape),
+                                          DefaultStridesTag{}};
   ExpectView(context, heap_metadata.shape(), {2, 3, 4, 5, 6},
              "Default-stride construction should preserve shape.");
   ExpectView(context, heap_metadata.strides(), {360, 120, 30, 6, 1},
@@ -214,7 +218,8 @@ void TestDefaultStrides(TestContext* context) {
 }
 
 void TestIndependentViewLengths(TestContext* context) {
-  const TensorMetadata longer_shape{Shape{2, 3, 4, 5, 6}, Strides{20, 5, 1}};
+  const ShapeStridesStorage longer_shape{Shape{2, 3, 4, 5, 6},
+                                         Strides{20, 5, 1}};
   context->ExpectEqual(longer_shape.shape().size(), std::size_t{5},
                        "Shape length should be preserved independently.");
   context->ExpectEqual(longer_shape.strides().size(), std::size_t{3},
@@ -224,8 +229,8 @@ void TestIndependentViewLengths(TestContext* context) {
   ExpectView(context, longer_shape.strides(), {20, 5, 1},
              "A shorter stride range should preserve all stride values.");
 
-  const TensorMetadata longer_strides{Shape{2, 3, 4},
-                                      Strides{360, 120, 30, 6, 1}};
+  const ShapeStridesStorage longer_strides{Shape{2, 3, 4},
+                                           Strides{360, 120, 30, 6, 1}};
   context->ExpectEqual(longer_strides.shape().size(), std::size_t{3},
                        "Shorter shape length should be preserved.");
   context->ExpectEqual(longer_strides.strides().size(), std::size_t{5},
@@ -237,7 +242,7 @@ void TestInputRanges(TestContext* context) {
   std::istringstream strides_stream{"360 120 30 6 1"};
   const InputRange<std::size_t> shape{&shape_stream};
   const InputRange<std::ptrdiff_t> strides{&strides_stream};
-  const TensorMetadata metadata{shape, strides};
+  const ShapeStridesStorage metadata{shape, strides};
 
   ExpectView(context, metadata.shape(), {2, 3, 4, 5, 6},
              "Input ranges should be consumed once for shape values.");

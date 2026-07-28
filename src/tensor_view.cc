@@ -16,7 +16,10 @@ static TensorView::Index GetEffectiveIndex(TensorView::Index index,
 TensorView::TensorView(void* data, std::initializer_list<Size> shape,
                        const DataType& dtype, const Device& device,
                        std::initializer_list<Stride> strides)
-    : data_{data}, metadata_{shape, strides}, dtype_{dtype}, device_{device} {}
+    : data_{data},
+      shape_strides_storage_{shape, strides},
+      dtype_{dtype},
+      device_{device} {}
 
 TensorView TensorView::operator[](const Index& index) const {
   const ShapeView shape_view = shape();
@@ -40,33 +43,33 @@ const DataType& TensorView::dtype() const { return dtype_; }
 const Device& TensorView::device() const { return device_; }
 
 TensorView::ShapeView TensorView::shape() const& noexcept {
-  return metadata_.shape();
+  return shape_strides_storage_.shape();
 }
 
 TensorView::Shape TensorView::shape() && {
-  const ShapeView view = metadata_.shape();
+  const ShapeView view = shape_strides_storage_.shape();
 
   return Shape{view.begin(), view.end()};
 }
 
 TensorView::Shape TensorView::shape() const&& {
-  const ShapeView view = metadata_.shape();
+  const ShapeView view = shape_strides_storage_.shape();
 
   return Shape{view.begin(), view.end()};
 }
 
 TensorView::StridesView TensorView::strides() const& noexcept {
-  return metadata_.strides();
+  return shape_strides_storage_.strides();
 }
 
 TensorView::Strides TensorView::strides() && {
-  const StridesView view = metadata_.strides();
+  const StridesView view = shape_strides_storage_.strides();
 
   return Strides{view.begin(), view.end()};
 }
 
 TensorView::Strides TensorView::strides() const&& {
-  const StridesView view = metadata_.strides();
+  const StridesView view = shape_strides_storage_.strides();
 
   return Strides{view.begin(), view.end()};
 }

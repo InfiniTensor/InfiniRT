@@ -251,17 +251,18 @@ int main() {
             << '\n';
 
 #if INFINI_RT_HAS_SMALL_VECTOR
-  std::cerr << "sizeof(SmallVector<Size, 4>)="
-            << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 4>)
-            << " sizeof(SmallVector<Size, 8>)="
-            << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 8>)
-            << " sizeof(TensorMetadata<4>)="
-            << sizeof(infini::rt::detail::TensorMetadata<TensorView::Size,
-                                                         TensorView::Stride, 4>)
-            << " sizeof(TensorMetadata<8>)="
-            << sizeof(infini::rt::detail::TensorMetadata<TensorView::Size,
-                                                         TensorView::Stride, 8>)
-            << '\n';
+  std::cerr
+      << "sizeof(SmallVector<Size, 4>)="
+      << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 4>)
+      << " sizeof(SmallVector<Size, 8>)="
+      << sizeof(infini::rt::detail::SmallVector<TensorView::Size, 8>)
+      << " sizeof(ShapeStridesStorage<4>)="
+      << sizeof(infini::rt::detail::ShapeStridesStorage<TensorView::Size,
+                                                        TensorView::Stride, 4>)
+      << " sizeof(ShapeStridesStorage<8>)="
+      << sizeof(infini::rt::detail::ShapeStridesStorage<TensorView::Size,
+                                                        TensorView::Stride, 8>)
+      << '\n';
 #endif
 
   std::array<float, 512> data{};

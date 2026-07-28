@@ -43,7 +43,7 @@ add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
 add_infini_rt_test(test_small_vector test_small_vector.cc)
 add_infini_rt_test(test_metadata_view test_metadata_view.cc)
-add_infini_rt_test(test_tensor_metadata test_tensor_metadata.cc)
+add_infini_rt_test(test_shape_strides_storage test_shape_strides_storage.cc)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_infini_rt_test(test_tensor_view_allocations
                        test_tensor_view_allocations.cc)

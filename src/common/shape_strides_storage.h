@@ -1,5 +1,5 @@
-#ifndef INFINI_RT_COMMON_TENSOR_METADATA_H_
-#define INFINI_RT_COMMON_TENSOR_METADATA_H_
+#ifndef INFINI_RT_COMMON_SHAPE_STRIDES_STORAGE_H_
+#define INFINI_RT_COMMON_SHAPE_STRIDES_STORAGE_H_
 
 #include <cassert>
 #include <cstddef>
@@ -33,21 +33,21 @@ struct IsForwardRange<Range, std::void_t<typename std::iterator_traits<
                           RangeIterator<Range>>::iterator_category> {};
 
 template <typename Size, typename Stride, std::size_t InlineCapacity>
-class TensorMetadata {
+class ShapeStridesStorage {
   static_assert(InlineCapacity > 0,
-                "Tensor metadata requires a positive inline capacity.");
+                "Shape/strides storage requires a positive inline capacity.");
 
   static_assert(std::is_trivially_copyable_v<Size> &&
                     std::is_trivially_destructible_v<Size>,
-                "Tensor metadata requires a trivial size type.");
+                "Shape/strides storage requires a trivial size type.");
 
   static_assert(std::is_trivially_copyable_v<Stride> &&
                     std::is_trivially_destructible_v<Stride>,
-                "Tensor metadata requires a trivial stride type.");
+                "Shape/strides storage requires a trivial stride type.");
 
   static_assert(alignof(Size) <= alignof(std::max_align_t) &&
                     alignof(Stride) <= alignof(std::max_align_t),
-                "Tensor metadata does not support over-aligned types.");
+                "Shape/strides storage does not support over-aligned types.");
 
  public:
   using Shape = SmallVector<Size, InlineCapacity>;
@@ -58,53 +58,55 @@ class TensorMetadata {
 
   using StridesView = MetadataView<Stride>;
 
-  TensorMetadata() = default;
+  ShapeStridesStorage() = default;
 
-  TensorMetadata(const Shape& shape, const Strides& strides) {
+  ShapeStridesStorage(const Shape& shape, const Strides& strides) {
     InitializeRanges(shape, strides);
   }
 
-  TensorMetadata(Shape&& shape, Strides&& strides) {
+  ShapeStridesStorage(Shape&& shape, Strides&& strides) {
     InitializeOwned(std::move(shape), std::move(strides));
   }
 
-  TensorMetadata(Shape&& shape, const Strides& strides) {
+  ShapeStridesStorage(Shape&& shape, const Strides& strides) {
     InitializeMixed(std::move(shape), strides);
   }
 
-  TensorMetadata(const Shape& shape, Strides&& strides) {
+  ShapeStridesStorage(const Shape& shape, Strides&& strides) {
     InitializeMixed(shape, std::move(strides));
   }
 
   template <typename ShapeRange, typename StridesRange>
-  TensorMetadata(const ShapeRange& shape, const StridesRange& strides) {
+  ShapeStridesStorage(const ShapeRange& shape, const StridesRange& strides) {
     InitializeRanges(shape, strides);
   }
 
-  TensorMetadata(const Shape& shape, DefaultStridesTag) {
+  ShapeStridesStorage(const Shape& shape, DefaultStridesTag) {
     InitializeDefaultStrides(shape);
   }
 
-  TensorMetadata(Shape&& shape, DefaultStridesTag) {
+  ShapeStridesStorage(Shape&& shape, DefaultStridesTag) {
     InitializeDefaultStrides(std::move(shape));
   }
 
   template <typename ShapeRange>
-  TensorMetadata(const ShapeRange& shape, DefaultStridesTag) {
+  ShapeStridesStorage(const ShapeRange& shape, DefaultStridesTag) {
     InitializeDefaultStrides(shape);
   }
 
-  TensorMetadata(const TensorMetadata& other) {
+  ShapeStridesStorage(const ShapeStridesStorage& other) {
     InitializeRanges(other.shape(), other.strides());
   }
 
-  TensorMetadata(TensorMetadata&& other) noexcept { MoveConstructFrom(other); }
+  ShapeStridesStorage(ShapeStridesStorage&& other) noexcept {
+    MoveConstructFrom(other);
+  }
 
-  TensorMetadata& operator=(const TensorMetadata&) = delete;
+  ShapeStridesStorage& operator=(const ShapeStridesStorage&) = delete;
 
-  TensorMetadata& operator=(TensorMetadata&&) = delete;
+  ShapeStridesStorage& operator=(ShapeStridesStorage&&) = delete;
 
-  ~TensorMetadata() { ReleaseStorage(); }
+  ~ShapeStridesStorage() { ReleaseStorage(); }
 
   ShapeView shape() const noexcept {
     return ShapeView{ShapeData(), shape_size_};
@@ -413,7 +415,7 @@ class TensorMetadata {
     strides_size_ = strides_size;
   }
 
-  void MoveConstructFrom(TensorMetadata& other) noexcept {
+  void MoveConstructFrom(ShapeStridesStorage& other) noexcept {
     if (other.IsInline()) {
       Initialize(
           other.shape_size_, other.strides_size_,
