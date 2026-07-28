@@ -22,6 +22,7 @@ Known device types include:
 - `Device::Type::kNvidia`
 - `Device::Type::kIluvatar`
 - `Device::Type::kMetax`
+- `Device::Type::kMars`
 - `Device::Type::kMoore`
 - `Device::Type::kHygon`
 - `Device::Type::kCambricon`

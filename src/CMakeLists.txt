@@ -84,6 +84,13 @@ if(WITH_METAX)
         "${MACA_RUNTIME_LIB}")
 endif()
 
+if(WITH_MARS)
+    target_compile_definitions(infinirt PRIVATE WITH_MARS=1)
+    _infinirt_use_backend_runtime(
+        "${HPCC_PATH}/include"
+        "${HPCC_RUNTIME_LIB}")
+endif()
+
 if(WITH_MOORE)
     target_compile_definitions(infinirt PRIVATE WITH_MOORE=1)
     _infinirt_use_backend_runtime(
