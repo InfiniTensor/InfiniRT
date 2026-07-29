@@ -2,16 +2,10 @@
 
 #include <algorithm>
 #include <cassert>
-#include <numeric>
 
 #include "dispatcher.h"
 
 namespace infini::rt {
-
-static TensorView::Index GetEffectiveIndex(TensorView::Index index,
-                                           TensorView::Size size) {
-  return index < 0 ? index + size : index;
-}
 
 TensorView::TensorView(void* data, std::initializer_list<Size> shape,
                        const DataType& dtype, const Device& device,
@@ -42,10 +36,6 @@ const DataType& TensorView::dtype() const { return dtype_; }
 
 const Device& TensorView::device() const { return device_; }
 
-TensorView::ShapeView TensorView::shape() const& noexcept {
-  return shape_strides_storage_.shape();
-}
-
 TensorView::Shape TensorView::shape() && {
   const ShapeView view = shape_strides_storage_.shape();
 
@@ -56,10 +46,6 @@ TensorView::Shape TensorView::shape() const&& {
   const ShapeView view = shape_strides_storage_.shape();
 
   return Shape{view.begin(), view.end()};
-}
-
-TensorView::StridesView TensorView::strides() const& noexcept {
-  return shape_strides_storage_.strides();
 }
 
 TensorView::Strides TensorView::strides() && {
@@ -74,30 +60,8 @@ TensorView::Strides TensorView::strides() const&& {
   return Strides{view.begin(), view.end()};
 }
 
-TensorView::Size TensorView::size(const Index& index) const {
-  const ShapeView view = shape();
-
-  return view[GetEffectiveIndex(index, view.size())];
-}
-
-TensorView::Stride TensorView::stride(const Index& index) const {
-  const StridesView view = strides();
-
-  return view[GetEffectiveIndex(index, view.size())];
-}
-
-TensorView::Size TensorView::ndim() const { return shape().size(); }
-
 TensorView::Size TensorView::element_size() const {
   return kDataTypeToSize.at(dtype_);
-}
-
-TensorView::Size TensorView::numel() const {
-  const ShapeView shape_view = shape();
-
-  return std::accumulate(
-      shape_view.begin(), shape_view.end(), static_cast<TensorView::Size>(1),
-      [](TensorView::Size a, TensorView::Size b) { return a * b; });
 }
 
 TensorView TensorView::T() const {

@@ -65,6 +65,19 @@ INFINI_RT_NOINLINE std::size_t ConsumeTensorView(TensorView tensor) {
          static_cast<std::size_t>(tensor.stride(0));
 }
 
+INFINI_RT_NOINLINE std::size_t ConsumeTensorMetadata(const TensorView& tensor) {
+  const auto rank = tensor.ndim();
+  std::size_t result = rank;
+
+  for (TensorView::Index axis = 0; axis < static_cast<TensorView::Index>(rank);
+       ++axis) {
+    result += tensor.size(axis);
+    result += static_cast<std::size_t>(tensor.stride(axis));
+  }
+
+  return result;
+}
+
 template <std::size_t Rank>
 std::array<TensorView::Size, Rank> MakeShape() {
   std::array<TensorView::Size, Rank> shape{};
@@ -197,6 +210,12 @@ void RunRankBenchmarks(float* data, const Device& device) {
   perf::RunBenchmark("perf_tensor_view.pass_by_value", params, kIterations,
                      "ns", [&] {
                        const auto value = ConsumeTensorView(source);
+                       perf::DoNotOptimize(value);
+                     });
+
+  perf::RunBenchmark("perf_tensor_view.metadata_access", params, kIterations,
+                     "ns", [&] {
+                       const auto value = ConsumeTensorMetadata(source);
                        perf::DoNotOptimize(value);
                      });
 

@@ -102,6 +102,14 @@ void TestInlineMetadata(TestContext* context) {
                    "Inline shape values should be contiguous.");
   ExpectContiguous(context, metadata.strides(),
                    "Inline stride values should be contiguous.");
+  context->ExpectEqual(metadata.shape_size(), std::size_t{4},
+                       "Direct inline shape size should match the view.");
+  context->ExpectEqual(metadata.strides_size(), std::size_t{4},
+                       "Direct inline strides size should match the view.");
+  context->Expect(metadata.shape_data() == metadata.shape().data(),
+                  "Direct inline shape data should match the view.");
+  context->Expect(metadata.strides_data() == metadata.strides().data(),
+                  "Direct inline strides data should match the view.");
 }
 
 void TestCombinedMetadata(TestContext* context) {
@@ -117,6 +125,14 @@ void TestCombinedMetadata(TestContext* context) {
                    "Combined shape values should be contiguous.");
   ExpectContiguous(context, exact_lvalue.strides(),
                    "Combined stride values should be contiguous.");
+  context->ExpectEqual(exact_lvalue.shape_size(), std::size_t{5},
+                       "Direct heap shape size should match the view.");
+  context->ExpectEqual(exact_lvalue.strides_size(), std::size_t{5},
+                       "Direct heap strides size should match the view.");
+  context->Expect(exact_lvalue.shape_data() == exact_lvalue.shape().data(),
+                  "Direct heap shape data should match the view.");
+  context->Expect(exact_lvalue.strides_data() == exact_lvalue.strides().data(),
+                  "Direct heap strides data should match the view.");
 
   const std::array<unsigned int, 5> generic_shape{7, 8, 9, 10, 11};
   const std::array<int, 5> generic_strides{7920, 990, 110, 11, 1};
@@ -224,6 +240,10 @@ void TestIndependentViewLengths(TestContext* context) {
                        "Shape length should be preserved independently.");
   context->ExpectEqual(longer_shape.strides().size(), std::size_t{3},
                        "Stride length should be preserved independently.");
+  context->ExpectEqual(longer_shape.shape_size(), std::size_t{5},
+                       "Direct shape size should remain independent.");
+  context->ExpectEqual(longer_shape.strides_size(), std::size_t{3},
+                       "Direct strides size should remain independent.");
   ExpectView(context, longer_shape.shape(), {2, 3, 4, 5, 6},
              "A longer shape should preserve all shape values.");
   ExpectView(context, longer_shape.strides(), {20, 5, 1},
@@ -235,6 +255,10 @@ void TestIndependentViewLengths(TestContext* context) {
                        "Shorter shape length should be preserved.");
   context->ExpectEqual(longer_strides.strides().size(), std::size_t{5},
                        "Longer stride length should be preserved.");
+  context->ExpectEqual(longer_strides.shape_size(), std::size_t{3},
+                       "Direct shorter shape size should be preserved.");
+  context->ExpectEqual(longer_strides.strides_size(), std::size_t{5},
+                       "Direct longer strides size should be preserved.");
 }
 
 void TestInputRanges(TestContext* context) {

@@ -116,6 +116,14 @@ class ShapeStridesStorage {
     return StridesView{StridesData(), strides_size_};
   }
 
+  std::size_t shape_size() const noexcept { return shape_size_; }
+
+  std::size_t strides_size() const noexcept { return strides_size_; }
+
+  const Size* shape_data() const noexcept { return ShapeData(); }
+
+  const Stride* strides_data() const noexcept { return StridesData(); }
+
  private:
   using ShapeAllocation = typename Shape::HeapAllocation;
 

@@ -194,27 +194,49 @@ class TensorView {
 
   const Device& device() const;
 
-  ShapeView shape() const& noexcept;
+  ShapeView shape() const& noexcept { return shape_strides_storage_.shape(); }
 
   Shape shape() &&;
 
   Shape shape() const&&;
 
-  StridesView strides() const& noexcept;
+  StridesView strides() const& noexcept {
+    return shape_strides_storage_.strides();
+  }
 
   Strides strides() &&;
 
   Strides strides() const&&;
 
-  Size size(const Index& index) const;
+  Size size(const Index& index) const noexcept {
+    const Size rank = shape_strides_storage_.shape_size();
 
-  Stride stride(const Index& index) const;
+    return shape_strides_storage_
+        .shape_data()[static_cast<Size>(GetEffectiveIndex(index, rank))];
+  }
 
-  Size ndim() const;
+  Stride stride(const Index& index) const noexcept {
+    const Size rank = shape_strides_storage_.strides_size();
+
+    return shape_strides_storage_
+        .strides_data()[static_cast<Size>(GetEffectiveIndex(index, rank))];
+  }
+
+  Size ndim() const noexcept { return shape_strides_storage_.shape_size(); }
 
   Size element_size() const;
 
-  Size numel() const;
+  Size numel() const noexcept {
+    const Size rank = shape_strides_storage_.shape_size();
+    const Size* const shape_data = shape_strides_storage_.shape_data();
+    Size result = 1;
+
+    for (Size axis = 0; axis < rank; ++axis) {
+      result *= shape_data[axis];
+    }
+
+    return result;
+  }
 
   TensorView T() const;
 
@@ -225,6 +247,10 @@ class TensorView {
   bool IsContiguous() const;
 
  private:
+  static constexpr Index GetEffectiveIndex(Index index, Size size) noexcept {
+    return index < 0 ? index + static_cast<Index>(size) : index;
+  }
+
   static const DataType DefaultDataType();
 
   static Device DefaultDevice();

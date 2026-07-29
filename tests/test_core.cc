@@ -54,6 +54,18 @@ static_assert(!std::is_convertible_v<TensorView::ShapeView, TensorView::Shape>,
 static_assert(
     !std::is_convertible_v<TensorView::StridesView, TensorView::Strides>,
     "Borrowed strides should not hide an owning allocation.");
+static_assert(noexcept(std::declval<const TensorView&>().shape()),
+              "Borrowed shape access should be noexcept.");
+static_assert(noexcept(std::declval<const TensorView&>().strides()),
+              "Borrowed strides access should be noexcept.");
+static_assert(noexcept(std::declval<const TensorView&>().size(0)),
+              "Scalar size access should be noexcept.");
+static_assert(noexcept(std::declval<const TensorView&>().stride(0)),
+              "Scalar stride access should be noexcept.");
+static_assert(noexcept(std::declval<const TensorView&>().ndim()),
+              "Rank access should be noexcept.");
+static_assert(noexcept(std::declval<const TensorView&>().numel()),
+              "Element-count access should be noexcept.");
 
 struct VectorTensorLike {
   void* data_value;
@@ -177,6 +189,17 @@ void TestTensorViewRanks(infini::rt::test::TestContext* context) {
     context->ExpectEqual(
         tensor.numel(), expected_numel,
         rank_prefix + "TensorView should compute the element count.");
+
+    if (rank > 0) {
+      context->ExpectEqual(
+          tensor.size(-1), shape.back(),
+          rank_prefix + "Negative size access should preserve the last axis.");
+      context->ExpectEqual(
+          tensor.stride(-1), strides.back(),
+          rank_prefix +
+              "Negative stride access should preserve the last axis.");
+    }
+
     context->Expect(
         tensor.IsContiguous(),
         rank_prefix + "TensorView should report contiguous metadata.");
@@ -257,6 +280,13 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
       negative_indexed.data(), indexed.data(),
       "Negative indexing should select the matching leading element.");
 
+  const TensorView reverse_strided{data.data() + 3, shape, DataType::kFloat32,
+                                   cpu, std::vector<std::ptrdiff_t>{-3, 1}};
+  const TensorView reverse_indexed = reverse_strided[1];
+  context->ExpectEqual(
+      reverse_indexed.data(), static_cast<const void*>(data.data()),
+      "Indexing should preserve a negative leading-stride offset.");
+
   const TensorView transposed = tensor.T();
   const std::vector<std::size_t> transposed_shape{3, 2};
   const std::vector<std::ptrdiff_t> transposed_strides{1, 3};
@@ -316,6 +346,15 @@ void TestTensorViewHeapRepresentations(infini::rt::test::TestContext* context) {
                          TensorView::Shape{shape.begin(), shape.end()},
                          DataType::kFloat32, cpu,
                          TensorView::Strides{strides.begin(), strides.end()}};
+
+  context->ExpectEqual(split.ndim(), std::size_t{9},
+                       "Split metadata should preserve its rank.");
+  context->ExpectEqual(split.size(8), std::size_t{2},
+                       "Split metadata should support scalar shape access.");
+  context->ExpectEqual(split.stride(8), std::ptrdiff_t{1},
+                       "Split metadata should support scalar stride access.");
+  context->ExpectEqual(split.numel(), std::size_t{512},
+                       "Split metadata should preserve its element count.");
 
   context->Expect(std::equal_to<TensorView>{}(combined, split),
                   "Combined and split metadata should compare equal.");
