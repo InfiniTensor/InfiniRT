@@ -13,12 +13,19 @@ namespace infini::rt::runtime {
 
 template <>
 struct Runtime<Device::Type::kCambricon>
-    : DeviceRuntime<Runtime<Device::Type::kCambricon>> {
+    : GraphRuntime<Runtime<Device::Type::kCambricon>> {
   using Error = cnrtRet_t;
 
   using Stream = cnrtQueue_t;
 
+  // CNRT exposes graph capture and replay as TaskTopo objects.
+  using Graph = cnrtTaskTopo_t;
+
+  using GraphExec = cnrtTaskTopoEntity_t;
+
   using Event = void*;
+
+  using StreamCaptureMode = cnrtQueueCaptureMode_t;
 
   static constexpr Device::Type kDeviceType = Device::Type::kCambricon;
 
@@ -79,9 +86,8 @@ struct Runtime<Device::Type::kCambricon>
 
   static constexpr auto Memset = cnrtMemset;
 
-  static Error MemsetAsync(void*, int, std::size_t, Stream) {
-    return Unsupported();
-  }
+  // InfiniCore emits zero-fill work on the captured queue.
+  static constexpr auto MemsetAsync = cnrtMemsetAsync;
 
   static constexpr auto StreamCreate = cnrtQueueCreate;
 
@@ -108,6 +114,38 @@ struct Runtime<Device::Type::kCambricon>
   static Error EventDestroy(Event) { return Unsupported(); }
 
   static Error EventElapsedTime(float*, Event, Event) { return Unsupported(); }
+
+  static constexpr auto kStreamCaptureModeGlobal =
+      cnrtQueueCaptureModeGlobal;
+
+  static constexpr auto kStreamCaptureModeThreadLocal =
+      cnrtQueueCaptureModeThreadLocal;
+
+  static constexpr auto kStreamCaptureModeRelaxed =
+      cnrtQueueCaptureModeRelaxed;
+
+  static constexpr auto StreamBeginCapture = cnrtQueueBeginCapture;
+
+  static Error StreamEndCapture(Stream stream, Graph* graph) {
+    assert(graph != nullptr);
+    return cnrtQueueEndCapture(stream, graph);
+  }
+
+  static Error GraphDestroy(Graph graph) {
+    return graph == nullptr ? kSuccess : cnrtTaskTopoDestroy(graph);
+  }
+
+  static Error GraphInstantiate(GraphExec* graph_exec, Graph graph) {
+    assert(graph_exec != nullptr);
+    return cnrtTaskTopoInstantiate(graph_exec, graph, nullptr, nullptr, 0);
+  }
+
+  static Error GraphExecDestroy(GraphExec graph_exec) {
+    return graph_exec == nullptr ? kSuccess
+                                 : cnrtTaskTopoEntityDestroy(graph_exec);
+  }
+
+  static constexpr auto GraphLaunch = cnrtTaskTopoEntityInvoke;
 
  private:
   static Error Unsupported() { return static_cast<Error>(1); }

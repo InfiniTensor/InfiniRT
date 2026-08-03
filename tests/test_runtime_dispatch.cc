@@ -442,7 +442,7 @@ int main() {
 
 #if defined(INFINI_RT_TEST_WITH_CAMBRICON)
   TestDispatch(&context, infini::rt::Device::Type::kCambricon, "CAMBRICON",
-               {true, false, false, false, false, false, false, false});
+               {true, false, false, false, true, false, false, false});
 #endif
 
 #if defined(INFINI_RT_TEST_WITH_ASCEND)
