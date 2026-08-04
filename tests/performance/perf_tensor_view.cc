@@ -78,20 +78,20 @@ INFINI_RT_NOINLINE std::size_t ConsumeTensorMetadata(const TensorView& tensor) {
   return result;
 }
 
-template <std::size_t Rank>
-std::array<TensorView::Size, Rank> MakeShape() {
-  std::array<TensorView::Size, Rank> shape{};
+template <std::size_t rank>
+std::array<TensorView::Size, rank> MakeShape() {
+  std::array<TensorView::Size, rank> shape{};
   shape.fill(2);
   return shape;
 }
 
-template <std::size_t Rank>
-std::array<TensorView::Stride, Rank> MakeStrides(
-    const std::array<TensorView::Size, Rank>& shape) {
-  std::array<TensorView::Stride, Rank> strides{};
+template <std::size_t rank>
+std::array<TensorView::Stride, rank> MakeStrides(
+    const std::array<TensorView::Size, rank>& shape) {
+  std::array<TensorView::Stride, rank> strides{};
   TensorView::Stride stride = 1;
 
-  for (std::size_t i = Rank; i > 0; --i) {
+  for (std::size_t i = rank; i > 0; --i) {
     strides[i - 1] = stride;
     stride *= static_cast<TensorView::Stride>(shape[i - 1]);
   }
@@ -99,7 +99,7 @@ std::array<TensorView::Stride, Rank> MakeStrides(
   return strides;
 }
 
-template <std::size_t Rank>
+template <std::size_t rank>
 TensorView MakeInitializerListTensor(float* data, const Device& device);
 
 template <>
@@ -142,9 +142,9 @@ TensorView MakeInitializerListTensor<9>(float* data, const Device& device) {
                     {256, 128, 64, 32, 16, 8, 4, 2, 1}};
 }
 
-template <std::size_t Rank>
+template <std::size_t rank>
 void RunRankBenchmarks(float* data, const Device& device) {
-  const auto shape_values = MakeShape<Rank>();
+  const auto shape_values = MakeShape<rank>();
   const auto stride_values = MakeStrides(shape_values);
   const TensorView::Shape shape{shape_values.begin(), shape_values.end()};
   const TensorView::Strides strides{stride_values.begin(), stride_values.end()};
@@ -155,7 +155,7 @@ void RunRankBenchmarks(float* data, const Device& device) {
       device,
       {stride_values.begin(), stride_values.end()}};
   const TensorView source{data, shape, DataType::kFloat32, device, strides};
-  const auto params = std::vector<perf::Param>{perf::NumberParam("ndim", Rank)};
+  const auto params = std::vector<perf::Param>{perf::NumberParam("ndim", rank)};
 
   perf::RunBenchmark("perf_tensor_view.construct_lvalue_explicit", params,
                      kIterations, "ns", [&] {
@@ -186,7 +186,7 @@ void RunRankBenchmarks(float* data, const Device& device) {
   perf::RunBenchmark("perf_tensor_view.construct_initializer_list", params,
                      kIterations, "ns", [&] {
                        const auto tensor =
-                           MakeInitializerListTensor<Rank>(data, device);
+                           MakeInitializerListTensor<rank>(data, device);
                        perf::DoNotOptimize(tensor);
                      });
 

@@ -32,9 +32,9 @@ struct IsForwardRange<Range, std::void_t<typename std::iterator_traits<
                       typename std::iterator_traits<
                           RangeIterator<Range>>::iterator_category> {};
 
-template <typename Size, typename Stride, std::size_t InlineCapacity>
+template <typename Size, typename Stride, std::size_t inline_capacity>
 class ShapeStridesStorage {
-  static_assert(InlineCapacity > 0,
+  static_assert(inline_capacity > 0,
                 "Shape/strides storage requires a positive inline capacity.");
 
   static_assert(std::is_trivially_copyable_v<Size> &&
@@ -50,9 +50,9 @@ class ShapeStridesStorage {
                 "Shape/strides storage does not support over-aligned types.");
 
  public:
-  using Shape = SmallVector<Size, InlineCapacity>;
+  using Shape = SmallVector<Size, inline_capacity>;
 
-  using Strides = SmallVector<Stride, InlineCapacity>;
+  using Strides = SmallVector<Stride, inline_capacity>;
 
   using ShapeView = MetadataView<Size>;
 
@@ -130,9 +130,9 @@ class ShapeStridesStorage {
   using StridesAllocation = typename Strides::HeapAllocation;
 
   struct InlineStorage {
-    Size shape[InlineCapacity];
+    Size shape[inline_capacity];
 
-    Stride strides[InlineCapacity];
+    Stride strides[inline_capacity];
 
     InlineStorage() noexcept {}
   };
@@ -236,7 +236,7 @@ class ShapeStridesStorage {
   };
 
   bool IsInline() const noexcept {
-    return shape_size_ <= InlineCapacity && strides_size_ <= InlineCapacity;
+    return shape_size_ <= inline_capacity && strides_size_ <= inline_capacity;
   }
 
   bool IsCombined() const noexcept {
@@ -294,7 +294,7 @@ class ShapeStridesStorage {
     const std::uint32_t narrowed_shape_size = NarrowSize(shape_size);
     const std::uint32_t narrowed_strides_size = NarrowSize(strides_size);
 
-    if (shape_size <= InlineCapacity && strides_size <= InlineCapacity) {
+    if (shape_size <= inline_capacity && strides_size <= inline_capacity) {
       std::forward<Writer>(writer)(storage_.inline_storage.shape,
                                    storage_.inline_storage.strides);
       shape_size_ = narrowed_shape_size;
@@ -312,14 +312,14 @@ class ShapeStridesStorage {
     const std::size_t shape_size = shape.size();
     const std::size_t strides_size = strides.size();
 
-    if (shape_size <= InlineCapacity && strides_size <= InlineCapacity) {
+    if (shape_size <= inline_capacity && strides_size <= inline_capacity) {
       InitializeRanges(shape, strides);
 
       return;
     }
 
-    if (shape.capacity() > InlineCapacity &&
-        strides.capacity() > InlineCapacity) {
+    if (shape.capacity() > inline_capacity &&
+        strides.capacity() > inline_capacity) {
       const std::uint32_t narrowed_shape_size = NarrowSize(shape_size);
       const std::uint32_t narrowed_strides_size = NarrowSize(strides_size);
       ShapeAllocation shape_allocation = shape.ReleaseHeap();
@@ -334,8 +334,8 @@ class ShapeStridesStorage {
   }
 
   void InitializeMixed(Shape&& shape, const Strides& strides) {
-    if (shape.size() > InlineCapacity && strides.size() > InlineCapacity &&
-        shape.capacity() > InlineCapacity) {
+    if (shape.size() > inline_capacity && strides.size() > inline_capacity &&
+        shape.capacity() > inline_capacity) {
       Strides owned_strides{strides};
       InitializeOwned(std::move(shape), std::move(owned_strides));
 
@@ -346,8 +346,8 @@ class ShapeStridesStorage {
   }
 
   void InitializeMixed(const Shape& shape, Strides&& strides) {
-    if (shape.size() > InlineCapacity && strides.size() > InlineCapacity &&
-        strides.capacity() > InlineCapacity) {
+    if (shape.size() > inline_capacity && strides.size() > inline_capacity &&
+        strides.capacity() > inline_capacity) {
       Shape owned_shape{shape};
       InitializeOwned(std::move(owned_shape), std::move(strides));
 
@@ -374,7 +374,8 @@ class ShapeStridesStorage {
   }
 
   void InitializeDefaultStrides(Shape&& shape) {
-    if (shape.size() <= InlineCapacity || shape.capacity() <= InlineCapacity) {
+    if (shape.size() <= inline_capacity ||
+        shape.capacity() <= inline_capacity) {
       InitializeDefaultStrides(static_cast<const Shape&>(shape));
 
       return;

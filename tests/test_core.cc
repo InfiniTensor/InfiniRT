@@ -18,54 +18,55 @@ using infini::rt::Device;
 using infini::rt::TensorView;
 
 static_assert(std::is_copy_constructible_v<TensorView>,
-              "TensorView should remain copy constructible.");
+              "`TensorView` should remain copy constructible.");
 static_assert(std::is_move_constructible_v<TensorView>,
-              "TensorView should remain move constructible.");
+              "`TensorView` should remain move constructible.");
 static_assert(!std::is_copy_assignable_v<TensorView>,
-              "TensorView should not become copy assignable.");
+              "`TensorView` should not become copy assignable.");
 static_assert(!std::is_move_assignable_v<TensorView>,
-              "TensorView should not become move assignable.");
-static_assert(!std::is_constructible_v<TensorView, std::vector<TensorView>>,
-              "TensorView should not treat tensor containers as tensor-like.");
+              "`TensorView` should not become move assignable.");
+static_assert(
+    !std::is_constructible_v<TensorView, std::vector<TensorView>>,
+    "`TensorView` should not treat tensor containers as tensor-like.");
 static_assert(
     std::is_same_v<decltype(std::declval<const TensorView&>().shape()),
                    TensorView::ShapeView>,
-    "TensorView lvalues should expose a borrowed shape view.");
+    "`TensorView` lvalues should expose a borrowed shape view.");
 static_assert(
     std::is_same_v<decltype(std::declval<const TensorView&>().strides()),
                    TensorView::StridesView>,
-    "TensorView lvalues should expose a borrowed strides view.");
+    "`TensorView` lvalues should expose a borrowed strides view.");
 static_assert(std::is_same_v<decltype(std::declval<TensorView&&>().shape()),
                              TensorView::Shape>,
-              "TensorView rvalues should return an owning shape.");
+              "`TensorView` rvalues should return an owning shape.");
 static_assert(std::is_same_v<decltype(std::declval<TensorView&&>().strides()),
                              TensorView::Strides>,
-              "TensorView rvalues should return owning strides.");
+              "`TensorView` rvalues should return owning strides.");
 static_assert(
     std::is_same_v<decltype(std::declval<const TensorView&&>().shape()),
                    TensorView::Shape>,
-    "Const TensorView rvalues should return an owning shape.");
+    "Const `TensorView` rvalues should return an owning shape.");
 static_assert(
     std::is_same_v<decltype(std::declval<const TensorView&&>().strides()),
                    TensorView::Strides>,
-    "Const TensorView rvalues should return owning strides.");
+    "Const `TensorView` rvalues should return owning strides.");
 static_assert(!std::is_convertible_v<TensorView::ShapeView, TensorView::Shape>,
               "A borrowed shape should not hide an owning allocation.");
 static_assert(
     !std::is_convertible_v<TensorView::StridesView, TensorView::Strides>,
     "Borrowed strides should not hide an owning allocation.");
 static_assert(noexcept(std::declval<const TensorView&>().shape()),
-              "Borrowed shape access should be noexcept.");
+              "Borrowed shape access should be `noexcept`.");
 static_assert(noexcept(std::declval<const TensorView&>().strides()),
-              "Borrowed strides access should be noexcept.");
+              "Borrowed strides access should be `noexcept`.");
 static_assert(noexcept(std::declval<const TensorView&>().size(0)),
-              "Scalar size access should be noexcept.");
+              "Scalar size access should be `noexcept`.");
 static_assert(noexcept(std::declval<const TensorView&>().stride(0)),
-              "Scalar stride access should be noexcept.");
+              "Scalar stride access should be `noexcept`.");
 static_assert(noexcept(std::declval<const TensorView&>().ndim()),
-              "Rank access should be noexcept.");
+              "Rank access should be `noexcept`.");
 static_assert(noexcept(std::declval<const TensorView&>().numel()),
-              "Element-count access should be noexcept.");
+              "Element-count access should be `noexcept`.");
 
 struct VectorTensorLike {
   void* data_value;
@@ -178,17 +179,17 @@ void TestTensorViewRanks(infini::rt::test::TestContext* context) {
 
     context->ExpectEqual(
         tensor.ndim(), rank,
-        rank_prefix + "TensorView should preserve the tested rank.");
+        rank_prefix + "`TensorView` should preserve the tested rank.");
     context->ExpectEqual(
         tensor.shape(), shape,
-        rank_prefix + "TensorView should preserve the complete shape.");
+        rank_prefix + "`TensorView` should preserve the complete shape.");
     context->ExpectEqual(
         tensor.strides(), strides,
         rank_prefix +
-            "TensorView should generate complete contiguous strides.");
+            "`TensorView` should generate complete contiguous strides.");
     context->ExpectEqual(
         tensor.numel(), expected_numel,
-        rank_prefix + "TensorView should compute the element count.");
+        rank_prefix + "`TensorView` should compute the element count.");
 
     if (rank > 0) {
       context->ExpectEqual(
@@ -202,7 +203,7 @@ void TestTensorViewRanks(infini::rt::test::TestContext* context) {
 
     context->Expect(
         tensor.IsContiguous(),
-        rank_prefix + "TensorView should report contiguous metadata.");
+        rank_prefix + "`TensorView` should report contiguous metadata.");
   }
 }
 
@@ -217,33 +218,33 @@ void TestTensorLikeValueAccessors(infini::rt::test::TestContext* context) {
 
   context->ExpectEqual(
       tensor.data(), static_cast<const void*>(tensor_like.data_value),
-      "TensorView should preserve TensorLike data returned by value.");
+      "`TensorView` should preserve `TensorLike` data returned by value.");
   context->ExpectEqual(
       tensor.shape(), tensor_like.shape_value,
-      "TensorView should own shape metadata returned by value.");
+      "`TensorView` should own shape metadata returned by value.");
   context->ExpectEqual(
       tensor.dtype(), tensor_like.dtype_value,
-      "TensorView should preserve TensorLike dtype returned by value.");
+      "`TensorView` should preserve `TensorLike` dtype returned by value.");
   context->ExpectEqual(
       tensor.device(), tensor_like.device_value,
-      "TensorView should preserve TensorLike device returned by value.");
+      "`TensorView` should preserve `TensorLike` device returned by value.");
   context->ExpectEqual(
       tensor.strides(), tensor_like.strides_value,
-      "TensorView should own stride metadata returned by value.");
+      "`TensorView` should own stride metadata returned by value.");
   context->ExpectEqual(tensor.numel(), std::size_t{6},
-                       "TensorLike construction should preserve the shape.");
+                       "`TensorLike` construction should preserve the shape.");
   context->Expect(tensor.IsContiguous(),
-                  "TensorLike construction should preserve contiguity.");
+                  "`TensorLike` construction should preserve contiguity.");
   context->ExpectEqual(tensor_like.data_call_count, std::size_t{1},
-                       "TensorView should evaluate data exactly once.");
+                       "`TensorView` should evaluate data exactly once.");
   context->ExpectEqual(tensor_like.shape_call_count, std::size_t{1},
-                       "TensorView should evaluate shape exactly once.");
+                       "`TensorView` should evaluate shape exactly once.");
   context->ExpectEqual(tensor_like.dtype_call_count, std::size_t{1},
-                       "TensorView should evaluate dtype exactly once.");
+                       "`TensorView` should evaluate dtype exactly once.");
   context->ExpectEqual(tensor_like.device_call_count, std::size_t{1},
-                       "TensorView should evaluate device exactly once.");
+                       "`TensorView` should evaluate device exactly once.");
   context->ExpectEqual(tensor_like.strides_call_count, std::size_t{1},
-                       "TensorView should evaluate strides exactly once.");
+                       "`TensorView` should evaluate strides exactly once.");
 }
 
 void TestTensorViewOperations(infini::rt::test::TestContext* context) {
@@ -255,15 +256,16 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
   const TensorView tensor{data.data(), shape, DataType::kFloat32, cpu};
 
   context->ExpectEqual(tensor.element_size(), std::size_t{4},
-                       "TensorView should compute element size.");
+                       "`TensorView` should compute element size.");
   context->ExpectEqual(tensor.size(0), std::size_t{2},
-                       "TensorView should expose dimension sizes.");
+                       "`TensorView` should expose dimension sizes.");
   context->ExpectEqual(tensor.size(-1), std::size_t{3},
-                       "TensorView should support negative dimension sizes.");
+                       "`TensorView` should support negative dimension sizes.");
   context->ExpectEqual(tensor.stride(0), std::ptrdiff_t{3},
-                       "TensorView should expose dimension strides.");
-  context->ExpectEqual(tensor.stride(-1), std::ptrdiff_t{1},
-                       "TensorView should support negative dimension strides.");
+                       "`TensorView` should expose dimension strides.");
+  context->ExpectEqual(
+      tensor.stride(-1), std::ptrdiff_t{1},
+      "`TensorView` should support negative dimension strides.");
 
   const TensorView indexed = tensor[1];
   const TensorView negative_indexed = tensor[-1];
@@ -302,14 +304,15 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
   const TensorView strided{data.data(), shape, DataType::kFloat32, cpu,
                            std::vector<std::ptrdiff_t>{4, 1}};
   context->Expect(std::equal_to<TensorView>{}(tensor, equal_tensor),
-                  "Equivalent TensorViews should compare equal.");
-  context->Expect(!std::equal_to<TensorView>{}(tensor, strided),
-                  "Different strides should make TensorViews unequal.");
-  context->ExpectEqual(std::hash<TensorView>{}(tensor),
-                       std::hash<TensorView>{}(equal_tensor),
-                       "Equivalent TensorViews should have equal hashes.");
+                  "Equivalent `TensorView` objects should compare equal.");
+  context->Expect(
+      !std::equal_to<TensorView>{}(tensor, strided),
+      "Different strides should make `TensorView` objects unequal.");
+  context->ExpectEqual(
+      std::hash<TensorView>{}(tensor), std::hash<TensorView>{}(equal_tensor),
+      "Equivalent `TensorView` objects should have equal hashes.");
   context->Expect(!strided.IsContiguous(),
-                  "TensorView with row padding should not be contiguous.");
+                  "`TensorView` with row padding should not be contiguous.");
 
   const auto first_shape_view = tensor.shape();
   const auto second_shape_view = tensor.shape();
@@ -324,15 +327,16 @@ void TestTensorViewOperations(infini::rt::test::TestContext* context) {
 
   const TensorView copied{tensor};
   context->Expect(copied.shape().data() != tensor.shape().data(),
-                  "A TensorView copy should own independent shape metadata.");
-  context->Expect(copied.strides().data() != tensor.strides().data(),
-                  "A TensorView copy should own independent stride metadata.");
+                  "A `TensorView` copy should own independent shape metadata.");
+  context->Expect(
+      copied.strides().data() != tensor.strides().data(),
+      "A `TensorView` copy should own independent stride metadata.");
 
   TensorView::Shape owned_temporary_shape =
       TensorView{data.data(), shape}.shape();
   context->ExpectEqual(
       owned_temporary_shape, shape,
-      "Shape access on a temporary TensorView should return owned metadata.");
+      "Shape access on a temporary `TensorView` should return owned metadata.");
 }
 
 void TestTensorViewHeapRepresentations(infini::rt::test::TestContext* context) {
@@ -392,9 +396,9 @@ void TestTensorViewHeapRepresentations(infini::rt::test::TestContext* context) {
 
   TensorView::Strides owned_temporary_strides =
       TensorView{data.data(), shape}.strides();
-  context->ExpectEqual(
-      owned_temporary_strides, strides,
-      "Stride access on a temporary TensorView should return owned metadata.");
+  context->ExpectEqual(owned_temporary_strides, strides,
+                       "Stride access on a temporary `TensorView` should "
+                       "return owned metadata.");
 }
 
 }  // namespace

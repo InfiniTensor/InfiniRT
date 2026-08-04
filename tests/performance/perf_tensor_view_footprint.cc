@@ -32,7 +32,9 @@ volatile std::uintptr_t g_benchmark_sink = 0;
 
 struct CacheKeyLike {
   std::size_t hash{0};
+
   std::vector<TensorView> tensors;
+
   std::size_t scalar_hash{0};
 };
 
@@ -73,9 +75,9 @@ INFINI_RT_NOINLINE bool EqualCacheKeys(const CacheKeyLike& lhs,
   return true;
 }
 
-template <std::size_t Rank>
+template <std::size_t rank>
 TensorView::Shape MakeShape() {
-  TensorView::Shape shape(Rank);
+  TensorView::Shape shape(rank);
   for (auto& size : shape) {
     size = 2;
   }
@@ -94,14 +96,14 @@ TensorView::Strides MakeStrides(const TensorView::Shape& shape) {
   return strides;
 }
 
-template <std::size_t Rank>
+template <std::size_t rank>
 std::vector<TensorView> MakeInputs(float* data, const Device& device,
                                    std::size_t tensor_count) {
   std::vector<TensorView> inputs;
   inputs.reserve(tensor_count);
 
   for (std::size_t i = 0; i < tensor_count; ++i) {
-    auto shape = MakeShape<Rank>();
+    auto shape = MakeShape<rank>();
     shape[0] += (i & 3);
     const auto strides = MakeStrides(shape);
     inputs.emplace_back(data, shape, DataType::kFloat32, device, strides);
@@ -109,14 +111,14 @@ std::vector<TensorView> MakeInputs(float* data, const Device& device,
   return inputs;
 }
 
-template <std::size_t Rank>
+template <std::size_t rank>
 void RunFootprintBenchmarks(float* data, const Device& device) {
   for (const auto tensor_count : kTensorCounts) {
-    const auto inputs = MakeInputs<Rank>(data, device, tensor_count);
+    const auto inputs = MakeInputs<rank>(data, device, tensor_count);
     const auto reference = BuildCacheKeyLike(inputs);
     const auto iterations = kTensorVisitsPerSample / tensor_count;
     const auto params = std::vector<perf::Param>{
-        perf::NumberParam("ndim", Rank),
+        perf::NumberParam("ndim", rank),
         perf::NumberParam("tensor_count", tensor_count)};
 
     perf::RunBenchmark(

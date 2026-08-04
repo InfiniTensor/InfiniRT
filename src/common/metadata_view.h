@@ -8,7 +8,7 @@
 
 namespace infini::rt::detail {
 
-template <typename T, std::size_t InlineCapacity>
+template <typename T, std::size_t inline_capacity>
 class SmallVector;
 
 template <typename T>
@@ -23,8 +23,8 @@ struct IsMetadataView<MetadataView<T>> : std::true_type {};
 template <typename T>
 struct IsMetadataViewSmallVector : std::false_type {};
 
-template <typename T, std::size_t InlineCapacity>
-struct IsMetadataViewSmallVector<SmallVector<T, InlineCapacity>>
+template <typename T, std::size_t inline_capacity>
+struct IsMetadataViewSmallVector<SmallVector<T, inline_capacity>>
     : std::true_type {};
 
 template <typename Range, typename T, typename = void>

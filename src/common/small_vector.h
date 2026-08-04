@@ -12,14 +12,14 @@
 
 namespace infini::rt::detail {
 
-template <typename T, std::size_t InlineCapacity>
+template <typename T, std::size_t inline_capacity>
 class SmallVector;
 
 template <typename T>
 struct IsSmallVector : std::false_type {};
 
-template <typename T, std::size_t InlineCapacity>
-struct IsSmallVector<SmallVector<T, InlineCapacity>> : std::true_type {};
+template <typename T, std::size_t inline_capacity>
+struct IsSmallVector<SmallVector<T, inline_capacity>> : std::true_type {};
 
 template <typename Range, typename T, typename = void>
 struct IsCompatibleContainer : std::false_type {};
@@ -46,25 +46,27 @@ struct IsEqualityComparableRange<
                     *std::begin(std::declval<const Range&>())))>>
     : std::true_type {};
 
-template <typename T, std::size_t InlineCapacity>
+template <typename T, std::size_t inline_capacity>
 class SmallVector {
-  static_assert(InlineCapacity > 0,
-                "SmallVector requires a positive inline capacity.");
+  static_assert(inline_capacity > 0,
+                "`SmallVector` requires a positive inline capacity.");
 
   static_assert(std::is_trivially_copyable_v<T>,
-                "SmallVector requires T to be trivially copyable.");
+                "`SmallVector` requires `T` to be trivially copyable.");
 
   static_assert(std::is_trivially_destructible_v<T>,
-                "SmallVector requires T to be trivially destructible.");
+                "`SmallVector` requires `T` to be trivially destructible.");
 
   static_assert(std::is_nothrow_default_constructible_v<T>,
-                "SmallVector requires T to be nothrow default constructible.");
+                "`SmallVector` requires `T` to be nothrow default "
+                "constructible.");
 
   static_assert(std::is_nothrow_copy_constructible_v<T>,
-                "SmallVector requires T to be nothrow copy constructible.");
+                "`SmallVector` requires `T` to be nothrow copy "
+                "constructible.");
 
   static_assert(std::is_nothrow_copy_assignable_v<T>,
-                "SmallVector requires T to be nothrow copy assignable.");
+                "`SmallVector` requires `T` to be nothrow copy assignable.");
 
  public:
   using value_type = T;
@@ -304,7 +306,7 @@ class SmallVector {
   using AllocatorTraits = std::allocator_traits<Allocator>;
 
   struct InlineStorage {
-    T data[InlineCapacity];
+    T data[inline_capacity];
 
     InlineStorage() noexcept {}
   };
@@ -317,7 +319,7 @@ class SmallVector {
     Storage() noexcept : inline_storage() {}
   };
 
-  bool IsHeap() const noexcept { return capacity_ > InlineCapacity; }
+  bool IsHeap() const noexcept { return capacity_ > inline_capacity; }
 
   static void Construct(T* destination, const T& value) {
     ::new (static_cast<void*>(destination)) T(value);
@@ -333,7 +335,7 @@ class SmallVector {
   }
 
   void InitializeCount(size_type count) {
-    if (count <= InlineCapacity) {
+    if (count <= inline_capacity) {
       std::fill_n(storage_.inline_storage.data, count, T{});
       size_ = count;
 
@@ -348,7 +350,7 @@ class SmallVector {
   }
 
   void InitializeFill(size_type count, const T& value) {
-    if (count <= InlineCapacity) {
+    if (count <= inline_capacity) {
       std::fill_n(storage_.inline_storage.data, count, value);
       size_ = count;
 
@@ -368,7 +370,7 @@ class SmallVector {
 
     const size_type count = static_cast<size_type>(std::distance(first, last));
 
-    if (count <= InlineCapacity) {
+    if (count <= inline_capacity) {
       CopyToInline(first, last, storage_.inline_storage.data);
       size_ = count;
 
@@ -509,7 +511,7 @@ class SmallVector {
     storage_.~Storage();
     ::new (static_cast<void*>(&storage_)) Storage();
     size_ = 0;
-    capacity_ = InlineCapacity;
+    capacity_ = inline_capacity;
   }
 
   void Reallocate(size_type new_capacity) {
@@ -538,15 +540,15 @@ class SmallVector {
 
   size_type size_{0};
 
-  size_type capacity_{InlineCapacity};
+  size_type capacity_{inline_capacity};
 };
 
-template <typename T, std::size_t LeftCapacity, std::size_t RightCapacity,
+template <typename T, std::size_t left_capacity, std::size_t right_capacity,
           std::enable_if_t<IsEqualityComparableRange<
-                               SmallVector<T, RightCapacity>, T>::value,
+                               SmallVector<T, right_capacity>, T>::value,
                            int> = 0>
-bool operator==(const SmallVector<T, LeftCapacity>& left,
-                const SmallVector<T, RightCapacity>& right) {
+bool operator==(const SmallVector<T, left_capacity>& left,
+                const SmallVector<T, right_capacity>& right) {
   if (left.size() != right.size()) return false;
 
   for (std::size_t index = 0; index < left.size(); ++index) {
@@ -556,20 +558,20 @@ bool operator==(const SmallVector<T, LeftCapacity>& left,
   return true;
 }
 
-template <typename T, std::size_t LeftCapacity, std::size_t RightCapacity,
+template <typename T, std::size_t left_capacity, std::size_t right_capacity,
           std::enable_if_t<IsEqualityComparableRange<
-                               SmallVector<T, RightCapacity>, T>::value,
+                               SmallVector<T, right_capacity>, T>::value,
                            int> = 0>
-bool operator!=(const SmallVector<T, LeftCapacity>& left,
-                const SmallVector<T, RightCapacity>& right) {
+bool operator!=(const SmallVector<T, left_capacity>& left,
+                const SmallVector<T, right_capacity>& right) {
   return !(left == right);
 }
 
-template <typename T, std::size_t InlineCapacity, typename Range,
+template <typename T, std::size_t inline_capacity, typename Range,
           std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
                                IsEqualityComparableRange<Range, T>::value,
                            int> = 0>
-bool operator==(const SmallVector<T, InlineCapacity>& left,
+bool operator==(const SmallVector<T, inline_capacity>& left,
                 const Range& right) {
   if (left.size() != static_cast<std::size_t>(std::size(right))) return false;
 
@@ -581,30 +583,30 @@ bool operator==(const SmallVector<T, InlineCapacity>& left,
   return true;
 }
 
-template <typename Range, typename T, std::size_t InlineCapacity,
+template <typename Range, typename T, std::size_t inline_capacity,
           std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
                                IsEqualityComparableRange<Range, T>::value,
                            int> = 0>
 bool operator==(const Range& left,
-                const SmallVector<T, InlineCapacity>& right) {
+                const SmallVector<T, inline_capacity>& right) {
   return right == left;
 }
 
-template <typename T, std::size_t InlineCapacity, typename Range,
+template <typename T, std::size_t inline_capacity, typename Range,
           std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
                                IsEqualityComparableRange<Range, T>::value,
                            int> = 0>
-bool operator!=(const SmallVector<T, InlineCapacity>& left,
+bool operator!=(const SmallVector<T, inline_capacity>& left,
                 const Range& right) {
   return !(left == right);
 }
 
-template <typename Range, typename T, std::size_t InlineCapacity,
+template <typename Range, typename T, std::size_t inline_capacity,
           std::enable_if_t<!IsSmallVector<std::decay_t<Range>>::value &&
                                IsEqualityComparableRange<Range, T>::value,
                            int> = 0>
 bool operator!=(const Range& left,
-                const SmallVector<T, InlineCapacity>& right) {
+                const SmallVector<T, inline_capacity>& right) {
   return !(right == left);
 }
 

@@ -112,10 +112,10 @@ static_assert(!std::is_copy_assignable_v<HeapAllocation>);
 static_assert(std::is_nothrow_move_constructible_v<HeapAllocation>);
 static_assert(std::is_nothrow_move_assignable_v<HeapAllocation>);
 
-template <std::size_t InlineCapacity>
+template <std::size_t inline_capacity>
 void ExpectValues(
     TestContext* context,
-    const infini::rt::detail::SmallVector<std::size_t, InlineCapacity>& actual,
+    const infini::rt::detail::SmallVector<std::size_t, inline_capacity>& actual,
     std::initializer_list<std::size_t> expected, std::string_view message) {
   context->ExpectEqual(std::vector<std::size_t>(actual.begin(), actual.end()),
                        std::vector<std::size_t>(expected), message);
@@ -131,17 +131,18 @@ void ExpectHeapValues(TestContext* context, const HeapAllocation& actual,
 
 void TestConstruction(TestContext* context) {
   Inline4 empty;
-  context->Expect(empty.empty(), "A default SmallVector should be empty.");
+  context->Expect(empty.empty(), "A default `SmallVector` should be empty.");
   context->ExpectEqual(empty.size(), std::size_t{0},
-                       "A default SmallVector should have size zero.");
-  context->ExpectEqual(empty.capacity(), std::size_t{4},
-                       "A default SmallVector should expose inline capacity.");
+                       "A default `SmallVector` should have size zero.");
+  context->ExpectEqual(
+      empty.capacity(), std::size_t{4},
+      "A default `SmallVector` should expose inline capacity.");
 
   const std::size_t* null_range = nullptr;
   Inline4 empty_pointer_range{null_range, null_range};
   context->Expect(
       empty_pointer_range.empty(),
-      "An empty null pointer range should construct an empty SmallVector.");
+      "An empty null pointer range should construct an empty `SmallVector`.");
 
   Inline4 counted(3);
   ExpectValues(context, counted, {0, 0, 0},
@@ -200,45 +201,47 @@ void TestConstruction(TestContext* context) {
 
   Inline8 wider_inline{1, 2, 3, 4, 5, 6, 7, 8};
   context->ExpectEqual(wider_inline.capacity(), std::size_t{8},
-                       "Inline8 should expose and use its inline capacity.");
+                       "`Inline8` should expose and use its inline capacity.");
   ExpectValues(context, wider_inline, {1, 2, 3, 4, 5, 6, 7, 8},
-               "Inline8 should preserve inline values.");
+               "`Inline8` should preserve inline values.");
 }
 
 void TestAccessorsAndIterators(TestContext* context) {
   Inline4 values{1, 2, 3};
   context->ExpectEqual(values.size(), std::size_t{3},
-                       "SmallVector should report its size.");
+                       "`SmallVector` should report its size.");
   context->Expect(!values.empty(),
-                  "SmallVector with values should not be empty.");
-  context->Expect(values.data() == values.begin(),
-                  "Mutable data and begin should identify the first value.");
+                  "`SmallVector` with values should not be empty.");
+  context->Expect(
+      values.data() == values.begin(),
+      "Mutable `data()` and `begin()` should identify the first value.");
   context->Expect(values.end() == values.data() + values.size(),
-                  "Mutable end should follow the final value.");
+                  "Mutable `end()` should follow the final value.");
 
   values.front() = 4;
   values[1] = 5;
   values.back() = 6;
   context->ExpectEqual(*values.begin(), std::size_t{4},
-                       "Mutable begin should expose the first value.");
+                       "Mutable `begin()` should expose the first value.");
   context->ExpectEqual(values.data()[1], std::size_t{5},
-                       "Mutable data should expose indexed values.");
+                       "Mutable `data()` should expose indexed values.");
   context->ExpectEqual(*(values.end() - 1), std::size_t{6},
-                       "Mutable end should delimit the final value.");
+                       "Mutable `end()` should delimit the final value.");
 
   const Inline4& const_values = values;
-  context->Expect(const_values.data() == const_values.begin(),
-                  "Const data and begin should identify the first value.");
+  context->Expect(
+      const_values.data() == const_values.begin(),
+      "Const `data()` and `begin()` should identify the first value.");
   context->Expect(const_values.begin() == const_values.cbegin(),
-                  "Const begin and cbegin should agree.");
+                  "Const `begin()` and `cbegin()` should agree.");
   context->Expect(const_values.end() == const_values.cend(),
-                  "Const end and cend should agree.");
+                  "Const `end()` and `cend()` should agree.");
   context->ExpectEqual(const_values.front(), std::size_t{4},
-                       "Const front should expose the first value.");
+                       "Const `front()` should expose the first value.");
   context->ExpectEqual(const_values[1], std::size_t{5},
                        "Const indexing should expose indexed values.");
   context->ExpectEqual(const_values.back(), std::size_t{6},
-                       "Const back should expose the final value.");
+                       "Const `back()` should expose the final value.");
 }
 
 void TestEquality(TestContext* context) {
@@ -247,13 +250,13 @@ void TestEquality(TestContext* context) {
   const std::vector<std::size_t> different_values{1, 2, 4};
 
   context->Expect(values == equal_values,
-                  "SmallVector should compare equal to std::vector.");
+                  "`SmallVector` should compare equal to `std::vector`.");
   context->Expect(equal_values == values,
-                  "std::vector should compare equal to SmallVector.");
+                  "`std::vector` should compare equal to `SmallVector`.");
   context->Expect(values != different_values,
-                  "SmallVector should compare unequal to std::vector.");
+                  "`SmallVector` should compare unequal to `std::vector`.");
   context->Expect(different_values != values,
-                  "std::vector should compare unequal to SmallVector.");
+                  "`std::vector` should compare unequal to `SmallVector`.");
 
   const Inline8 wider_equal{1, 2, 3};
   const Inline8 wider_different{1, 2, 4};
@@ -266,30 +269,30 @@ void TestEquality(TestContext* context) {
 void TestMutation(TestContext* context) {
   Inline4 cleared{1, 2, 3, 4, 5};
   cleared.clear();
-  context->Expect(cleared.empty(), "Clear should remove every value.");
+  context->Expect(cleared.empty(), "`clear()` should remove every value.");
   context->ExpectEqual(cleared.size(), std::size_t{0},
-                       "Clear should reset the size to zero.");
+                       "`clear()` should reset the size to zero.");
 
   Inline4 reserved{1, 2, 3};
   reserved.reserve(12);
   context->Expect(reserved.capacity() >= 12,
-                  "Reserve should provide the requested capacity.");
+                  "`reserve()` should provide the requested capacity.");
   ExpectValues(context, reserved, {1, 2, 3},
-               "Reserve should preserve existing values.");
+               "`reserve()` should preserve existing values.");
   const std::size_t reserved_capacity = reserved.capacity();
   reserved.reserve(6);
   context->ExpectEqual(reserved.capacity(), reserved_capacity,
-                       "Reserve should not shrink existing capacity.");
+                       "`reserve()` should not shrink existing capacity.");
 
   Inline4 resized{1, 2};
   resized.resize(5);
   ExpectValues(context, resized, {1, 2, 0, 0, 0},
-               "Growing resize should value-initialize new elements.");
+               "Growing `resize()` should value-initialize new elements.");
   context->Expect(resized.capacity() >= 5,
-                  "Growing resize should provide sufficient capacity.");
+                  "Growing `resize()` should provide sufficient capacity.");
   resized.resize(1);
   ExpectValues(context, resized, {1},
-               "Shrinking resize should preserve the retained prefix.");
+               "Shrinking `resize()` should preserve the retained prefix.");
 
   Inline4 pushed;
   std::vector<std::size_t> pushed_expected;
@@ -301,41 +304,41 @@ void TestMutation(TestContext* context) {
     if (pushed.capacity() != previous_capacity) {
       const std::size_t new_capacity = pushed.capacity();
       context->Expect(new_capacity > previous_capacity,
-                      "Repeated push_back should increase capacity.");
+                      "Repeated `push_back()` should increase capacity.");
       if (new_capacity > previous_capacity) {
         context->Expect(
             new_capacity - previous_capacity >= previous_capacity / 2,
-            "Repeated push_back should grow capacity multiplicatively.");
+            "Repeated `push_back()` should grow capacity multiplicatively.");
       }
       previous_capacity = new_capacity;
       ++growth_count;
     }
   }
   context->ExpectEqual(pushed.size(), pushed_expected.size(),
-                       "Repeated push_back should update the size.");
+                       "Repeated `push_back()` should update the size.");
   context->Expect(pushed.capacity() >= pushed.size(),
-                  "Repeated push_back should provide sufficient capacity.");
+                  "Repeated `push_back()` should provide sufficient capacity.");
   context->Expect(growth_count >= 2,
-                  "Repeated push_back should exercise multiple heap growth "
+                  "Repeated `push_back()` should exercise multiple heap growth "
                   "steps.");
   context->Expect(pushed == pushed_expected,
-                  "Repeated push_back should preserve every value.");
+                  "Repeated `push_back()` should preserve every value.");
 
   Inline4 assigned;
   assigned.assign({4, 5, 6});
   ExpectValues(context, assigned, {4, 5, 6},
-               "Initializer-list assign should replace values.");
+               "Initializer-list `assign()` should replace values.");
   const std::vector<std::size_t> range_values{8, 6, 4, 2, 0};
   assigned.assign(range_values.begin(), range_values.end());
   context->Expect(assigned == range_values,
-                  "Iterator-range assign should replace values.");
+                  "Iterator-range `assign()` should replace values.");
 
   std::istringstream assign_input_stream{"9 7 5"};
   Inline4 input_assigned;
   input_assigned.assign(std::istream_iterator<std::size_t>{assign_input_stream},
                         std::istream_iterator<std::size_t>{});
   ExpectValues(context, input_assigned, {9, 7, 5},
-               "Input-iterator assign should consume the range once.");
+               "Input-iterator `assign()` should consume the range once.");
 
   Inline4 heap_to_inline{1, 2, 3, 4, 5};
   heap_to_inline.assign({7, 8});
