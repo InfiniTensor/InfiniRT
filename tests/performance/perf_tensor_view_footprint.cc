@@ -9,14 +9,6 @@
 
 #include "perf_common.h"
 
-#if defined(_MSC_VER)
-#define INFINI_RT_NOINLINE __declspec(noinline)
-#elif defined(__GNUC__) || defined(__clang__)
-#define INFINI_RT_NOINLINE __attribute__((noinline))
-#else
-#define INFINI_RT_NOINLINE
-#endif
-
 namespace {
 
 namespace perf = infini::rt::perf;
