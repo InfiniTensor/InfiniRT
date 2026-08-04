@@ -15,6 +15,14 @@
 #include <utility>
 #include <vector>
 
+#if defined(_MSC_VER)
+#define INFINI_RT_NOINLINE __declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+#define INFINI_RT_NOINLINE __attribute__((noinline))
+#else
+#define INFINI_RT_NOINLINE
+#endif
+
 #ifndef INFINI_RT_PERF_BACKEND_NAME
 #define INFINI_RT_PERF_BACKEND_NAME "unknown"
 #endif

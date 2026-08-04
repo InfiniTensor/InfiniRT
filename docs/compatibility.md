@@ -42,3 +42,17 @@ by the same configured build.
 InfiniRT currently exposes a C++ API. Consumers should treat the installed
 headers and `libinfinirt.so` as a matching pair from the same build or release.
 
+`TensorView::Shape` and `TensorView::Strides` are concrete vector-like C++
+aliases using inline capacity 8. `TensorView` stores ranks 0 through 8 inline
+and uses owned heap fallback at rank 9 and above. This representation changes
+`TensorView` layout and is an API/ABI compatibility break from the previous
+`std::vector` aliases. Consumers must rebuild after this alias or layout change
+and must not mix headers and libraries from different builds.
+
+Existing construction from `std::vector` remains supported, but code that
+requires the exact `std::vector` alias must adapt. On lvalues, `shape()` and
+`strides()` now return typed borrowed contiguous views by value; callers that
+need ownership should explicitly materialize `TensorView::Shape` or
+`TensorView::Strides`. The owning aliases support the common
+`Strides(count, value)` construction used by downstream metadata code.
+

@@ -2,73 +2,77 @@
 
 #include <algorithm>
 #include <cassert>
-#include <numeric>
 
 #include "dispatcher.h"
 
 namespace infini::rt {
 
-static TensorView::Index GetEffectiveIndex(TensorView::Index index,
-                                           TensorView::Size size) {
-  return index < 0 ? index + size : index;
-}
-
 TensorView::TensorView(void* data, std::initializer_list<Size> shape,
                        const DataType& dtype, const Device& device,
                        std::initializer_list<Stride> strides)
     : data_{data},
-      shape_{shape},
+      shape_strides_storage_{shape, strides},
       dtype_{dtype},
-      device_{device},
-      strides_{strides} {}
+      device_{device} {}
 
 TensorView TensorView::operator[](const Index& index) const {
-  return {
-      reinterpret_cast<decltype(data_)>(
-          reinterpret_cast<decltype(index)>(data_) +
-          GetEffectiveIndex(index, shape_[0]) * strides_[0] * element_size()),
-      Shape{shape_.cbegin() + 1, shape_.cend()}, dtype_, device_,
-      Strides{strides_.cbegin() + 1, strides_.cend()}};
+  const ShapeView shape_view = shape();
+  const StridesView strides_view = strides();
+
+  return {reinterpret_cast<decltype(data_)>(
+              reinterpret_cast<decltype(index)>(data_) +
+              GetEffectiveIndex(index, shape_view[0]) * strides_view[0] *
+                  element_size()),
+          ShapeView{shape_view.data() + 1, shape_view.size() - 1}, dtype_,
+          device_,
+          StridesView{strides_view.data() + 1, strides_view.size() - 1}};
 }
 
 void*& TensorView::data() { return data_; }
 
 const void* TensorView::data() const { return data_; }
 
-const TensorView::Shape& TensorView::shape() const { return shape_; }
-
 const DataType& TensorView::dtype() const { return dtype_; }
 
 const Device& TensorView::device() const { return device_; }
 
-const TensorView::Strides& TensorView::strides() const { return strides_; }
+TensorView::Shape TensorView::shape() && {
+  const ShapeView view = shape_strides_storage_.shape();
 
-TensorView::Size TensorView::size(const Index& index) const {
-  return shape_[GetEffectiveIndex(index, shape_.size())];
+  return Shape{view.begin(), view.end()};
 }
 
-TensorView::Stride TensorView::stride(const Index& index) const {
-  return strides_[GetEffectiveIndex(index, strides_.size())];
+TensorView::Shape TensorView::shape() const&& {
+  const ShapeView view = shape_strides_storage_.shape();
+
+  return Shape{view.begin(), view.end()};
 }
 
-TensorView::Size TensorView::ndim() const { return shape_.size(); }
+TensorView::Strides TensorView::strides() && {
+  const StridesView view = shape_strides_storage_.strides();
+
+  return Strides{view.begin(), view.end()};
+}
+
+TensorView::Strides TensorView::strides() const&& {
+  const StridesView view = shape_strides_storage_.strides();
+
+  return Strides{view.begin(), view.end()};
+}
 
 TensorView::Size TensorView::element_size() const {
   return kDataTypeToSize.at(dtype_);
 }
 
-TensorView::Size TensorView::numel() const {
-  return std::accumulate(
-      shape_.begin(), shape_.end(), static_cast<TensorView::Size>(1),
-      [](TensorView::Size a, TensorView::Size b) { return a * b; });
-}
-
 TensorView TensorView::T() const {
+  const ShapeView shape_view = shape();
+  const StridesView strides_view = strides();
+
   return {data_,
-          {shape_[1], shape_[0]},
+          {shape_view[1], shape_view[0]},
           dtype_,
           device_,
-          {strides_[1], strides_[0]}};
+          {strides_view[1], strides_view[0]}};
 }
 
 std::string TensorView::ToString() const {
@@ -78,9 +82,12 @@ std::string TensorView::ToString() const {
 }
 
 bool TensorView::HasBroadcastDim() const {
-  return std::any_of(shape_.begin(), shape_.end(),
+  const ShapeView shape_view = shape();
+  const StridesView strides_view = strides();
+
+  return std::any_of(shape_view.begin(), shape_view.end(),
                      [&, i = 0](const auto&) mutable {
-                       return shape_[i] != 1 && strides_[i++] == 0;
+                       return shape_view[i] != 1 && strides_view[i++] == 0;
                      });
 }
 
@@ -100,22 +107,6 @@ const DataType TensorView::DefaultDataType() { return DataType::kFloat32; }
 
 Device TensorView::DefaultDevice() { return Device{Device::Type::kCpu}; }
 
-TensorView::Strides TensorView::DefaultStrides(const Shape& shape) {
-  if (shape.empty()) {
-    return {};
-  }
-
-  Strides strides(shape.size());
-
-  strides.back() = 1;
-
-  for (auto i{shape.size() - 2}; i != -1; --i) {
-    strides[i] = strides[i + 1] * shape[i + 1];
-  }
-
-  return strides;
-}
-
 std::string TensorView::ToStringHelper() const {
   if (ndim() == 0) {
     return DispatchFunc<Device::Type::kCpu,
@@ -130,7 +121,7 @@ std::string TensorView::ToStringHelper() const {
 
   std::string result{"["};
 
-  for (auto i{Index{0}}; i < shape_[0]; ++i) {
+  for (auto i{Index{0}}; i < shape()[0]; ++i) {
     result += operator[](i).ToStringHelper() + ", ";
   }
 

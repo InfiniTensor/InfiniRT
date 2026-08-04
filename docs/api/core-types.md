@@ -41,7 +41,8 @@ floating point, and standard floating point types:
 
 ## TensorView
 
-`infini::rt::TensorView` is a non-owning description of tensor memory.
+`infini::rt::TensorView` is a non-owning description of tensor memory that owns
+its shape and stride metadata.
 
 ```cpp
 std::vector<float> data(16);
@@ -66,4 +67,12 @@ auto contiguous = tensor.IsContiguous();
 - device
 - strides
 
-It does not own the memory it references.
+It does not own the tensor data it references. Shape and strides are stored
+inline for ranks 0 through 8; rank 9 and above use owned heap fallback storage.
+Construction from `std::vector` and other compatible contiguous ranges remains
+supported.
+
+On an lvalue `TensorView`, `shape()` and `strides()` return lightweight
+contiguous views by value. Those views borrow metadata from the `TensorView` and
+must not outlive it. Calling the accessors on an rvalue returns owning metadata
+so a view cannot dangle from a temporary.

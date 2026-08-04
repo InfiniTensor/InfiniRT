@@ -146,6 +146,7 @@ def main():
         "perf_runtime_dispatch",
         "perf_memory",
         "perf_tensor_view",
+        "perf_tensor_view_footprint",
     ]
 
     metadata = {
