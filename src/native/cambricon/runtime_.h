@@ -115,14 +115,12 @@ struct Runtime<Device::Type::kCambricon>
 
   static Error EventElapsedTime(float*, Event, Event) { return Unsupported(); }
 
-  static constexpr auto kStreamCaptureModeGlobal =
-      cnrtQueueCaptureModeGlobal;
+  static constexpr auto kStreamCaptureModeGlobal = cnrtQueueCaptureModeGlobal;
 
   static constexpr auto kStreamCaptureModeThreadLocal =
       cnrtQueueCaptureModeThreadLocal;
 
-  static constexpr auto kStreamCaptureModeRelaxed =
-      cnrtQueueCaptureModeRelaxed;
+  static constexpr auto kStreamCaptureModeRelaxed = cnrtQueueCaptureModeRelaxed;
 
   static constexpr auto StreamBeginCapture = cnrtQueueBeginCapture;
 
