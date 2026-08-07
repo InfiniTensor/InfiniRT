@@ -17,6 +17,7 @@ backend.
 | Hygon | `WITH_HYGON` | Requires DTK and a DTK CUDA toolkit. |
 | Cambricon | `WITH_CAMBRICON` | Requires `NEUWARE_HOME`. |
 | Ascend | `WITH_ASCEND` | Requires Ascend toolkit. |
+| T-Head | `WITH_THEAD` | Requires T-Head toolkit. |
 
 Only one accelerator backend can be enabled at a time. CPU can be enabled
 together with the selected accelerator backend.
@@ -27,7 +28,7 @@ All enabled runtime backends provide the core device and memory entry points
 needed by the dispatching runtime API. Optional operations may return an error
 status on backends that do not support them.
 
-Current test expectations are:
+Current backend capabilities are:
 
 | Backend | Async memcpy | Host memory | Async memory | Memory info | Async memset | Events | Graph capture |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -36,10 +37,11 @@ Current test expectations are:
 | Iluvatar | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | MetaX | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Mars | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Moore | Yes | Yes | No | Yes | Yes | Yes | No |
-| Hygon | Yes | Yes | Yes | Yes | Yes | Yes | No |
-| Cambricon | Yes | No | No | No | No | No | No |
-| Ascend | Yes | No | No | No | No | No | Yes |
+| Moore | Yes | Yes | No | Yes | Yes | Yes | Yes |
+| Hygon | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Cambricon | Yes | No | No | No | Yes | No | Yes |
+| Ascend | Yes | No | No | No | Yes | No | Yes |
+| T-Head | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 
 Treat a non-`kSuccess` status as the portable way to detect unsupported
 operations.
