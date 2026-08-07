@@ -197,7 +197,8 @@ struct Runtime<Device::Type::kAscend>
 
     bool Available() const {
       return CaptureBegin != nullptr && CaptureGetInfo != nullptr &&
-             CaptureEnd != nullptr && ExecuteAsync != nullptr;
+             CaptureEnd != nullptr && ExecuteAsync != nullptr &&
+             Destroy != nullptr;
     }
   };
 

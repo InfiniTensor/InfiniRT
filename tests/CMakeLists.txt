@@ -143,7 +143,9 @@ if(WITH_ASCEND)
     add_infini_rt_backend_runtime_test(
         ASCEND infini::rt::Device::Type::kAscend
         infini/rt/ascend/runtime_.h
-        1 0 0 0 0 0 0 0)
+        1 0 0 0 1 0 0 0)
+    add_infini_rt_backend_graph_test(
+        ASCEND infini::rt::Device::Type::kAscend 1)
 endif()
 
 if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)

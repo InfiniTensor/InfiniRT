@@ -447,7 +447,7 @@ int main() {
 
 #if defined(INFINI_RT_TEST_WITH_ASCEND)
   TestDispatch(&context, infini::rt::Device::Type::kAscend, "ASCEND",
-               {true, false, false, false, false, false, false, false});
+               {true, false, false, false, true, false, false, false});
 #endif
 
   return context.ExitCode();

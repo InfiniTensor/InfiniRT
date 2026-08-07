@@ -140,14 +140,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Only one CUDA-like GPU backend can be enabled at a time.
 set(_gpu_backend_count 0)
-foreach(_gpu_backend WITH_NVIDIA WITH_ILUVATAR WITH_HYGON WITH_THEAD WITH_METAX WITH_MARS WITH_MOORE WITH_ASCEND)
+foreach(_gpu_backend WITH_NVIDIA WITH_ILUVATAR WITH_HYGON WITH_THEAD WITH_METAX WITH_MARS WITH_MOORE WITH_CAMBRICON WITH_ASCEND)
     if(${_gpu_backend})
         math(EXPR _gpu_backend_count "${_gpu_backend_count} + 1")
     endif()
 endforeach()
 
 if(_gpu_backend_count GREATER 1)
-    message(FATAL_ERROR "`WITH_NVIDIA`, `WITH_ILUVATAR`, `WITH_HYGON`, `WITH_THEAD`, `WITH_METAX`, `WITH_MARS`, `WITH_MOORE`, and `WITH_ASCEND` are mutually exclusive. Build one GPU backend at a time.")
+    message(FATAL_ERROR "GPU backend options are mutually exclusive. Build one GPU backend at a time.")
 endif()
 
 if(WITH_NVIDIA)
