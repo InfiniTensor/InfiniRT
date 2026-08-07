@@ -15,6 +15,7 @@ backend.
 | Mars | `WITH_MARS` | Requires `HPCC_PATH`. |
 | Moore | `WITH_MOORE` | Requires `MUSA_ROOT`, `MUSA_HOME`, or `MUSA_PATH`. |
 | Hygon | `WITH_HYGON` | Requires DTK and a DTK CUDA toolkit. |
+| T-Head | `WITH_THEAD` | Requires a T-Head CUDA-compatible toolkit. |
 | Cambricon | `WITH_CAMBRICON` | Requires `NEUWARE_HOME`. |
 | Ascend | `WITH_ASCEND` | Requires Ascend toolkit. |
 
@@ -27,7 +28,7 @@ All enabled runtime backends provide the core device and memory entry points
 needed by the dispatching runtime API. Optional operations may return an error
 status on backends that do not support them.
 
-Current test expectations are:
+Current runtime test expectations are:
 
 | Backend | Async memcpy | Host memory | Async memory | Memory info | Async memset | Events | Graph capture |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -36,13 +37,21 @@ Current test expectations are:
 | Iluvatar | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | MetaX | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Mars | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Moore | Yes | Yes | No | Yes | Yes | Yes | No |
-| Hygon | Yes | Yes | Yes | Yes | Yes | Yes | No |
-| Cambricon | Yes | No | No | No | No | No | No |
-| Ascend | Yes | No | No | No | No | No | Yes |
+| Moore | Yes | Yes | No | Yes | Yes | Yes | Yes |
+| Hygon | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| T-Head | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Cambricon | Yes | No | No | No | Yes | No | Yes |
+| Ascend | Yes | No | No | No | Yes | No | Yes* |
 
 Treat a non-`kSuccess` status as the portable way to detect unsupported
 operations.
+
+\* Ascend Graph capture and replay require the runtime `aclmdlRI*` symbols
+(`aclmdlRICaptureBegin`, `aclmdlRICaptureGetInfo`, `aclmdlRICaptureEnd`,
+`aclmdlRIExecuteAsync`, and `aclmdlRIDestroy`). The Graph replay test is
+registered for Ascend builds and passes on CANN 9.0 with 910B hardware. On a
+CANN installation without these symbols, the runtime reports Graph capture as
+unsupported.
 
 ## Header Dependencies
 

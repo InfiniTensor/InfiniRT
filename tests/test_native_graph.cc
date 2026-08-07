@@ -110,9 +110,13 @@ void RunGraphReplayTest(infini::rt::test::TestContext* context) {
                   "Failed to record device-to-device copy.");
     ExpectSuccess(context, runtime::StreamEndCapture(stream, &graph),
                   "Failed to end stream capture.");
+    context->Expect(graph != nullptr,
+                    "Stream capture should produce a graph handle.");
 
     ExpectSuccess(context, runtime::GraphInstantiate(&graph_exec, graph),
                   "Failed to instantiate graph.");
+    context->Expect(graph_exec != nullptr,
+                    "Graph instantiation should produce an executable handle.");
   }
 
   std::array<std::uint8_t, 16> replay_input_1{};
