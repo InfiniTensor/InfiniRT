@@ -147,10 +147,22 @@ inline void PrintResult(const std::string& benchmark,
             << ",\"median\":" << median << "}" << std::endl;
 }
 
+/// Aggregated timings for one benchmark, in the unit passed to the runner.
+/// Returned so callers can compare two arms of an A/B measurement without
+/// re-parsing the printed JSON.
+struct Measurement {
+  double mean = 0.0;
+  double median = 0.0;
+};
+
+/// Times `func` and prints the result, additionally handing the aggregates back
+/// to the caller. `RunBenchmark` is this function with the return value
+/// dropped.
 template <typename Func>
-void RunBenchmark(const std::string& benchmark,
-                  const std::vector<Param>& params, std::size_t iterations,
-                  const std::string& unit, Func&& func) {
+Measurement RunBenchmarkMeasured(const std::string& benchmark,
+                                 const std::vector<Param>& params,
+                                 std::size_t iterations,
+                                 const std::string& unit, Func&& func) {
   constexpr std::size_t kSamples = 7;
   const auto warmup_iterations = std::min<std::size_t>(iterations, 1000);
 
@@ -174,8 +186,18 @@ void RunBenchmark(const std::string& benchmark,
         ConvertNanoseconds(elapsed_ns / static_cast<double>(iterations), unit));
   }
 
-  PrintResult(benchmark, params, iterations, unit, Mean(samples),
-              Median(samples));
+  const Measurement measurement{Mean(samples), Median(samples)};
+  PrintResult(benchmark, params, iterations, unit, measurement.mean,
+              measurement.median);
+  return measurement;
+}
+
+template <typename Func>
+void RunBenchmark(const std::string& benchmark,
+                  const std::vector<Param>& params, std::size_t iterations,
+                  const std::string& unit, Func&& func) {
+  RunBenchmarkMeasured(benchmark, params, iterations, unit,
+                       std::forward<Func>(func));
 }
 
 inline void SkipBenchmark(const std::string& benchmark,
