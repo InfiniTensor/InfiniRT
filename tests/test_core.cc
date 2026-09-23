@@ -159,6 +159,20 @@ void TestDataType(infini::rt::test::TestContext* context) {
                        "float64", "float64 should have a stable name.");
   context->ExpectEqual(infini::rt::kStringToDataType.at("uint16"),
                        DataType::kUInt16, "uint16 should parse by name.");
+  context->Expect(DataType::kBool != DataType::kUInt8,
+                  "bool must be distinct from uint8.");
+  context->ExpectEqual(infini::rt::kDataTypeToSize.at(DataType::kBool),
+                       std::size_t{1}, "bool should use one byte.");
+  context->ExpectEqual(infini::rt::kDataTypeToDesc.at(DataType::kBool), "bool",
+                       "bool should have a stable name.");
+  context->ExpectEqual(infini::rt::kStringToDataType.at("bool"),
+                       DataType::kBool, "bool should parse by name.");
+  context->ExpectEqual(infini::rt::kStringToDataType.at("uint8"),
+                       DataType::kUInt8, "uint8 should remain distinct.");
+  context->Expect(
+      std::is_same_v<
+          infini::rt::TypeMapType<Device::Type::kCpu, DataType::kBool>, bool>,
+      "CPU bool should map to C++ bool.");
 }
 
 void TestTensorViewRanks(infini::rt::test::TestContext* context) {

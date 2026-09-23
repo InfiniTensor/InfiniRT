@@ -23,10 +23,11 @@ enum class DataType : std::int8_t {
   kFloat16,
   kBFloat16,
   kFloat32,
-  kFloat64
+  kFloat64,
+  kBool
 };
 
-constexpr ConstexprMap<DataType, std::size_t, 12> kDataTypeToSize{{{
+constexpr ConstexprMap<DataType, std::size_t, 13> kDataTypeToSize{{{
     {DataType::kInt8, 1},
     {DataType::kInt16, 2},
     {DataType::kInt32, 4},
@@ -39,9 +40,10 @@ constexpr ConstexprMap<DataType, std::size_t, 12> kDataTypeToSize{{{
     {DataType::kBFloat16, 2},
     {DataType::kFloat32, 4},
     {DataType::kFloat64, 8},
+    {DataType::kBool, 1},
 }}};
 
-constexpr ConstexprMap<DataType, std::string_view, 12> kDataTypeToDesc{{{
+constexpr ConstexprMap<DataType, std::string_view, 13> kDataTypeToDesc{{{
     {DataType::kInt8, "int8"},
     {DataType::kInt16, "int16"},
     {DataType::kInt32, "int32"},
@@ -54,9 +56,10 @@ constexpr ConstexprMap<DataType, std::string_view, 12> kDataTypeToDesc{{{
     {DataType::kBFloat16, "bfloat16"},
     {DataType::kFloat32, "float32"},
     {DataType::kFloat64, "float64"},
+    {DataType::kBool, "bool"},
 }}};
 
-constexpr ConstexprMap<std::string_view, DataType, 12> kStringToDataType{{{
+constexpr ConstexprMap<std::string_view, DataType, 13> kStringToDataType{{{
     {"int8", DataType::kInt8},
     {"int16", DataType::kInt16},
     {"int32", DataType::kInt32},
@@ -69,6 +72,7 @@ constexpr ConstexprMap<std::string_view, DataType, 12> kStringToDataType{{{
     {"bfloat16", DataType::kBFloat16},
     {"float32", DataType::kFloat32},
     {"float64", DataType::kFloat64},
+    {"bool", DataType::kBool},
 }}};
 
 struct Float16 {
@@ -164,6 +168,7 @@ using TypeMapType = typename TypeMap<dev, dtype>::type;
   };
 
 DEFINE_DATA_TYPE_MAPPING(kUInt8, std::uint8_t)
+DEFINE_DATA_TYPE_MAPPING(kBool, bool)
 DEFINE_DATA_TYPE_MAPPING(kInt8, std::int8_t)
 DEFINE_DATA_TYPE_MAPPING(kUInt16, std::uint16_t)
 DEFINE_DATA_TYPE_MAPPING(kInt16, std::int16_t)
