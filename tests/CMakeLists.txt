@@ -148,6 +148,15 @@ if(WITH_ASCEND)
         ASCEND infini::rt::Device::Type::kAscend 1)
 endif()
 
+if(WITH_KUNLUN)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        KUNLUN infini::rt::Device::Type::kKunlun infini/rt/kunlun/runtime_.h
+        1 1 0 0 0 1 1 0)
+    add_infini_rt_backend_graph_test(
+        KUNLUN infini::rt::Device::Type::kKunlun 0)
+endif()
+
 if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
     add_infini_rt_test(test_runtime_dispatch test_runtime_dispatch.cc)
 
@@ -186,6 +195,10 @@ if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
     if(WITH_CAMBRICON)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_CAMBRICON=1)
+    endif()
+    if(WITH_KUNLUN)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_KUNLUN=1)
     endif()
     if(WITH_ASCEND)
         target_compile_definitions(test_runtime_dispatch
@@ -242,6 +255,10 @@ elseif(WITH_ASCEND)
     set(INFINI_RT_TEST_CONSUMER_BACKEND ASCEND)
     set(INFINI_RT_TEST_BACKEND_ROOT_VARIABLE InfiniRT_ASCEND_ROOT)
     set(INFINI_RT_TEST_BACKEND_ROOT "${ASCEND_HOME}")
+elseif(WITH_KUNLUN)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND KUNLUN)
+    set(INFINI_RT_TEST_BACKEND_ROOT_VARIABLE InfiniRT_KUNLUN_ROOT)
+    set(INFINI_RT_TEST_BACKEND_ROOT "${XRE_ROOT}")
 elseif(WITH_CPU)
     set(INFINI_RT_TEST_CONSUMER_BACKEND CPU)
 endif()
