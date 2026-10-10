@@ -450,5 +450,10 @@ int main() {
                {true, false, false, false, true, false, false, false});
 #endif
 
+#if defined(INFINI_RT_TEST_WITH_QY)
+  TestDispatch(&context, infini::rt::Device::Type::kQy, "QY",
+               {true, true, true, true, true, true, true, true});
+#endif
+
   return context.ExitCode();
 }

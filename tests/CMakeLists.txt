@@ -148,6 +148,16 @@ if(WITH_ASCEND)
         ASCEND infini::rt::Device::Type::kAscend 1)
 endif()
 
+if(WITH_QY)
+    set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
+    add_infini_rt_backend_runtime_test(
+        QY infini::rt::Device::Type::kQy
+        infini/rt/qy/runtime_.h
+        1 1 1 1 1 1 1 1)
+    add_infini_rt_backend_graph_test(
+        QY infini::rt::Device::Type::kQy 1)
+endif()
+
 if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
     add_infini_rt_test(test_runtime_dispatch test_runtime_dispatch.cc)
 
@@ -190,6 +200,10 @@ if(INFINI_RT_TEST_HAS_RUNTIME_BACKEND)
     if(WITH_ASCEND)
         target_compile_definitions(test_runtime_dispatch
                                    PRIVATE INFINI_RT_TEST_WITH_ASCEND=1)
+    endif()
+    if(WITH_QY)
+        target_compile_definitions(test_runtime_dispatch
+                                   PRIVATE INFINI_RT_TEST_WITH_QY=1)
     endif()
 endif()
 
@@ -242,6 +256,10 @@ elseif(WITH_ASCEND)
     set(INFINI_RT_TEST_CONSUMER_BACKEND ASCEND)
     set(INFINI_RT_TEST_BACKEND_ROOT_VARIABLE InfiniRT_ASCEND_ROOT)
     set(INFINI_RT_TEST_BACKEND_ROOT "${ASCEND_HOME}")
+elseif(WITH_QY)
+    set(INFINI_RT_TEST_CONSUMER_BACKEND QY)
+    set(INFINI_RT_TEST_BACKEND_ROOT_VARIABLE InfiniRT_QY_ROOT)
+    set(INFINI_RT_TEST_BACKEND_ROOT "${QY_ROOT}")
 elseif(WITH_CPU)
     set(INFINI_RT_TEST_CONSUMER_BACKEND CPU)
 endif()
