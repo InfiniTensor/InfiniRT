@@ -221,6 +221,10 @@ enum class StreamCaptureMode {
     runtime_declarations = "\n\n".join(
         f"{function.signature()};" for function in public_runtime_functions
     )
+    if any(function.name == "GetDeviceCount" for function in public_runtime_functions):
+        runtime_declarations += "\n\nError GetDeviceCount(Device::Type type, int* count);"
+    if any(function.name == "EventQuery" for function in public_runtime_functions):
+        runtime_declarations += "\n\nbool IsEventNotReady(Error status);"
 
     path = include_root / "infini" / "rt" / "generated.h"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -521,6 +525,38 @@ def _write_runtime_dispatch_function(function, devices):
 """
 
 
+def _write_explicit_device_count_query(devices):
+    cases = "\n".join(
+        f"    case {_DEVICE_TYPES[device]}:\n"
+        f"      return QueryDeviceCount<{_DEVICE_TYPES[device]}>(count);"
+        for device in devices
+    )
+    return f"""namespace {{
+
+template <Device::Type type>
+Error QueryDeviceCount(int* count) {{
+  using DeviceRuntime = Runtime<type>;
+  int queried_count = -1;
+  const auto status = DeviceRuntime::GetDeviceCount(&queried_count);
+  if (status != DeviceRuntime::kSuccess) return static_cast<Error>(status);
+  if (queried_count < 0) return InvalidValueError();
+  *count = queried_count;
+  return kSuccess;
+}}
+
+}}  // namespace
+
+Error GetDeviceCount(Device::Type type, int* count) {{
+  if (count == nullptr) return InvalidValueError();
+  switch (type) {{
+{cases}
+    default:
+      return InvalidValueError();
+  }}
+}}
+"""
+
+
 def _runtime_header_for_device(source_root, device):
     for _, header_name, target in _DEVICE_HEADERS[device]:
         if header_name == "runtime_.h":
@@ -549,6 +585,27 @@ def _public_runtime_functions_for_devices(devices, source_root):
 
 def _write_runtime_dispatch(source_path, source_root, devices):
     functions = _public_runtime_functions_for_devices(devices, source_root)
+    event_not_ready_dispatch = ""
+    event_query = next(
+        (function for function in functions if function.name == "EventQuery"), None
+    )
+    if event_query is not None:
+        event_not_ready_cases = "\n".join(
+            f"    case {_DEVICE_TYPES[device]}:\n"
+            f"      return status == static_cast<Error>(Runtime<{_DEVICE_TYPES[device]}>::kEventNotReady);"
+            for device in _devices_for_function(event_query, devices, source_root)
+            if re.search(r"\bkEventNotReady\b", _runtime_header_for_device(source_root, device).read_text())
+        )
+        event_not_ready_dispatch = f"""
+bool IsEventNotReady(Error status) {{
+  if (status == kSuccess) return false;
+  switch (infini::rt::runtime_device_type()) {{
+{event_not_ready_cases}
+    default:
+      return false;
+  }}
+}}
+"""
     stream_capture_mode_helper = (
         """
 template <Device::Type device_type>
@@ -581,6 +638,16 @@ auto RuntimeStreamCaptureMode(StreamCaptureMode mode) {
             devices=_devices_for_function(function, devices, source_root),
         )
         for function in functions
+    )
+    device_count_query = next(
+        (function for function in functions if function.name == "GetDeviceCount"), None
+    )
+    explicit_device_count_query = (
+        _write_explicit_device_count_query(
+            _devices_for_function(device_count_query, devices, source_root)
+        )
+        if device_count_query is not None
+        else ""
     )
     set_device_type_cases = "\n".join(
         f"""    case {_DEVICE_TYPES[device]}:
@@ -660,6 +727,8 @@ auto RuntimeMemcpyKind(MemcpyKind kind) {{
 }}  // namespace
 
 {dispatch_functions}
+{explicit_device_count_query}
+{event_not_ready_dispatch}
 }}  // namespace infini::rt::runtime
 """
     )
