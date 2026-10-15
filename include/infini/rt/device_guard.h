@@ -2,25 +2,29 @@
 #define INFINI_RT_DEVICE_GUARD_H_
 
 #include <infini/rt.h>
+
 #include <cstdio>
 #include <stdexcept>
 
 namespace infini::rt {
 
-// Select the owning resource's device and restore this thread's prior selection.
+// Select the owning resource's device and restore this thread's prior
+// selection.
 class DeviceGuard {
  public:
   DeviceGuard(Device::Type target_type, int target_index) noexcept
       : previous_type_(runtime_device_type()) {
     if (!enabled(target_type, AllDeviceTypes{})) {
-      std::fputs("InfiniRT device scope unsupported target device type\n", stderr);
+      std::fputs("InfiniRT device scope unsupported target device type\n",
+                 stderr);
       restored_ = true;
       return;
     }
     const auto previous_status = runtime::GetDevice(&previous_index_);
     restore_index_ = previous_status == runtime::kSuccess;
     warn(previous_status, "read previous device");
-    if (restore_index_ && previous_type_ == target_type && previous_index_ == target_index) {
+    if (restore_index_ && previous_type_ == target_type &&
+        previous_index_ == target_index) {
       active_ = true;
       return;
     }
@@ -33,13 +37,14 @@ class DeviceGuard {
 
   DeviceGuard(Device::Type target_type, int target_index, bool required)
       : DeviceGuard(target_type, target_index) {
-    if (required && !active_) throw std::runtime_error("cannot select runtime device");
+    if (required && !active_)
+      throw std::runtime_error("cannot select runtime device");
   }
 
-  DeviceGuard(const DeviceGuard &) = delete;
-  DeviceGuard &operator=(const DeviceGuard &) = delete;
-  DeviceGuard(DeviceGuard &&) = delete;
-  DeviceGuard &operator=(DeviceGuard &&) = delete;
+  DeviceGuard(const DeviceGuard&) = delete;
+  DeviceGuard& operator=(const DeviceGuard&) = delete;
+  DeviceGuard(DeviceGuard&&) = delete;
+  DeviceGuard& operator=(DeviceGuard&&) = delete;
   ~DeviceGuard() noexcept { restore(); }
 
   bool active() const noexcept { return active_; }
@@ -50,7 +55,7 @@ class DeviceGuard {
     return ((type == types && DeviceEnabled<types>::value) || ...);
   }
 
-  static void warn(runtime::Error status, const char *operation) noexcept {
+  static void warn(runtime::Error status, const char* operation) noexcept {
     if (status != runtime::kSuccess)
       std::fprintf(stderr, "InfiniRT device scope %s error=%lld\n", operation,
                    static_cast<long long>(status));
@@ -59,7 +64,8 @@ class DeviceGuard {
     if (restored_) return;
     restored_ = true;
     set_runtime_device_type(previous_type_);
-    if (restore_index_) warn(runtime::SetDevice(previous_index_), "restore previous device");
+    if (restore_index_)
+      warn(runtime::SetDevice(previous_index_), "restore previous device");
   }
 
   Device::Type previous_type_;

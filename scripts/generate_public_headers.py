@@ -222,7 +222,9 @@ enum class StreamCaptureMode {
         f"{function.signature()};" for function in public_runtime_functions
     )
     if any(function.name == "GetDeviceCount" for function in public_runtime_functions):
-        runtime_declarations += "\n\nError GetDeviceCount(Device::Type type, int* count);"
+        runtime_declarations += (
+            "\n\nError GetDeviceCount(Device::Type type, int* count);"
+        )
     if any(function.name == "EventQuery" for function in public_runtime_functions):
         runtime_declarations += "\n\nbool IsEventNotReady(Error status);"
 
@@ -594,7 +596,10 @@ def _write_runtime_dispatch(source_path, source_root, devices):
             f"    case {_DEVICE_TYPES[device]}:\n"
             f"      return status == static_cast<Error>(Runtime<{_DEVICE_TYPES[device]}>::kEventNotReady);"
             for device in _devices_for_function(event_query, devices, source_root)
-            if re.search(r"\bkEventNotReady\b", _runtime_header_for_device(source_root, device).read_text())
+            if re.search(
+                r"\bkEventNotReady\b",
+                _runtime_header_for_device(source_root, device).read_text(),
+            )
         )
         event_not_ready_dispatch = f"""
 bool IsEventNotReady(Error status) {{

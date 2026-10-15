@@ -378,9 +378,9 @@ void TestEvent(infini::rt::test::TestContext* context) {
 template <typename DeviceRuntime>
 void TestEventStatus(infini::rt::test::TestContext* context) {
   infini::rt::set_runtime_device_type(INFINI_RT_TEST_DEVICE_TYPE);
-  context->Expect(!infini::rt::runtime::IsEventNotReady(
-                      infini::rt::runtime::kSuccess),
-                  "Success must not be classified as an incomplete event.");
+  context->Expect(
+      !infini::rt::runtime::IsEventNotReady(infini::rt::runtime::kSuccess),
+      "Success must not be classified as an incomplete event.");
   if constexpr (kSupportsEvent &&
                 INFINI_RT_TEST_DEVICE_TYPE != infini::rt::Device::Type::kCpu) {
     context->Expect(infini::rt::runtime::IsEventNotReady(
