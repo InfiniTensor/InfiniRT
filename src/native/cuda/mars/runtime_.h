@@ -30,6 +30,8 @@ struct Runtime<Device::Type::kMars>
 
   static constexpr Error kSuccess = hcSuccess;
 
+  static constexpr Error kEventNotReady = hcErrorNotReady;
+
   static constexpr auto SetDevice = hcSetDevice;
 
   static constexpr auto GetDevice = hcGetDevice;

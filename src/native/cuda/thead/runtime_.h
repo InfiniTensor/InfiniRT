@@ -33,6 +33,8 @@ struct Runtime<Device::Type::kThead>
 
   static constexpr Error kSuccess = cudaSuccess;
 
+  static constexpr Error kEventNotReady = cudaErrorNotReady;
+
   static constexpr auto SetDevice = cudaSetDevice;
 
   static constexpr auto GetDevice = cudaGetDevice;

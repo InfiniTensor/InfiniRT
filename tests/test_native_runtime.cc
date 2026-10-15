@@ -375,6 +375,21 @@ void TestEvent(infini::rt::test::TestContext* context) {
   }
 }
 
+template <typename DeviceRuntime>
+void TestEventStatus(infini::rt::test::TestContext* context) {
+  infini::rt::set_runtime_device_type(INFINI_RT_TEST_DEVICE_TYPE);
+  context->Expect(!infini::rt::runtime::IsEventNotReady(
+                      infini::rt::runtime::kSuccess),
+                  "Success must not be classified as an incomplete event.");
+  if constexpr (kSupportsEvent &&
+                INFINI_RT_TEST_DEVICE_TYPE != infini::rt::Device::Type::kCpu) {
+    context->Expect(infini::rt::runtime::IsEventNotReady(
+                        static_cast<infini::rt::runtime::Error>(
+                            DeviceRuntime::kEventNotReady)),
+                    "Dispatch must recognize this backend's not-ready status.");
+  }
+}
+
 void TestStreamWaitEvent(infini::rt::test::TestContext* context) {
   typename Runtime::Stream stream{};
   if (!CreateStream(context, &stream)) {
@@ -478,6 +493,7 @@ int main() {
   TestMemsetAsync(&context);
   TestStream(&context);
   TestEvent(&context);
+  TestEventStatus<Runtime>(&context);
   TestStreamWaitEvent(&context);
   TestEventElapsedTime(&context);
 

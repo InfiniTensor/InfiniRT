@@ -83,6 +83,17 @@ struct ReusableMemoryPool::State {
     }
 
     runtime::Error allocate_block_(void **ptr, std::size_t size) {
+#if defined(WITH_NVIDIA)
+        if (allocation_stream_ != nullptr) {
+            cudaStreamCaptureStatus status;
+            check(static_cast<runtime::Error>(cudaStreamIsCapturing(
+                      reinterpret_cast<cudaStream_t>(allocation_stream_), &status)),
+                  "query pool stream capture");
+            // A captured cudaMallocAsync belongs to the graph, not this pool.
+            if (status != cudaStreamCaptureStatusNone)
+                throw std::runtime_error("pool cannot grow during CUDA stream capture; preallocate blocks before capture");
+        }
+#endif
         return allocation_stream_ != nullptr
             ? runtime::MallocAsync(ptr, size, allocation_stream_)
             : runtime::Malloc(ptr, size);

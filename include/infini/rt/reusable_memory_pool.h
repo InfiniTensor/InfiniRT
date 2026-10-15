@@ -34,6 +34,8 @@ public:
 
     Device device() const;
     runtime::Stream stream() const;
+    // During native CUDA stream capture, only cached blocks may be reused.
+    // Preallocate before capture; a cache miss throws without invalidating it.
     std::byte *allocate(std::size_t size);
     std::byte *allocate_exact(std::size_t size);
     void deallocate(std::byte *ptr);

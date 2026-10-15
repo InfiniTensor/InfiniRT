@@ -12,14 +12,14 @@ class DeviceGuard {
  public:
   DeviceGuard(Device::Type target_type, int target_index) noexcept
       : previous_type_(runtime_device_type()) {
+    if (!enabled(target_type, AllDeviceTypes{})) {
+      std::fputs("InfiniRT device scope unsupported target device type\n", stderr);
+      restored_ = true;
+      return;
+    }
     const auto previous_status = runtime::GetDevice(&previous_index_);
     restore_index_ = previous_status == runtime::kSuccess;
     warn(previous_status, "read previous device");
-    if (target_type == Device::Type::kCount) {
-      std::fputs("InfiniRT device scope invalid target device type\n", stderr);
-      restore();
-      return;
-    }
     if (restore_index_ && previous_type_ == target_type && previous_index_ == target_index) {
       active_ = true;
       restored_ = true;
@@ -46,6 +46,11 @@ class DeviceGuard {
   bool active() const noexcept { return active_; }
 
  private:
+  template <Device::Type... types>
+  static bool enabled(Device::Type type, List<types...>) noexcept {
+    return ((type == types && DeviceEnabled<types>::value) || ...);
+  }
+
   static void warn(runtime::Error status, const char *operation) noexcept {
     if (status != runtime::kSuccess)
       std::fprintf(stderr, "InfiniRT device scope %s error=%lld\n", operation,
