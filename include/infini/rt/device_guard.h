@@ -22,7 +22,6 @@ class DeviceGuard {
     warn(previous_status, "read previous device");
     if (restore_index_ && previous_type_ == target_type && previous_index_ == target_index) {
       active_ = true;
-      restored_ = true;
       return;
     }
     set_runtime_device_type(target_type);

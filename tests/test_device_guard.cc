@@ -7,6 +7,7 @@
 
 namespace {
 using namespace infini::rt;
+struct TestUnwind {};
 
 void CheckRejected(test::TestContext& context, Device::Type type) {
   const auto previous = runtime_device_type();
@@ -57,6 +58,41 @@ void CheckBackend(test::TestContext& context) {
                        runtime::GetDevice(&restored) == runtime::kSuccess &&
                        restored == 0,
                    "Nested guard must restore the prior selection.");
+
+    for (bool unwind : {false, true}) {
+      if (count > 1) {
+        set_runtime_device_type(type);
+        context.Expect(runtime::SetDevice(0) == runtime::kSuccess,
+                       "Failed to select the initial device.");
+        try {
+          DeviceGuard same_device(type, 0, true);
+          context.Expect(runtime::SetDevice(count - 1) == runtime::kSuccess,
+                         "Failed to change device inside the guard.");
+          if (unwind) throw TestUnwind{};
+        } catch (const TestUnwind&) {
+        }
+        context.Expect(
+            runtime::GetDevice(&restored) == runtime::kSuccess && restored == 0,
+            "Same-device guard must restore an internal index change.");
+      }
+      if constexpr (type != Device::Type::kCpu &&
+                    DeviceEnabled<Device::Type::kCpu>::value) {
+        set_runtime_device_type(type);
+        context.Expect(runtime::SetDevice(0) == runtime::kSuccess,
+                       "Failed to select the initial backend.");
+        try {
+          DeviceGuard same_device(type, 0, true);
+          set_runtime_device_type(Device::Type::kCpu);
+          if (unwind) throw TestUnwind{};
+        } catch (const TestUnwind&) {
+        }
+        context.Expect(
+            runtime_device_type() == type &&
+                runtime::GetDevice(&restored) == runtime::kSuccess &&
+                restored == 0,
+            "Same-device guard must restore an internal backend change.");
+      }
+    }
   }
 }
 
