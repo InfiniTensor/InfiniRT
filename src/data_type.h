@@ -93,12 +93,14 @@ struct Float16 {
       // Inf
       return {static_cast<std::uint16_t>(sign | 0x7C00)};
     } else if (exponent >= -14) {
-      return {static_cast<std::uint16_t>(sign | ((exponent + 15) << 10) |
-                                         (mantissa >> 13))};
-    } else if (exponent >= -24) {
+      mantissa += 0x0FFF + ((mantissa >> 13) & 1);
+      return {static_cast<std::uint16_t>(
+          sign | (((exponent + 15) << 10) + (mantissa >> 13)))};
+    } else if (exponent >= -25) {
       mantissa |= 0x800000;
-      mantissa >>= (-14 - exponent);
-      return {static_cast<std::uint16_t>(sign | (mantissa >> 13))};
+      const unsigned shift = static_cast<unsigned>(-exponent - 1);
+      const auto bias = ((1u << (shift - 1)) - 1) + ((mantissa >> shift) & 1);
+      return {static_cast<std::uint16_t>(sign | ((mantissa + bias) >> shift))};
     }
     // Too small for subnormal: return signed zero.
     return {sign};

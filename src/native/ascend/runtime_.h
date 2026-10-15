@@ -35,12 +35,17 @@ struct Runtime<Device::Type::kAscend>
 
   static constexpr Error kSuccess = ACL_SUCCESS;
 
-  static constexpr auto SetDevice = aclrtSetDevice;
+  static Error SetDevice(int device) {
+    const auto status = EnsureInitialized();
+    return status == kSuccess ? aclrtSetDevice(device) : status;
+  }
 
   static constexpr auto GetDevice = aclrtGetDevice;
 
   static auto GetDeviceCount(int* count) {
     assert(count != nullptr);
+    const auto initialized = EnsureInitialized();
+    if (initialized != kSuccess) return initialized;
     std::uint32_t device_count = 0;
     auto status = aclrtGetDeviceCount(&device_count);
     *count = static_cast<int>(device_count);
@@ -182,6 +187,16 @@ struct Runtime<Device::Type::kAscend>
   }
 
  private:
+  static Error EnsureInitialized() {
+    // Cache one live epoch; external owners must not finalize while RT is live.
+    // No static destructor finalization or post-finalize reinitialization.
+    static const Error status = [] {
+      const auto result = aclInit(nullptr);
+      return result == ACL_ERROR_REPEAT_INITIALIZE ? kSuccess : result;
+    }();
+    return status;
+  }
+
   struct RiApi {
     using CaptureBeginFn = Error (*)(Stream, int);
     using CaptureGetInfoFn = Error (*)(Stream, int*, void**);
