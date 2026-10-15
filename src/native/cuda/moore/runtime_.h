@@ -31,6 +31,8 @@ struct Runtime<Device::Type::kMoore>
 
   static constexpr Error kSuccess = musaSuccess;
 
+  static constexpr Error kEventNotReady = musaErrorNotReady;
+
   static constexpr auto SetDevice = musaSetDevice;
 
   static constexpr auto GetDevice = [](auto&&... args) {

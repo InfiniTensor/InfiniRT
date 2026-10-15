@@ -41,6 +41,7 @@ endfunction()
 
 add_infini_rt_test(test_smoke test_smoke.cc)
 add_infini_rt_test(test_core test_core.cc)
+add_infini_rt_test(test_device_guard test_device_guard.cc)
 add_infini_rt_test(test_small_vector test_small_vector.cc)
 add_infini_rt_test(test_metadata_view test_metadata_view.cc)
 add_infini_rt_test(test_shape_strides_storage test_shape_strides_storage.cc)
@@ -59,6 +60,8 @@ if(WITH_CPU)
 endif()
 
 if(WITH_NVIDIA)
+    add_infini_rt_test(test_reusable_memory_pool_capture
+                      test_reusable_memory_pool_capture.cc)
     set(INFINI_RT_TEST_HAS_RUNTIME_BACKEND ON)
     add_infini_rt_backend_runtime_test(
         NVIDIA infini::rt::Device::Type::kNvidia
