@@ -57,6 +57,11 @@ _DEVICE_HEADERS = {
         ("ascend", "device_.h", "native/ascend/device_.h"),
         ("ascend", "runtime_.h", "native/ascend/runtime_.h"),
     ),
+    "qy": (
+        ("qy", "data_type_.h", "native/cuda/qy/data_type_.h"),
+        ("qy", "device_.h", "native/cuda/qy/device_.h"),
+        ("qy", "runtime_.h", "native/cuda/qy/runtime_.h"),
+    ),
 }
 
 _DEVICE_TYPES = {
@@ -70,6 +75,7 @@ _DEVICE_TYPES = {
     "moore": "Device::Type::kMoore",
     "cambricon": "Device::Type::kCambricon",
     "ascend": "Device::Type::kAscend",
+    "qy": "Device::Type::kQy",
 }
 
 _DEFAULT_DEVICE_PRIORITY = (
@@ -82,6 +88,7 @@ _DEFAULT_DEVICE_PRIORITY = (
     "moore",
     "cambricon",
     "ascend",
+    "qy",
     "cpu",
 )
 
