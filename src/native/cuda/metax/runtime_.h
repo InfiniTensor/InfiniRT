@@ -30,6 +30,8 @@ struct Runtime<Device::Type::kMetax>
 
   static constexpr Error kSuccess = mcSuccess;
 
+  static constexpr Error kEventNotReady = mcErrorNotReady;
+
   static constexpr auto SetDevice = mcSetDevice;
 
   static constexpr auto GetDevice = mcGetDevice;
