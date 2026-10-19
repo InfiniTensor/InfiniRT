@@ -50,7 +50,8 @@ int main() {
     defined(INFINI_RT_CONSUMER_BACKEND_MARS) ||      \
     defined(INFINI_RT_CONSUMER_BACKEND_MOORE) ||     \
     defined(INFINI_RT_CONSUMER_BACKEND_CAMBRICON) || \
-    defined(INFINI_RT_CONSUMER_BACKEND_ASCEND)
+    defined(INFINI_RT_CONSUMER_BACKEND_ASCEND) ||    \
+    defined(INFINI_RT_CONSUMER_BACKEND_KUNLUN)
   namespace runtime = infini::rt::runtime;
 #if defined(INFINI_RT_CONSUMER_BACKEND_CPU)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kCpu;
@@ -78,6 +79,9 @@ int main() {
   constexpr bool kExpectAsyncMemcpySuccess = true;
 #elif defined(INFINI_RT_CONSUMER_BACKEND_CAMBRICON)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kCambricon;
+  constexpr bool kExpectAsyncMemcpySuccess = true;
+#elif defined(INFINI_RT_CONSUMER_BACKEND_KUNLUN)
+  constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kKunlun;
   constexpr bool kExpectAsyncMemcpySuccess = true;
 #elif defined(INFINI_RT_CONSUMER_BACKEND_ASCEND)
   constexpr auto kExpectedDeviceType = infini::rt::Device::Type::kAscend;
