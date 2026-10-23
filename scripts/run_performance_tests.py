@@ -145,6 +145,7 @@ def main():
     tests = args.tests or [
         "perf_runtime_dispatch",
         "perf_memory",
+        "perf_memory_pool",
         "perf_tensor_view",
         "perf_tensor_view_footprint",
     ]
