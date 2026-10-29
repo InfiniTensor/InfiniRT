@@ -26,6 +26,7 @@ _DEVICE_HEADERS = {
         ("hygon", "data_type_.h", "native/cuda/hygon/data_type_.h"),
         ("hygon", "device_.h", "native/cuda/hygon/device_.h"),
         ("hygon", "runtime_.h", "native/cuda/hygon/runtime_.h"),
+        ("hygon", "driver_.h", "native/cuda/hygon/driver_.h"),
     ),
     "thead": (
         ("thead", "data_type_.h", "native/cuda/thead/data_type_.h"),
