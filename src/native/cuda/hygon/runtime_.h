@@ -40,6 +40,19 @@ struct Runtime<Device::Type::kHygon>
 
   static constexpr auto GetDeviceCount = cudaGetDeviceCount;
 
+  static constexpr auto DeviceGetAttribute = cudaDeviceGetAttribute;
+
+  static constexpr auto kDevAttrWarpSize = cudaDevAttrWarpSize;
+
+  static constexpr auto kDevAttrComputeCapabilityMajor =
+      cudaDevAttrComputeCapabilityMajor;
+
+  static constexpr auto kDevAttrComputeCapabilityMinor =
+      cudaDevAttrComputeCapabilityMinor;
+
+  static constexpr auto kDevAttrMaxSharedMemoryPerBlockOptin =
+      cudaDevAttrMaxSharedMemoryPerBlockOptin;
+
   static constexpr auto DeviceSynchronize = cudaDeviceSynchronize;
 
   static constexpr auto Malloc = [](auto&&... args) {
