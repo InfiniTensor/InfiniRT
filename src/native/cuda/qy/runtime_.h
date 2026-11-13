@@ -33,6 +33,8 @@ struct Runtime<Device::Type::kQy>
 
   static constexpr Error kSuccess = cudaSuccess;
 
+  static constexpr Error kEventNotReady = cudaErrorNotReady;
+
   // Denglin headers overload several cuda* entry points; wrap them in
   // forwarding lambdas so Clang CUDA can resolve a single candidate.
   static constexpr auto SetDevice = [](auto&&... args) {
