@@ -15,6 +15,7 @@ set(InfiniRT_WITH_MARS @WITH_MARS@)
 set(InfiniRT_WITH_MOORE @WITH_MOORE@)
 set(InfiniRT_WITH_CAMBRICON @WITH_CAMBRICON@)
 set(InfiniRT_WITH_ASCEND @WITH_ASCEND@)
+set(InfiniRT_WITH_QY @WITH_QY@)
 
 if(@INFINI_RT_PACKAGE_NEEDS_CUDATOOLKIT@)
     find_dependency(CUDAToolkit)
@@ -186,6 +187,32 @@ elseif(_InfiniRT_VENDOR_BACKEND STREQUAL "ASCEND")
     _infinirt_define_backend_runtime(
         "${_InfiniRT_ASCEND_INCLUDE_DIRS}"
         "${_InfiniRT_BACKEND_RUNTIME_LIBRARY};${_InfiniRT_BACKEND_DRIVER_LIBRARY};${CMAKE_DL_LIBS}")
+elseif(_InfiniRT_VENDOR_BACKEND STREQUAL "QY")
+    set(_InfiniRT_ROOT_HINTS "${InfiniRT_QY_ROOT}")
+    foreach(_InfiniRT_ENV QY_ROOT QY_HOME QY_PATH)
+        if(DEFINED ENV{${_InfiniRT_ENV}})
+            list(APPEND _InfiniRT_ROOT_HINTS "$ENV{${_InfiniRT_ENV}}")
+        endif()
+    endforeach()
+    list(APPEND _InfiniRT_ROOT_HINTS /usr/local/denglin)
+    find_path(_InfiniRT_BACKEND_INCLUDE_DIR
+        NAMES cuda_runtime.h
+        HINTS ${_InfiniRT_ROOT_HINTS}
+        PATH_SUFFIXES sdk/include include)
+    find_library(_InfiniRT_BACKEND_RUNTIME_LIBRARY
+        NAMES curt
+        HINTS ${_InfiniRT_ROOT_HINTS}
+        PATH_SUFFIXES sdk/lib lib lib64)
+    if(NOT _InfiniRT_BACKEND_INCLUDE_DIR OR
+       NOT _InfiniRT_BACKEND_RUNTIME_LIBRARY)
+        set(InfiniRT_FOUND FALSE)
+        set(InfiniRT_NOT_FOUND_MESSAGE
+            "Denglin QY SDK not found. Set InfiniRT_QY_ROOT or QY_ROOT.")
+        return()
+    endif()
+    _infinirt_define_backend_runtime(
+        "${_InfiniRT_BACKEND_INCLUDE_DIR}"
+        "${_InfiniRT_BACKEND_RUNTIME_LIBRARY}")
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/InfiniRTTargets.cmake")
