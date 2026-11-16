@@ -15,6 +15,7 @@ set(InfiniRT_WITH_MARS @WITH_MARS@)
 set(InfiniRT_WITH_MOORE @WITH_MOORE@)
 set(InfiniRT_WITH_CAMBRICON @WITH_CAMBRICON@)
 set(InfiniRT_WITH_ASCEND @WITH_ASCEND@)
+set(InfiniRT_WITH_KUNLUN @WITH_KUNLUN@)
 
 if(@INFINI_RT_PACKAGE_NEEDS_CUDATOOLKIT@)
     find_dependency(CUDAToolkit)
@@ -126,6 +127,24 @@ elseif(_InfiniRT_VENDOR_BACKEND STREQUAL "CAMBRICON")
         set(InfiniRT_FOUND FALSE)
         set(InfiniRT_NOT_FOUND_MESSAGE
             "Cambricon SDK not found. Set InfiniRT_CAMBRICON_ROOT or NEUWARE_HOME.")
+        return()
+    endif()
+    _infinirt_define_backend_runtime(
+        "${_InfiniRT_BACKEND_INCLUDE_DIR}"
+        "${_InfiniRT_BACKEND_RUNTIME_LIBRARY}")
+elseif(_InfiniRT_VENDOR_BACKEND STREQUAL "KUNLUN")
+    find_dependency(Threads)
+    find_path(_InfiniRT_BACKEND_INCLUDE_DIR xpu/runtime.h
+        HINTS "${InfiniRT_KUNLUN_ROOT}" "$ENV{XRE_ROOT}"
+        PATH_SUFFIXES include)
+    find_library(_InfiniRT_BACKEND_RUNTIME_LIBRARY xpurt
+        HINTS "${InfiniRT_KUNLUN_ROOT}" "$ENV{XRE_ROOT}"
+        PATH_SUFFIXES lib lib64 so)
+    if(NOT _InfiniRT_BACKEND_INCLUDE_DIR OR
+       NOT _InfiniRT_BACKEND_RUNTIME_LIBRARY)
+        set(InfiniRT_FOUND FALSE)
+        set(InfiniRT_NOT_FOUND_MESSAGE
+            "Kunlun XRE SDK not found. Set InfiniRT_KUNLUN_ROOT or XRE_ROOT.")
         return()
     endif()
     _infinirt_define_backend_runtime(

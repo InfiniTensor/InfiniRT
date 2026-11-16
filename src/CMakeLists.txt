@@ -105,6 +105,14 @@ if(WITH_CAMBRICON)
         "${CAMBRICON_RUNTIME_LIB}")
 endif()
 
+if(WITH_KUNLUN)
+    find_package(Threads REQUIRED)
+    target_link_libraries(infinirt PUBLIC Threads::Threads)
+    target_compile_definitions(infinirt PRIVATE WITH_KUNLUN=1)
+    _infinirt_use_backend_runtime(
+        "${KUNLUN_INCLUDE_DIR}" "${KUNLUN_RUNTIME_LIB}")
+endif()
+
 if(WITH_ASCEND)
     # ASCEND_HOME is set by the top-level CMakeLists.txt.
     target_compile_definitions(infinirt PUBLIC WITH_ASCEND=1)

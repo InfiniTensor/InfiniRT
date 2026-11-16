@@ -6,6 +6,11 @@ import re
 _DETAIL_PREFIX = "infini/rt/detail"
 
 _DEVICE_HEADERS = {
+    "kunlun": (
+        ("kunlun", "data_type_.h", "native/kunlun/data_type_.h"),
+        ("kunlun", "device_.h", "native/kunlun/device_.h"),
+        ("kunlun", "runtime_.h", "native/kunlun/runtime_.h"),
+    ),
     "cpu": (
         ("cpu", "data_type_.h", "native/cpu/data_type_.h"),
         ("cpu", "device_.h", "native/cpu/device_.h"),
@@ -70,6 +75,7 @@ _DEVICE_TYPES = {
     "moore": "Device::Type::kMoore",
     "cambricon": "Device::Type::kCambricon",
     "ascend": "Device::Type::kAscend",
+    "kunlun": "Device::Type::kKunlun",
 }
 
 _DEFAULT_DEVICE_PRIORITY = (
@@ -82,6 +88,7 @@ _DEFAULT_DEVICE_PRIORITY = (
     "moore",
     "cambricon",
     "ascend",
+    "kunlun",
     "cpu",
 )
 
