@@ -15,7 +15,7 @@ using cuda_bfloat162 = __mt_bfloat162;
 
 template <>
 struct TypeMap<Device::Type::kMoore, DataType::kFloat16> {
-  using type = half;
+  using type = Float16;
 };
 
 template <>
