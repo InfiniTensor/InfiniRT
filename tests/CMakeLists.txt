@@ -87,6 +87,11 @@ if(WITH_HYGON)
         HYGON infini::rt::Device::Type::kHygon
         infini/rt/hygon/runtime_.h
         1 1 1 1 1 1 1 1)
+    add_infini_rt_test(test_hygon_cuda_runtime test_hygon_cuda_runtime.cu)
+    get_target_property(_hygon_runtime_definitions test_hygon_runtime
+                        COMPILE_DEFINITIONS)
+    target_compile_definitions(test_hygon_cuda_runtime
+                               PRIVATE ${_hygon_runtime_definitions})
     add_infini_rt_backend_graph_test(
         HYGON infini::rt::Device::Type::kHygon 1)
 endif()

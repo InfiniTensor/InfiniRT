@@ -36,11 +36,17 @@ struct Runtime<Device::Type::kHygon>
 
   static constexpr auto SetDevice = cudaSetDevice;
 
-  static constexpr auto GetDevice = cudaGetDevice;
+  static constexpr auto GetDevice = [](auto&&... args) {
+    return cudaGetDevice(std::forward<decltype(args)>(args)...);
+  };
 
-  static constexpr auto GetDeviceCount = cudaGetDeviceCount;
+  static constexpr auto GetDeviceCount = [](auto&&... args) {
+    return cudaGetDeviceCount(std::forward<decltype(args)>(args)...);
+  };
 
-  static constexpr auto DeviceSynchronize = cudaDeviceSynchronize;
+  static constexpr auto DeviceSynchronize = [](auto&&... args) {
+    return cudaDeviceSynchronize(std::forward<decltype(args)>(args)...);
+  };
 
   static constexpr auto Malloc = [](auto&&... args) {
     return cudaMalloc(std::forward<decltype(args)>(args)...);
@@ -72,7 +78,9 @@ struct Runtime<Device::Type::kHygon>
 
   static constexpr auto Memcpy = cudaMemcpy;
 
-  static constexpr auto MemcpyAsync = cudaMemcpyAsync;
+  static constexpr auto MemcpyAsync = [](auto&&... args) {
+    return cudaMemcpyAsync(std::forward<decltype(args)>(args)...);
+  };
 
   static constexpr auto kMemcpyHostToHost = cudaMemcpyHostToHost;
 
