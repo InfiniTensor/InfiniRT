@@ -15,6 +15,8 @@ elseif(WITH_CAMBRICON)
     set(INFINI_RT_PERF_BACKEND_NAME "cambricon")
 elseif(WITH_ASCEND)
     set(INFINI_RT_PERF_BACKEND_NAME "ascend")
+elseif(WITH_QY)
+    set(INFINI_RT_PERF_BACKEND_NAME "qy")
 endif()
 
 function(add_infini_rt_performance_test target)

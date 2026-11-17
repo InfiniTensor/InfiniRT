@@ -15,6 +15,7 @@ _BACKEND_OPTIONS = (
     ("WITH_MOORE", "moore"),
     ("WITH_CAMBRICON", "cambricon"),
     ("WITH_ASCEND", "ascend"),
+    ("WITH_QY", "qy"),
     ("WITH_CPU", "cpu"),
 )
 
