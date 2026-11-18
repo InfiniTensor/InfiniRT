@@ -105,6 +105,28 @@ if(WITH_CAMBRICON)
         "${CAMBRICON_RUNTIME_LIB}")
 endif()
 
+if(WITH_KUNLUN)
+    # KUNLUN_XRE_ROOT is set by the top-level CMakeLists.txt.
+    target_compile_definitions(infinirt PUBLIC WITH_KUNLUN=1)
+
+    find_library(KUNLUN_RUNTIME_LIB NAMES xpurt
+        HINTS "${KUNLUN_XRE_ROOT}/so" "${KUNLUN_XRE_ROOT}/lib" "${KUNLUN_XRE_ROOT}/lib64"
+        REQUIRED)
+    # `data_type_.h` pulls XTDK builtin device headers (`xpu/kernel/xtdk_*.h`),
+    # which live under the XTDK clang resource include dir.
+    find_path(KUNLUN_XTDK_INC NAMES xpu/kernel/xtdk_bf16.h
+        HINTS "${KUNLUN_XRE_ROOT}/../xtdk/lib/clang/15.0.7/include"
+              "${KUNLUN_XRE_ROOT}/../xtdk/include"
+        NO_DEFAULT_PATH)
+    # Only the `xpu/kernel` subtree may leak into host compilation: the XTDK
+    # clang resource root also carries `stddef.h` etc. with clang-only syntax
+    # that breaks the host compiler.
+    set(KUNLUN_XTDK_DEVICE_INC "${KUNLUN_XTDK_INC}/xpu/kernel")
+    _infinirt_use_backend_runtime(
+        "${KUNLUN_XRE_ROOT}/include;${KUNLUN_XTDK_DEVICE_INC}"
+        "${KUNLUN_RUNTIME_LIB}")
+endif()
+
 if(WITH_ASCEND)
     # ASCEND_HOME is set by the top-level CMakeLists.txt.
     target_compile_definitions(infinirt PUBLIC WITH_ASCEND=1)
