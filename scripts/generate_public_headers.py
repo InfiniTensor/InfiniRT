@@ -209,9 +209,6 @@ enum class StreamCaptureMode {
     ]
 
     for device in devices:
-        includes.append(f"#include <infini/rt/{device}/data_type_.h>")
-
-    for device in devices:
         includes.append(f"#include <infini/rt/{device}/device_.h>")
 
     for device in devices:
