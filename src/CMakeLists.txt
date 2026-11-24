@@ -105,6 +105,13 @@ if(WITH_CAMBRICON)
         "${CAMBRICON_RUNTIME_LIB}")
 endif()
 
+if(WITH_QY)
+    target_compile_definitions(infinirt PUBLIC WITH_QY=1)
+    _infinirt_use_backend_runtime(
+        "${QY_SDK}/include"
+        "${QY_CURT_LIB}")
+endif()
+
 if(WITH_ASCEND)
     # ASCEND_HOME is set by the top-level CMakeLists.txt.
     target_compile_definitions(infinirt PUBLIC WITH_ASCEND=1)
