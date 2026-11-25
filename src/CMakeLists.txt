@@ -3,8 +3,11 @@ add_library(InfiniRT::infinirt ALIAS infinirt)
 
 function(_infinirt_use_backend_runtime include_dirs link_libraries)
     add_library(InfiniRT::BackendRuntime INTERFACE IMPORTED GLOBAL)
+    if(include_dirs)
+        set_target_properties(InfiniRT::BackendRuntime PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${include_dirs}")
+    endif()
     set_target_properties(InfiniRT::BackendRuntime PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${include_dirs}"
         INTERFACE_LINK_LIBRARIES "${link_libraries}")
     target_link_libraries(infinirt PUBLIC InfiniRT::BackendRuntime)
 endfunction()
@@ -56,6 +59,24 @@ if(WITH_HYGON)
 
     find_package(CUDAToolkit REQUIRED)
     target_link_libraries(infinirt PUBLIC CUDA::cudart)
+
+    # The public Hygon driver header exposes cuModuleLoadData, cuLaunchKernel
+    # and the other driver entry points, which live in the CUDA driver
+    # library, not in cudart. FindCUDAToolkit does not provide CUDA::cuda for
+    # every DTK layout, so locate the library here and carry it through
+    # InfiniRT::BackendRuntime: the package config re-finds it on the
+    # consumer's machine, and the install-consumer test links it by
+    # referencing the driver entry points.
+    find_library(HYGON_CUDA_DRIVER_LIBRARY
+        NAMES cuda
+        HINTS "${HYGON_CUDA_ROOT}/lib64/stubs" "${HYGON_CUDA_ROOT}/lib64")
+    if(NOT HYGON_CUDA_DRIVER_LIBRARY)
+        message(FATAL_ERROR
+                "The Hygon CUDA driver library (libcuda) was not found under "
+                "'${HYGON_CUDA_ROOT}'. It provides the driver entry points of "
+                "the public Hygon driver header.")
+    endif()
+    _infinirt_use_backend_runtime("" "${HYGON_CUDA_DRIVER_LIBRARY}")
 
     set_target_properties(infinirt PROPERTIES
         CUDA_STANDARD 17

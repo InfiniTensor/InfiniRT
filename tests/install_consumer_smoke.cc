@@ -1,4 +1,7 @@
 #include <infini/rt.h>
+#if defined(INFINI_RT_CONSUMER_BACKEND_HYGON)
+#include <infini/rt/hygon/driver_.h>
+#endif
 
 #include <array>
 #include <cstddef>
@@ -136,6 +139,37 @@ int main() {
     return 1;
   }
   if (runtime::Free(ptr) != runtime::kSuccess) {
+    return 1;
+  }
+#endif
+
+#if defined(INFINI_RT_CONSUMER_BACKEND_HYGON)
+  // The Hygon driver interface is header-only and its entry points live in
+  // the CUDA driver library, not in cudart. Referencing every one of them
+  // makes this executable's link fail when the installed InfiniRT target
+  // does not carry that dependency - on any machine, with or without a
+  // device, which is exactly the stage the missing symbol belongs to.
+  namespace hygon_driver = infini::rt::driver;
+  using HygonDriver = hygon_driver::Driver<infini::rt::Device::Type::kHygon>;
+  using DriverEntryPoint = void (*)();
+  // The volatile store keeps each address from being folded away at
+  // optimization time.
+  volatile DriverEntryPoint driver_entry_point = nullptr;
+  driver_entry_point =
+      reinterpret_cast<DriverEntryPoint>(HygonDriver::ModuleLoadData);
+  driver_entry_point =
+      reinterpret_cast<DriverEntryPoint>(HygonDriver::ModuleGetFunction);
+  driver_entry_point =
+      reinterpret_cast<DriverEntryPoint>(HygonDriver::ModuleUnload);
+  driver_entry_point =
+      reinterpret_cast<DriverEntryPoint>(HygonDriver::FuncGetAttribute);
+  driver_entry_point =
+      reinterpret_cast<DriverEntryPoint>(HygonDriver::FuncSetCacheConfig);
+  driver_entry_point =
+      reinterpret_cast<DriverEntryPoint>(HygonDriver::FuncSetAttribute);
+  driver_entry_point =
+      reinterpret_cast<DriverEntryPoint>(HygonDriver::LaunchKernel);
+  if (driver_entry_point == nullptr) {
     return 1;
   }
 #endif
