@@ -450,5 +450,10 @@ int main() {
                {true, false, false, false, true, false, false, false});
 #endif
 
+#if defined(INFINI_RT_TEST_WITH_KUNLUN)
+  TestDispatch(&context, infini::rt::Device::Type::kKunlun, "KUNLUN",
+               {true, true, false, false, false, true, true, false});
+#endif
+
   return context.ExitCode();
 }
