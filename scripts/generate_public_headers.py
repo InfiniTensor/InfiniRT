@@ -58,6 +58,11 @@ _DEVICE_HEADERS = {
         ("ascend", "device_.h", "native/ascend/device_.h"),
         ("ascend", "runtime_.h", "native/ascend/runtime_.h"),
     ),
+    "kunlun": (
+        ("kunlun", "data_type_.h", "native/kunlun/data_type_.h"),
+        ("kunlun", "device_.h", "native/kunlun/device_.h"),
+        ("kunlun", "runtime_.h", "native/kunlun/runtime_.h"),
+    ),
 }
 
 _DEVICE_TYPES = {
@@ -71,6 +76,7 @@ _DEVICE_TYPES = {
     "moore": "Device::Type::kMoore",
     "cambricon": "Device::Type::kCambricon",
     "ascend": "Device::Type::kAscend",
+    "kunlun": "Device::Type::kKunlun",
 }
 
 _DEFAULT_DEVICE_PRIORITY = (
@@ -83,6 +89,7 @@ _DEFAULT_DEVICE_PRIORITY = (
     "moore",
     "cambricon",
     "ascend",
+    "kunlun",
     "cpu",
 )
 
